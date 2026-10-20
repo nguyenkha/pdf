@@ -35,7 +35,35 @@ const fullResolution: Profile[] = [
   { quality: 60, dpi: 0, qfactor: 0.9 },
   { quality: 45, dpi: 0, qfactor: 1.4 },
 ];
+// Size-limit ladder, best looking first. For scans a 150 dpi copy at good
+// JPEG quality looks better than a full-resolution one at heavy quality,
+// and is smaller, so resolution steps sit between quality steps.
+const targetLadder: Profile[] = [
+  { quality: 90, dpi: 0, qfactor: 0.25 },
+  { quality: 82, dpi: 0, qfactor: 0.4 },
+  { quality: 72, dpi: 0, qfactor: 0.6 },
+  { quality: 68, dpi: 200, qfactor: 0.4 },
+  { quality: 62, dpi: 150, qfactor: 0.4 },
+  { quality: 50, dpi: 150, qfactor: 0.9 },
+  { quality: 40, dpi: 110, qfactor: 1.4 },
+  { quality: 25, dpi: 96, qfactor: 1.4 },
+];
+function targetAttempts(options: CompressOptions): Profile[] {
+  const rows =
+    options.imageQuality === "high"
+      ? targetLadder.slice(0, 2)
+      : options.imageQuality === "medium"
+        ? targetLadder.slice(1, 6)
+        : options.imageQuality === "low"
+          ? targetLadder.slice(2)
+          : targetLadder;
+  return [
+    { quality: 101, dpi: 0 },
+    ...rows.map((row) => (options.gray ? { ...row, gray: true } : row)),
+  ];
+}
 export function attemptsFor(options: CompressOptions): Profile[] {
+  if (options.target) return targetAttempts(options);
   let rows =
     options.target || options.preference === "smallest"
       ? fullResolution
@@ -173,39 +201,65 @@ export async function compressWithGhostscript(
     reported = Math.max(reported, Math.min(1, value));
     onProgress({ stage, value: reported, page });
   };
-  for (const [index, profile] of profiles.entries()) {
-    const span = (share: number) =>
-      (PASS_SHARE * (index + share)) / profiles.length;
+  // A size limit is met by a binary search over the quality-ordered ladder
+  // (about 3 passes instead of up to 9); the lossless pass is only worth a
+  // run when the limit is close to the original size.
+  const search = Boolean(options.target) && hasImages;
+  const lossless = profiles[0].quality > 100 ? profiles[0] : undefined;
+  const ladder = search ? profiles.slice(lossless ? 1 : 0) : profiles;
+  const tryLossless =
+    search && lossless && options.target! >= inputSize * (1 - WORTHWHILE);
+  const planned = search
+    ? Math.ceil(Math.log2(ladder.length + 1)) + (tryLossless ? 1 : 0)
+    : profiles.length;
+  let smallest: Candidate | undefined;
+  const pass = async (profile: Profile): Promise<Candidate | undefined> => {
+    const slot = Math.min(attempts, planned - 1);
+    const span = (share: number) => (PASS_SHARE * (slot + share)) / planned;
     report(attempts ? "optimizing" : "loading", span(0));
     const output = await runPass(profile, (page) =>
       report("optimizing", span(Math.min(page, total) / total), page),
     );
     attempts++;
     heapBytes = Math.max(heapBytes, output.heapBytes);
-    if (output.bytes.length >= inputSize) continue;
-    const candidate = {
-      bytes: output.bytes,
-      quality: profile.quality,
-      dpi: profile.dpi,
-    };
-    if (options.target) {
-      if (!selected || candidate.bytes.length < selected.bytes.length)
-        selected = candidate;
-      // Profiles are ordered by preservation/quality, not expected byte size.
-      if (candidate.bytes.length <= options.target) {
-        selected = candidate;
-        break;
-      }
-    } else if (options.preference === "quality") {
-      // Stop at the gentlest pass that saves something worth having; a
-      // lossless rewrite that trims 0.1 MB off a 42 MB scan is not that.
-      if (!selected || candidate.bytes.length < selected.bytes.length)
-        selected = candidate;
-      if (candidate.bytes.length <= inputSize * (1 - WORTHWHILE)) break;
-    } else if (!selected || candidate.bytes.length < selected.bytes.length) {
-      selected = candidate;
+    if (output.bytes.length >= inputSize) return undefined;
+    const candidate = { bytes: output.bytes, quality: profile.quality, dpi: profile.dpi, lossless: profile.quality > 100 };
+    if (!smallest || candidate.bytes.length < smallest.bytes.length) smallest = candidate;
+    return candidate;
+  };
+  if (search) {
+    const target = options.target!;
+    if (tryLossless) {
+      const candidate = await pass(lossless!);
+      if (candidate && candidate.bytes.length <= target) selected = candidate;
     }
-  }
+    // Each hit moves the search toward better-looking profiles, so the last
+    // hit is the best-looking result found under the limit.
+    let low = 0;
+    let high = ladder.length - 1;
+    while (!selected?.lossless && low <= high) {
+      const middle = (low + high) >> 1;
+      const candidate = await pass(ladder[middle]);
+      if (candidate && candidate.bytes.length <= target) {
+        selected = candidate;
+        high = middle - 1;
+      } else low = middle + 1;
+    }
+    selected ??= smallest;
+  } else
+    for (const profile of profiles) {
+      const candidate = await pass(profile);
+      if (!candidate) continue;
+      if (options.preference === "quality") {
+        // Stop at the gentlest pass that saves something worth having; a
+        // lossless rewrite that trims 0.1 MB off a 42 MB scan is not that.
+        if (!selected || candidate.bytes.length < selected.bytes.length)
+          selected = candidate;
+        if (candidate.bytes.length <= inputSize * (1 - WORTHWHILE)) break;
+      } else if (!selected || candidate.bytes.length < selected.bytes.length) {
+        selected = candidate;
+      }
+    }
   // Only the released result needs the (slow, per-page) preservation check;
   // a failure still stops the job rather than falling back silently.
   if (selected) {

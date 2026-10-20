@@ -129,19 +129,52 @@ describe("quality-first pipeline", () => {
     expect(result.bytes).toBeUndefined();
     expect(result.lossy).toBe(false);
   });
-  it("handles non-monotonic sizes and stops at the highest ranked valid result", async () => {
-    const sizes = [120, 90, 95, 40];
-    let index = 0;
+  it("finds the best-looking result under a limit by binary search", async () => {
+    // Ladder (after lossless) has 8 rows; sizes fall with each row.
+    const sizes = [95, 90, 80, 70, 55, 45, 30, 20];
+    const tried: number[] = [];
     const result = await compressWithGhostscript(
       100,
       { preference: "quality", imageQuality: "auto", target: 50 },
       () => {},
-      async () => ({ bytes: new Uint8Array(sizes[index++]), heapBytes: 64 }),
+      async (profile) => {
+        const row = attemptsFor({ preference: "quality", imageQuality: "auto", target: 50 })
+          .slice(1)
+          .findIndex((p) => p.quality === profile.quality);
+        tried.push(row);
+        return { bytes: new Uint8Array(sizes[row]), heapBytes: 64 };
+      },
       async () => {},
     );
-    expect(result.bytes?.length).toBe(40);
-    expect(result.attempts).toBe(4);
+    expect(result.bytes?.length).toBe(45);
     expect(result.achieved).toBe(true);
+    expect(tried.length).toBeLessThanOrEqual(4);
+    expect(tried).not.toContain(-1);
+  });
+  it("tries lossless first only when the limit is near the original size", async () => {
+    const qualities: number[] = [];
+    await compressWithGhostscript(
+      100,
+      { preference: "quality", imageQuality: "auto", target: 95 },
+      () => {},
+      async (profile) => {
+        qualities.push(profile.quality);
+        return { bytes: new Uint8Array(90), heapBytes: 64 };
+      },
+      async () => {},
+    );
+    expect(qualities).toEqual([101]);
+  });
+  it("falls back to the smallest result when the limit is out of reach", async () => {
+    const result = await compressWithGhostscript(
+      100,
+      { preference: "quality", imageQuality: "auto", target: 1 },
+      () => {},
+      async (profile) => ({ bytes: new Uint8Array(profile.quality), heapBytes: 64 }),
+      async () => {},
+    );
+    expect(result.bytes?.length).toBe(25);
+    expect(result.achieved).toBe(false);
   });
   it("never releases a result after a preservation failure", async () => {
     await expect(
@@ -224,7 +257,7 @@ describe("attempt ladder", () => {
     expect(
       attemptsFor({ preference: "smallest", imageQuality: "auto", target: 10 })
         .length,
-    ).toBe(8);
+    ).toBe(9);
   });
 });
 

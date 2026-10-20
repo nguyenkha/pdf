@@ -31,7 +31,12 @@ export function validateFile(file: File): "invalid" | undefined {
     return "invalid";
   if (file.size < 8) return "invalid";
 }
-export type Candidate = { bytes: Uint8Array; quality: number; dpi: number };
+export type Candidate = {
+  bytes: Uint8Array;
+  quality: number;
+  dpi: number;
+  lossless?: boolean;
+};
 export function chooseCandidate(
   candidates: Candidate[],
   originalSize: number,
