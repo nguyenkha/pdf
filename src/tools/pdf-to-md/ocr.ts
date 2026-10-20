@@ -1,4 +1,4 @@
-import type { Paragraph, Worker as TesseractWorker } from "tesseract.js";
+import type { Line, Paragraph, Worker as TesseractWorker } from "tesseract.js";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import workerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
 import type { Locale } from "../../i18n/config";
@@ -22,6 +22,8 @@ const MIN_SCALE = 2;
 const MAX_PIXELS = 12_000_000;
 // Words below this confidence are usually noise from pictures or stains.
 const MIN_CONFIDENCE = 35;
+// Whole lines below this are stamps, photos and handwriting read as letters.
+const MIN_LINE_CONFIDENCE = 40;
 const CJK = /[぀-ヿ㐀-鿿가-힯豈-﫿]/;
 const median = (values: number[]) => {
   const sorted = [...values].sort((a, b) => a - b);
@@ -34,6 +36,26 @@ const median = (values: number[]) => {
  * a degree off, rows of a table would otherwise not line up. A line is split
  * where a wide gap suggests a table cell.
  */
+// Letters without ascenders, descenders or marks: their height is the x-height.
+const X_LETTERS = /^[acemnorsuvwxz]$/;
+const CAPITALS = /^[A-HIK-PR-Z]$/;
+/**
+ * A line's font size in image pixels from its letters: about twice the
+ * x-height, or capitals at 0.7 of it. Tesseract's row height is a poor
+ * guide here: Vietnamese marks or one tall letter stretch it by a third.
+ */
+export function lineSize(line: Line): number {
+  const heights = (pattern: RegExp) =>
+    line.words
+      .flatMap((word) => word.symbols ?? [])
+      .filter((symbol) => pattern.test(symbol.text))
+      .map((symbol) => symbol.bbox.y1 - symbol.bbox.y0);
+  const x = heights(X_LETTERS);
+  if (x.length) return median(x) * 2;
+  const capitals = heights(CAPITALS);
+  if (capitals.length) return median(capitals) / 0.7;
+  return line.rowAttributes?.rowHeight || line.bbox.y1 - line.bbox.y0;
+}
 /** How far the scan is turned, from the slope of its long text lines. */
 export const skewAngle = (paragraphs: Paragraph[]) =>
   median(
@@ -69,15 +91,18 @@ export function partsFromParagraphs(
     sin = Math.sin(angle);
   const level = (x: number, y: number) => [x * cos + y * sin, -x * sin + y * cos];
   const parts: TextPart[] = [];
+  // Measured sizes wobble by a fifth: within that of the page's body size a
+  // line is body text, so noise never turns it into a heading.
+  const body = median(paragraphs.flatMap((paragraph) => paragraph.lines.map(lineSize)));
+  const snap = (size: number) => (Math.abs(size - body) <= body * 0.22 ? body : size);
   for (const paragraph of paragraphs) {
-    const heights = paragraph.lines.map((line) => line.rowAttributes?.rowHeight || line.bbox.y1 - line.bbox.y0);
-    const typical = median(heights);
+    const sizes = paragraph.lines.map((line) => snap(lineSize(line)));
+    // Only a paragraph's first line can be a heading Tesseract kept with it.
+    const rest = median(sizes.slice(1));
     for (const [index, line] of paragraph.lines.entries()) {
-      // A line's row height wobbles with its letters: near the paragraph's
-      // typical height it takes that one; a clear outlier (a heading Tesseract
-      // kept in the paragraph) keeps its own.
-      const rowHeight = Math.abs(heights[index] - typical) <= typical * 0.25 ? typical : heights[index];
-      const size = Math.max(4, rowHeight / scale);
+      if (line.confidence < MIN_LINE_CONFIDENCE) continue;
+      const size = Math.max(4, (index && rest ? rest : sizes[index]) / scale);
+      const rowHeight = line.rowAttributes?.rowHeight || line.bbox.y1 - line.bbox.y0;
       // Noise is a whole doubtful line; a doubtful word in a clear line is usually real.
       const words = line.words.filter(
         (word) => word.text.trim() && (word.confidence >= MIN_CONFIDENCE || line.confidence >= 70),

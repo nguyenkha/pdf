@@ -5,9 +5,9 @@ import { safeUrl } from "../src/tools/pdf-to-md/structure";
 import { InlineMarkdown } from "../src/tools/pdf-to-md/InlineMarkdown";
 import { MarkdownPreview } from "../src/tools/pdf-to-md/MarkdownPreview";
 import { findImages } from "../src/tools/pdf-to-md/images";
-import { partsFromParagraphs } from "../src/tools/pdf-to-md/ocr";
+import { lineSize, partsFromParagraphs } from "../src/tools/pdf-to-md/ocr";
 import { scanRulings } from "../src/tools/pdf-to-md/scan-rulings";
-import type { Paragraph } from "tesseract.js";
+import type { Line, Paragraph } from "tesseract.js";
 import {
   convertDocument,
   defaultOptions,
@@ -268,4 +268,53 @@ it("keeps one rule whole when the scan shifts part of it by a row", () => {
   expect(rules[0].x2).toBe(390);
   expect(rules[0].y1).toBeGreaterThan(20);
   expect(rules[0].y1).toBeLessThan(23);
+});
+it("sizes OCR lines by their letters, not by marks that stretch the row", () => {
+  const symbol = (text: string, height: number) => ({ text, bbox: { x0: 0, y0: 0, x1: 10, y1: height } });
+  const line = (symbols: ReturnType<typeof symbol>[], rowHeight: number) =>
+    ({ words: [{ symbols }], rowAttributes: { rowHeight }, bbox: { x0: 0, y0: 0, x1: 100, y1: rowHeight } }) as unknown as Line;
+  // Body text: x-height 19 px, row height stretched by Vietnamese marks.
+  expect(lineSize(line([symbol("n", 19), symbol("ệ", 30), symbol("o", 19)], 45))).toBe(38);
+  // A capitals-only line of the same font reads as the same size.
+  expect(lineSize(line([symbol("C", 27), symbol("Ộ", 36), symbol("N", 27)], 38))).toBeCloseTo(38.6, 0);
+  // No usable letters: the row height.
+  expect(lineSize(line([symbol("漢", 40)], 42))).toBe(42);
+});
+it("keeps OCR body lines at one size so wobble never makes a heading", () => {
+  const symbol = (height: number) => ({ text: "n", bbox: { x0: 0, y0: 0, x1: 10, y1: height } });
+  const line = (y: number, xHeight: number) => ({
+    words: [{ text: "word", confidence: 90, symbols: [symbol(xHeight)], bbox: { x0: 0, y0: y - 30, x1: 300, y1: y } }],
+    confidence: 90,
+    rowAttributes: { rowHeight: 40 },
+    baseline: { x0: 0, y0: y, x1: 300, y1: y },
+    bbox: { x0: 0, y0: y - 30, x1: 300, y1: y },
+  });
+  const paragraph = (...lines: ReturnType<typeof line>[]) => ({ lines }) as unknown as Paragraph;
+  const parts = partsFromParagraphs(
+    [
+      paragraph(line(100, 30), line(150, 19)),
+      paragraph(line(200, 19), line(250, 22), line(300, 18)),
+      paragraph(line(350, 21)),
+    ],
+    { scale: 1, angle: 0 },
+  );
+  // The large first line stays a heading; 18-22 px x-heights are all body text.
+  expect(parts.map((part) => part.height)).toEqual([60, 42, 42, 42, 42, 42]);
+});
+it("asks more of a heading on a scanned page", () => {
+  const page = (scanned: boolean) => ({
+    parts: [
+      { ...part("Overview of costs", 50, 100, 16), hasEOL: true },
+      { ...part("in", 50, 130, 24), hasEOL: true },
+      { ...part("Body text that is long enough to set the size of the page.", 50, 160), hasEOL: true },
+      { ...part("More body text so the body size is clear on this page.", 50, 180), hasEOL: true },
+    ],
+    width: 600,
+    height: 800,
+    scanned,
+  });
+  // 1.33x body: a heading in a text layer, measurement noise on a scan.
+  expect(convertDocument("", [page(false)], defaultOptions).markdown).toContain("## Overview of costs");
+  const scanned = convertDocument("", [page(true)], defaultOptions).markdown;
+  expect(scanned).not.toMatch(/^#/m);
 });

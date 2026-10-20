@@ -173,7 +173,11 @@ function marginKey(
   return `${edge}:${pageNumber ? "page-number" : text}`;
 }
 
-function headingLevel(line: Line, bodySize: number): number | undefined {
+function headingLevel(line: Line, bodySize: number, scanned = false): number | undefined {
+  // OCR sizes are estimates within about a fifth, and stamps leave stray
+  // letters: on a scan only clearly larger lines with real words are headings.
+  if (scanned && (line.size / bodySize < 1.4 || (line.text.match(/\p{L}/gu) ?? []).length < 4))
+    return;
   if (
     line.text.length > 120 ||
     line.text.split(/\s+/).length > 18 ||
@@ -258,11 +262,12 @@ export function convertDocument(
       )
       .map(([key]) => key),
   );
+  const scannedLines = new Set(lines.flatMap((pageLines, index) => (pages[index].scanned ? pageLines : [])));
   const headingLevels = [
     ...new Set(
       lines
         .flat()
-        .map((line) => headingLevel(line, bodySize))
+        .map((line) => headingLevel(line, bodySize, scannedLines.has(line)))
         .filter((level): level is number => level !== undefined),
     ),
   ].sort((a, b) => a - b);
@@ -353,6 +358,11 @@ export function convertDocument(
           x: parts[0].transform[4],
         }));
     });
+    // Where full lines end on this page: a line reaching it wrapped, so the
+    // next one continues the same paragraph even when it starts further left.
+    const rightOf = (line: Line) => Math.max(...line.parts.map((part) => part.transform[4] + part.width));
+    const rights = segmented.map(rightOf).sort((a, b) => a - b);
+    const fullWidth = rights[Math.floor(rights.length * 0.9)] ?? 0;
     for (const originalLine of segmented) {
       while (pending.length && pending[0].y + pending[0].height / 2 < originalLine.y) {
         flush();
@@ -412,7 +422,7 @@ export function convertDocument(
         continue;
       }
       const heading = options.detectHeadings
-        ? headingLevel(line, bodySize)
+        ? headingLevel(line, bodySize, pages[index].scanned)
         : undefined;
       if (heading) {
         flush();
@@ -425,13 +435,18 @@ export function convertDocument(
         continue;
       }
       const list = /^(?:[-*•◦▪]|\d+[.)]|[a-zA-Z][.)])\s/.test(line.text);
+      // A first-line indent (or a list marker) followed by a line back at the
+      // margin is one paragraph when the line before ran to the full width.
+      const wrapped =
+        previous && rightOf(previous) >= fullWidth - previous.size * 2;
       const separated =
         previous &&
         (Math.abs(line.y - previous.y) >
           Math.max(line.size, previous.size) * 1.8 ||
-          Math.abs(line.x - previous.x) > line.size * 1.2 ||
+          line.x - previous.x > line.size * 1.2 ||
+          (previous.x - line.x > line.size * 1.2 && !wrapped) ||
           list ||
-          /^(?:[-*•◦▪]|\d+[.)])\s/.test(previous.text));
+          (/^(?:[-*•◦▪]|\d+[.)])\s/.test(previous.text) && !wrapped));
       if (separated) flush();
       paragraph = !paragraph
         ? line.text
