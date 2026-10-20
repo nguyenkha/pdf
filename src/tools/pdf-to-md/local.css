@@ -1,0 +1,39 @@
+.md-experiment {
+  max-width: 860px;
+  margin: auto;
+  padding: 0 20px 64px;
+}
+.md-experiment .hero {
+  padding: 40px 0 28px;
+}
+.md-experiment .hero h1 {
+  font-size: clamp(32px, 6vw, 48px);
+}
+.md-experiment .tool-card {
+  max-width: none;
+  margin: 0;
+}
+.md-experiment .tool-card > p {
+  margin: 16px 0;
+}
+.md-experiment .tool-card > .primary {
+  margin-top: 16px;
+}
+.md-result {
+  display: grid;
+  gap: 16px;
+  margin-top: 24px;
+}
+.md-result textarea {
+  width: 100%;
+  min-height: 360px;
+  resize: vertical;
+  padding: 16px;
+  background: var(--bg);
+  color: inherit;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font:
+    14px/1.65 ui-monospace,
+    monospace;
+}
