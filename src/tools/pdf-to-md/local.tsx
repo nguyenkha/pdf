@@ -1,14 +1,21 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { FileDropZone } from "../../components/FileDropZone";
 import { useObjectUrl } from "../../hooks/useObjectUrl";
 import { validateFile, formatSize } from "../../lib/pdf";
 import vi from "../../i18n/vi";
 import { MarkdownPreview } from "./MarkdownPreview";
+import type { ConvertedTable } from "./tables";
 import { defaultOptions, type ConversionOptions } from "./markdown";
 const PdfPagePreview = lazy(() => import("./PdfPagePreview"));
 import "../../styles/main.css";
 import "./local.css";
+
+function CsvDownload({table,index}:{table:ConvertedTable;index:number}) {
+  const blob = useMemo(()=>new Blob([table.csv],{type:"text/csv;charset=utf-8"}),[table.csv]);
+  const url = useObjectUrl(blob);
+  return <a className="secondary" href={url} download={`table-page-${table.page}-${index}.csv`}>CSV · Bảng {index} · Trang {table.page}</a>;
+}
 
 function App() {
   const [file, setFile] = useState<File>();
@@ -22,6 +29,7 @@ function App() {
   const [pageMarkdowns, setPageMarkdowns] = useState<string[]>([]);
   const [removedLines, setRemovedLines] = useState(0);
   const [headings, setHeadings] = useState(0);
+  const [tables, setTables] = useState<ConvertedTable[]>([]);
   const [compare, setCompare] = useState(false);
   const [page, setPage] = useState(1);
   const [formatting, setFormatting] = useState(false);
@@ -56,7 +64,7 @@ function App() {
     setEmptyPages(0);
     setPageMarkdowns([]);
     setRemovedLines(0);
-    setHeadings(0);
+    setHeadings(0); setTables([]);
     setCompare(false);
     setPage(1);
     setCopyStatus("idle");
@@ -117,7 +125,7 @@ function App() {
         setMarkdown(data.markdown);
         setPageMarkdowns(data.pageMarkdowns);
         setRemovedLines(data.removedLines);
-        setHeadings(data.headings);
+        setHeadings(data.headings); setTables(data.tables);
         setCopyStatus("idle");
         setEmptyPages(data.emptyPages);
         setDownloadBlob(
@@ -185,7 +193,7 @@ function App() {
         <section className="tool-card" aria-label="Chuyển PDF sang Markdown">
           <p className="hint">
             Trích chữ, ghép đoạn và nhận diện tiêu đề theo cỡ chữ. Chưa có OCR,
-            bảng hay hình ảnh; thứ tự đọc có thể sai với tài liệu nhiều cột. Các
+            ô gộp hay hình ảnh; thứ tự đọc có thể sai với tài liệu nhiều cột. Các
             quy tắc định dạng là ước lượng, hãy đối chiếu với PDF gốc.
           </p>
           <FileDropZone
@@ -242,7 +250,9 @@ function App() {
                 />
                 Bỏ header/footer lặp
               </label>
+              <label><input type="checkbox" checked={options.detectTables} onChange={event=>updateOptions({...options,detectTables:event.target.checked})} />Nhận diện bảng đơn giản</label>
               <small>
+                Bảng cần hàng/cột thẳng, không ô gộp. Bảng 2 cột cần dữ liệu số để giảm nhầm với bố cục nhiều cột. Dòng đầu dạng chữ được dùng làm tiêu đề; hãy kiểm tra lại.
                 Chỉ bỏ dòng nhỏ lặp ở mép ít nhất 3 trang. Bạn có thể tắt từng
                 tùy chọn và xem kết quả cập nhật.
               </small>
@@ -287,11 +297,12 @@ function App() {
                   : ""}
               </p>
               <p className="hint">
-                {headings} tiêu đề được nhận diện.{" "}
+                {headings} tiêu đề và {tables.length} bảng được nhận diện.{" "}
                 {removedLines > 0
                   ? `Đã bỏ ${removedLines} dòng header/footer lặp; tắt tùy chọn nếu muốn giữ lại.`
                   : "Không bỏ dòng header/footer nào."}
               </p>
+              {tables.length>0 && <div className="md-csv-links" aria-label="Tải bảng CSV">{tables.map((table,i)=><CsvDownload key={i} table={table} index={i+1} />)}</div>}
               <div className="md-actions">
                 <a
                   className="primary"

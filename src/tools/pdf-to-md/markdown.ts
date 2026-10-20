@@ -1,48 +1,6 @@
-export type TextPart = {
-  str: string;
-  transform: number[];
-  width: number;
-  height: number;
-  hasEOL: boolean;
-  fontFamily?: string;
-};
-
-export function escapeMarkdown(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/[\\`*_{}[\]()#+.!|~-]/g, "\\$&");
-}
-
-export function pageText(parts: TextPart[]): string {
-  const lines: string[] = [];
-  let line = "";
-  let previous: TextPart | undefined;
-  const flush = () => {
-    if (line.trim()) lines.push(line.trim());
-    line = "";
-  };
-  for (const part of parts) {
-    if (
-      previous &&
-      Math.abs(part.transform[5] - previous.transform[5]) >
-        Math.max(2, previous.height * 0.4)
-    )
-      flush();
-    if (line && part.str && !/\s$/.test(line) && !/^\s/.test(part.str)) {
-      const gap =
-        part.transform[4] -
-        ((previous?.transform[4] ?? 0) + (previous?.width ?? 0));
-      if (gap > 1) line += " ";
-    }
-    line += part.str;
-    if (part.hasEOL) flush();
-    previous = part;
-  }
-  flush();
-  return lines.join("\n");
-}
+import { escapeMarkdown, pageText, type TextPart } from "./text";
+export { escapeMarkdown, pageText, type TextPart } from "./text";
+import { detectTables, tableMarkdown, tableCsv, type ConvertedTable } from "./tables";
 
 export function makeMarkdown(name: string, pages: string[]): string {
   const title = escapeMarkdown(name.replace(/\.pdf$/i, ""));
@@ -63,13 +21,15 @@ export type ConversionOptions = {
   keepLineBreaks: boolean;
   detectHeadings: boolean;
   removeMargins: boolean;
+  detectTables: boolean;
 };
 export const defaultOptions: ConversionOptions = {
   keepLineBreaks: false,
   detectHeadings: true,
   removeMargins: true,
+  detectTables: true,
 };
-type Line = { text: string; x: number; y: number; size: number; bold: boolean };
+type Line = { text: string; x: number; y: number; size: number; bold: boolean; parts: TextPart[] };
 
 function weightedSize(values: { size: number; weight: number }[]): number {
   const weights = new Map<number, number>();
@@ -90,6 +50,7 @@ function linesFromParts(parts: TextPart[]): Line[] {
       const total = group.reduce((sum, part) => sum + weight(part), 0);
       lines.push({
         text,
+        parts: group,
         x: group[0].transform[4],
         y: group[0].transform[5],
         size: weightedSize(
@@ -217,6 +178,7 @@ export function convertDocument(
         .filter((level): level is number => level !== undefined),
     ),
   ].sort((a, b) => a - b);
+  const tables: ConvertedTable[] = [];
   let removedLines = 0;
   let headings = 0;
   let emptyPages = 0;
@@ -230,6 +192,8 @@ export function convertDocument(
       }
       return true;
     });
+    const regions = options.detectTables ? detectTables(kept.flatMap(line => line.parts)) : [];
+    const emitted = new Set<typeof regions[number]>();
     const blocks: string[] = [];
     let paragraph = "";
     let previous: Line | undefined;
@@ -238,6 +202,12 @@ export function convertDocument(
       paragraph = "";
     };
     for (const line of kept) {
+      const region = regions.find(table => line.parts.filter(part => part.str.trim()).every(part => table.parts.has(part)));
+      if (region) {
+        flush(); previous = undefined;
+        if (!emitted.has(region)) { blocks.push(tableMarkdown(region.rows)); tables.push({ page: index+1, cells: region.rows, csv: tableCsv(region.rows) }); emitted.add(region); }
+        continue;
+      }
       const heading = options.detectHeadings
         ? headingLevel(line, bodySize)
         : undefined;
@@ -280,5 +250,6 @@ export function convertDocument(
     emptyPages,
     removedLines,
     headings,
+    tables,
   };
 }

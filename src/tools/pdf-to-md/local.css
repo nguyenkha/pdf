@@ -164,3 +164,9 @@
 .md-page-controls > .secondary {
   width: auto;
 }
+.md-table-scroll { overflow-x: auto; }
+.md-preview table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.md-preview th,.md-preview td { border: 1px solid var(--border); padding: 10px; text-align: start; vertical-align: top; }
+.md-preview th { background: var(--surface-2); font-weight: 650; }
+.md-csv-links { display: flex; flex-wrap: wrap; gap: 8px; }
+.md-csv-links .secondary { width: auto; }

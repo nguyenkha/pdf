@@ -1,4 +1,5 @@
 import { createElement } from "react";
+import { splitTableRow } from "./tables";
 
 function readable(text: string): string {
   return text
@@ -17,6 +18,11 @@ export function MarkdownPreview({ markdown }: { markdown: string }) {
         .split(/\n\s*\n/)
         .map((block, index) => {
           if (block === "---") return <hr key={index} />;
+          const rows = block.split("\n");
+          if (rows.length >= 3 && rows.every(row => row.startsWith("|") && row.endsWith("|")) && splitTableRow(rows[1]).every(cell => /^:?-{3,}:?$/.test(cell))) {
+            const head = splitTableRow(rows[0]);
+            return <div className="md-table-scroll" key={index}><table aria-label="Bảng dữ liệu nhận diện"><thead><tr>{head.map((cell,col)=><th scope="col" key={col}>{readable(cell)}</th>)}</tr></thead><tbody>{rows.slice(2).map((row,i)=><tr key={i}>{splitTableRow(row).map((cell,col)=><td key={col}>{readable(cell)}</td>)}</tr>)}</tbody></table></div>;
+          }
           const heading = /^(#{1,6}) (.*)$/.exec(block);
           if (heading)
             return createElement(

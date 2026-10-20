@@ -254,3 +254,10 @@ test("Copy writes Markdown on request and has a manual fallback", async ({
   await expect(page.getByText(/Trình duyệt không cho phép copy/)).toBeVisible();
   await expect(page.getByLabel("Nội dung Markdown")).toBeFocused();
 });
+
+test("recognizes a simple table, previews it and exports its own CSV",async({page})=>{
+ await page.goto(path);await page.locator('input[type=file]').setInputFiles('experiments/pdf-to-md/fixtures/simple-table.pdf');await page.getByRole('button',{name:'Chuyển sang Markdown'}).click();
+ await expect(page.getByRole('table',{name:'Bảng dữ liệu nhận diện'})).toBeVisible();await expect(page.getByRole('cell',{name:'Apple',exact:true})).toBeVisible();
+ const download=page.waitForEvent('download');await page.getByRole('link',{name:'CSV · Bảng 1 · Trang 1'}).click();const result=await download;expect(result.suggestedFilename()).toBe('table-page-1-1.csv');expect(await readFile((await result.path())!,'utf8')).toContain('"Apple","12","$24"');
+ await page.getByLabel('Nhận diện bảng đơn giản').uncheck();await expect(page.getByRole('table')).toHaveCount(0);await expect(page.getByRole('article',{name:'Xem trước Markdown'})).toContainText('Apple');await expect(page.getByRole('link',{name:/CSV · Bảng/})).toHaveCount(0);
+});
