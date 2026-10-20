@@ -1,7 +1,19 @@
+import {
+  safeUrl,
+  linkForLine,
+  listItem,
+  footnotes,
+  type PdfLink,
+} from "./structure";
 import { escapeMarkdown, pageText, type TextPart } from "./text";
 export { escapeMarkdown, pageText, type TextPart } from "./text";
 import { restoreReadingOrder } from "./columns";
-import { detectTables, tableMarkdown, tableCsv, type ConvertedTable } from "./tables";
+import {
+  detectTables,
+  tableMarkdown,
+  tableCsv,
+  type ConvertedTable,
+} from "./tables";
 
 export function makeMarkdown(name: string, pages: string[]): string {
   const title = escapeMarkdown(name.replace(/\.pdf$/i, ""));
@@ -17,7 +29,12 @@ export function makeMarkdown(name: string, pages: string[]): string {
   );
 }
 
-export type TextPage = { parts: TextPart[]; width: number; height: number };
+export type TextPage = {
+  parts: TextPart[];
+  width: number;
+  height: number;
+  links?: PdfLink[];
+};
 export type ConversionOptions = {
   keepLineBreaks: boolean;
   detectHeadings: boolean;
@@ -25,6 +42,9 @@ export type ConversionOptions = {
   detectTables: boolean;
   restoreColumns: boolean;
   joinPages: boolean;
+  preserveLinks: boolean;
+  preserveLists: boolean;
+  preserveFootnotes: boolean;
 };
 export const defaultOptions: ConversionOptions = {
   keepLineBreaks: false,
@@ -33,8 +53,18 @@ export const defaultOptions: ConversionOptions = {
   detectTables: true,
   restoreColumns: false,
   joinPages: false,
+  preserveLinks: true,
+  preserveLists: true,
+  preserveFootnotes: true,
 };
-type Line = { text: string; x: number; y: number; size: number; bold: boolean; parts: TextPart[] };
+export type Line = {
+  text: string;
+  x: number;
+  y: number;
+  size: number;
+  bold: boolean;
+  parts: TextPart[];
+};
 
 function weightedSize(values: { size: number; weight: number }[]): number {
   const weights = new Map<number, number>();
@@ -100,6 +130,7 @@ function marginKey(
   page: TextPage,
   bodySize: number,
 ): string | undefined {
+  if (/^\d{1,3}[.)]?\s+\p{L}/u.test(line.text)) return;
   if (line.size > bodySize * 1.05 || line.text.length > 120) return;
   const y = line.y / page.height;
   const edge = y <= 0.075 ? "top" : y >= 0.925 ? "bottom" : undefined;
@@ -145,9 +176,11 @@ export function convertDocument(
   options: ConversionOptions,
 ) {
   let columnPages = 0;
-  const lines = pages.map(page => {
-    const ordered = options.restoreColumns ? restoreReadingOrder(page.parts,page.width,page.height) : { parts:page.parts,reordered:false };
-    if(ordered.reordered)columnPages++;
+  const lines = pages.map((page) => {
+    const ordered = options.restoreColumns
+      ? restoreReadingOrder(page.parts, page.width, page.height)
+      : { parts: page.parts, reordered: false };
+    if (ordered.reordered) columnPages++;
     return linesFromParts(ordered.parts);
   });
   const bodySize = weightedSize(
@@ -192,6 +225,9 @@ export function convertDocument(
   let removedLines = 0;
   let headings = 0;
   let emptyPages = 0;
+  let linkCount = 0;
+  let noteCount = 0;
+  let listCount = 0;
   const pageMarkdowns = lines.map((original, index) => {
     if (!original.length) emptyPages++;
     const kept = original.filter((line) => {
@@ -202,20 +238,83 @@ export function convertDocument(
       }
       return true;
     });
-    const regions = options.detectTables ? detectTables(kept.flatMap(line => line.parts)) : [];
-    const emitted = new Set<typeof regions[number]>();
+    const notes = options.preserveFootnotes
+      ? footnotes(kept, pages[index].height, bodySize, index + 1)
+      : {
+          skip: new Set<Line>(),
+          overrides: new Map<Line, string>(),
+          references: new Map<Line, string[]>(),
+          definitions: [] as string[],
+        };
+    const links = options.preserveLinks
+      ? (pages[index].links ?? []).filter((link) => safeUrl(link.url))
+      : [];
+    const usedLinks = new Set<PdfLink>();
+    noteCount += notes.definitions.length;
+    const regions = options.detectTables
+      ? detectTables(kept.flatMap((line) => line.parts))
+      : [];
+    const emitted = new Set<(typeof regions)[number]>();
     const blocks: string[] = [];
     let paragraph = "";
+    let paragraphRefs: string[] = [];
     let previous: Line | undefined;
     const flush = () => {
-      if (paragraph) blocks.push(escapeMarkdown(paragraph));
+      if (paragraph)
+        blocks.push(escapeMarkdown(paragraph) + paragraphRefs.join(""));
       paragraph = "";
+      paragraphRefs = [];
     };
-    for (const line of kept) {
-      const region = regions.find(table => line.parts.filter(part => part.str.trim()).every(part => table.parts.has(part)));
+    for (const originalLine of kept) {
+      if (notes.skip.has(originalLine)) continue;
+      const refs = notes.references.get(originalLine) ?? [];
+      const line = {
+        ...originalLine,
+        text: notes.overrides.get(originalLine) ?? originalLine.text,
+      };
+      const region = regions.find((table) =>
+        line.parts
+          .filter((part) => part.str.trim())
+          .every((part) => table.parts.has(part)),
+      );
       if (region) {
-        flush(); previous = undefined;
-        if (!emitted.has(region)) { blocks.push(tableMarkdown(region.rows)); tables.push({ page: index+1, cells: region.rows, csv: tableCsv(region.rows) }); emitted.add(region); }
+        flush();
+        previous = undefined;
+        if (!emitted.has(region)) {
+          blocks.push(tableMarkdown(region.rows));
+          tables.push({
+            page: index + 1,
+            cells: region.rows,
+            csv: tableCsv(region.rows),
+          });
+          emitted.add(region);
+        }
+        continue;
+      }
+      const link = linkForLine(line, links);
+      if (link) {
+        flush();
+        blocks.push(
+          `[${escapeMarkdown(line.text)}](<${safeUrl(link.url)}>)` +
+            refs.join(""),
+        );
+        usedLinks.add(link);
+        linkCount++;
+        previous = undefined;
+        continue;
+      }
+      const item = options.preserveLists ? listItem(line.text) : undefined;
+      if (item) {
+        flush();
+        const rendered =
+          `${item.marker} ${escapeMarkdown(item.body)}` + refs.join("");
+        const last = blocks.at(-1);
+        const prefix = item.ordered ? /^\d+\. / : /^- /;
+        if (last && last.split("\n").every((row) => prefix.test(row)))
+          blocks[blocks.length - 1] += "\n" + rendered;
+        else blocks.push(rendered);
+        listCount++;
+        previous = undefined;
         continue;
       }
       const heading = options.detectHeadings
@@ -227,6 +326,7 @@ export function convertDocument(
           `${"#".repeat((options.joinPages ? 2 : 3) + headingLevels.indexOf(heading))} ${escapeMarkdown(line.text)}`,
         );
         headings++;
+        if (refs.length) blocks[blocks.length - 1] += refs.join("");
         previous = undefined;
         continue;
       }
@@ -244,9 +344,17 @@ export function convertDocument(
         : options.keepLineBreaks
           ? paragraph + "\n" + line.text
           : joinWrapped(paragraph, line.text);
+      paragraphRefs.push(...refs);
       previous = line;
     }
     flush();
+    for (const link of links) {
+      if (!usedLinks.has(link)) {
+        blocks.push(`[${escapeMarkdown(link.url)}](<${safeUrl(link.url)}>)`);
+        linkCount++;
+      }
+    }
+    blocks.push(...notes.definitions);
     const content =
       blocks.join("\n\n") ||
       (original.length
@@ -255,12 +363,15 @@ export function convertDocument(
     return `## Trang ${index + 1}\n\n${content}`;
   });
   return {
-    markdown: `# ${escapeMarkdown(name.replace(/\.pdf$/i, ""))}\n\n${options.joinPages ? pageMarkdowns.map(page=>page.replace(/^## Trang \d+\n\n/, "")).join("\n\n") : pageMarkdowns.join("\n\n---\n\n")}\n`,
+    markdown: `# ${escapeMarkdown(name.replace(/\.pdf$/i, ""))}\n\n${options.joinPages ? pageMarkdowns.map((page) => page.replace(/^## Trang \d+\n\n/, "")).join("\n\n") : pageMarkdowns.join("\n\n---\n\n")}\n`,
     pageMarkdowns,
     emptyPages,
     removedLines,
     headings,
     tables,
     columnPages,
+    linkCount,
+    noteCount,
+    listCount,
   };
 }

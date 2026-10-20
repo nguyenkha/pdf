@@ -45,3 +45,10 @@ export function pageText(parts: TextPart[]): string {
   return lines.join("\n");
 }
 
+export function readableMarkdown(text: string): string {
+  return text
+    .replace(/\\([\\`*_{}[\]()#+.!|~-])/g, "$1")
+    .replace(/&gt;/g, ">")
+    .replace(/&lt;/g, "<")
+    .replace(/&amp;/g, "&");
+}

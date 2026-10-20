@@ -255,21 +255,130 @@ test("Copy writes Markdown on request and has a manual fallback", async ({
   await expect(page.getByLabel("Nội dung Markdown")).toBeFocused();
 });
 
-test("recognizes a simple table, previews it and exports its own CSV",async({page})=>{
- await page.goto(path);await page.locator('input[type=file]').setInputFiles('experiments/pdf-to-md/fixtures/simple-table.pdf');await page.getByRole('button',{name:'Chuyển sang Markdown'}).click();
- await expect(page.getByRole('table',{name:'Bảng dữ liệu nhận diện'})).toBeVisible();await expect(page.getByRole('cell',{name:'Apple',exact:true})).toBeVisible();
- const download=page.waitForEvent('download');await page.getByRole('link',{name:'CSV · Bảng 1 · Trang 1'}).click();const result=await download;expect(result.suggestedFilename()).toBe('table-page-1-1.csv');expect(await readFile((await result.path())!,'utf8')).toContain('"Apple","12","$24"');
- await page.getByLabel('Nhận diện bảng đơn giản').uncheck();await expect(page.getByRole('table')).toHaveCount(0);await expect(page.getByRole('article',{name:'Xem trước Markdown'})).toContainText('Apple');await expect(page.getByRole('link',{name:/CSV · Bảng/})).toHaveCount(0);
+test("recognizes a simple table, previews it and exports its own CSV", async ({
+  page,
+}) => {
+  await page.goto(path);
+  await page
+    .locator("input[type=file]")
+    .setInputFiles("experiments/pdf-to-md/fixtures/simple-table.pdf");
+  await page.getByRole("button", { name: "Chuyển sang Markdown" }).click();
+  await expect(
+    page.getByRole("table", { name: "Bảng dữ liệu nhận diện" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("cell", { name: "Apple", exact: true }),
+  ).toBeVisible();
+  const download = page.waitForEvent("download");
+  await page.getByRole("link", { name: "CSV · Bảng 1 · Trang 1" }).click();
+  const result = await download;
+  expect(result.suggestedFilename()).toBe("table-page-1-1.csv");
+  expect(await readFile((await result.path())!, "utf8")).toContain(
+    '"Apple","12","$24"',
+  );
+  await page.getByLabel("Nhận diện bảng đơn giản").uncheck();
+  await expect(page.getByRole("table")).toHaveCount(0);
+  await expect(
+    page.getByRole("article", { name: "Xem trước Markdown" }),
+  ).toContainText("Apple");
+  await expect(page.getByRole("link", { name: /CSV · Bảng/ })).toHaveCount(0);
 });
 
-test('restores clear two-column reading order and can keep original order',async({page})=>{
- await page.goto(path);await page.locator('input[type=file]').setInputFiles('experiments/pdf-to-md/fixtures/two-column.pdf');await page.getByRole('button',{name:'Chuyển sang Markdown'}).click();await page.getByRole('button',{name:'Markdown',exact:true}).click();
- const source=page.getByLabel('Nội dung Markdown');await expect(source).toHaveValue(/Right column sentence/);const original=await source.inputValue();expect(original.indexOf('Right column sentence 1')).toBeLessThan(original.indexOf('Left column sentence 4'));
- await page.getByLabel('Khôi phục thứ tự 2 cột').check();await expect(page.getByText(/Đã khôi phục 2 cột trên 1 trang/)).toBeVisible();const restored=await source.inputValue();expect(restored.indexOf('Left column sentence 4')).toBeLessThan(restored.indexOf('Right column sentence 1'));
- await page.getByLabel('Khôi phục thứ tự 2 cột').uncheck();await expect(source).toHaveValue(original);
+test("restores clear two-column reading order and can keep original order", async ({
+  page,
+}) => {
+  await page.goto(path);
+  await page
+    .locator("input[type=file]")
+    .setInputFiles("experiments/pdf-to-md/fixtures/two-column.pdf");
+  await page.getByRole("button", { name: "Chuyển sang Markdown" }).click();
+  await page.getByRole("button", { name: "Markdown", exact: true }).click();
+  const source = page.getByLabel("Nội dung Markdown");
+  await expect(source).toHaveValue(/Right column sentence/);
+  const original = await source.inputValue();
+  expect(original.indexOf("Right column sentence 1")).toBeLessThan(
+    original.indexOf("Left column sentence 4"),
+  );
+  await page.getByLabel("Khôi phục thứ tự 2 cột").check();
+  await expect(page.getByText(/Đã khôi phục 2 cột trên 1 trang/)).toBeVisible();
+  const restored = await source.inputValue();
+  expect(restored.indexOf("Left column sentence 4")).toBeLessThan(
+    restored.indexOf("Right column sentence 1"),
+  );
+  await page.getByLabel("Khôi phục thứ tự 2 cột").uncheck();
+  await expect(source).toHaveValue(original);
 });
-test('can join pages without losing page text or comparison navigation',async({page})=>{
- await page.goto(path);await page.locator('input[type=file]').setInputFiles('tests/fixtures/multipage.pdf');await page.getByRole('button',{name:'Chuyển sang Markdown'}).click();await page.getByRole('button',{name:'Markdown',exact:true}).click();await expect(page.getByLabel('Nội dung Markdown')).toHaveValue(/## Trang 3/);
- await page.getByLabel('Gộp trang (bỏ mốc trang)').check();await expect(page.getByLabel('Nội dung Markdown')).not.toHaveValue(/## Trang/);await expect(page.getByLabel('Nội dung Markdown')).toHaveValue(/Selectable page 3/);
- await page.getByRole('button',{name:'So sánh với PDF'}).click();await expect(page.getByText('Trang 1/3',{exact:true})).toBeVisible();
+test("can join pages without losing page text or comparison navigation", async ({
+  page,
+}) => {
+  await page.goto(path);
+  await page
+    .locator("input[type=file]")
+    .setInputFiles("tests/fixtures/multipage.pdf");
+  await page.getByRole("button", { name: "Chuyển sang Markdown" }).click();
+  await page.getByRole("button", { name: "Markdown", exact: true }).click();
+  await expect(page.getByLabel("Nội dung Markdown")).toHaveValue(/## Trang 3/);
+  await page.getByLabel("Gộp trang (bỏ mốc trang)").check();
+  await expect(page.getByLabel("Nội dung Markdown")).not.toHaveValue(
+    /## Trang/,
+  );
+  await expect(page.getByLabel("Nội dung Markdown")).toHaveValue(
+    /Selectable page 3/,
+  );
+  await page.getByRole("button", { name: "So sánh với PDF" }).click();
+  await expect(page.getByText("Trang 1/3", { exact: true })).toBeVisible();
+});
+
+test("preserves links, ordered/bullet lists and clearly matched footnotes without external requests", async ({
+  page,
+}) => {
+  const requests: string[] = [];
+  page.context().on("request", (request) => requests.push(request.url()));
+  await page.goto(path);
+  await page
+    .locator("input[type=file]")
+    .setInputFiles("experiments/pdf-to-md/fixtures/links-lists-notes.pdf");
+  await page.getByRole("button", { name: "Chuyển sang Markdown" }).click();
+  await expect(
+    page.getByRole("link", {
+      name: "Visit the reference website",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", {
+      name: "Visit the reference website",
+      exact: true,
+    }),
+  ).toHaveAttribute("title", "https://example.com/reference");
+  await expect(page.locator(".md-preview ol li")).toHaveCount(2);
+  await expect(page.locator(".md-preview ul li")).toHaveCount(2);
+  await expect(
+    page.getByRole("link", { name: "Chú thích 1", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator("#fn-p1-1")).toContainText(
+    "A synthetic explanatory footnote.",
+  );
+  const origin = new URL(page.url()).origin;
+  expect(
+    requests.filter(
+      (url) => url.startsWith("http") && new URL(url).origin !== origin,
+    ),
+  ).toEqual([]);
+  await page.getByRole("button", { name: "Markdown", exact: true }).click();
+  await expect(page.getByLabel("Nội dung Markdown")).toHaveValue(
+    /\[\^p1-1\]: A synthetic explanatory footnote/,
+  );
+  await page.getByLabel("Nhận diện chú thích cuối trang").uncheck();
+  await expect(page.getByLabel("Nội dung Markdown")).not.toHaveValue(
+    /\[\^p1-1\]/,
+  );
+  await page.getByLabel("Giữ liên kết").uncheck();
+  await expect(page.getByLabel("Nội dung Markdown")).not.toHaveValue(
+    /https:\/\/example.com/,
+  );
+  await page.getByLabel("Giữ danh sách").uncheck();
+  await expect(page.getByLabel("Nội dung Markdown")).toHaveValue(
+    /1\\\. First ordered item/,
+  );
 });

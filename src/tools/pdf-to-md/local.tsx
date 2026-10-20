@@ -11,10 +11,27 @@ const PdfPagePreview = lazy(() => import("./PdfPagePreview"));
 import "../../styles/main.css";
 import "./local.css";
 
-function CsvDownload({table,index}:{table:ConvertedTable;index:number}) {
-  const blob = useMemo(()=>new Blob([table.csv],{type:"text/csv;charset=utf-8"}),[table.csv]);
+function CsvDownload({
+  table,
+  index,
+}: {
+  table: ConvertedTable;
+  index: number;
+}) {
+  const blob = useMemo(
+    () => new Blob([table.csv], { type: "text/csv;charset=utf-8" }),
+    [table.csv],
+  );
   const url = useObjectUrl(blob);
-  return <a className="secondary" href={url} download={`table-page-${table.page}-${index}.csv`}>CSV · Bảng {index} · Trang {table.page}</a>;
+  return (
+    <a
+      className="secondary"
+      href={url}
+      download={`table-page-${table.page}-${index}.csv`}
+    >
+      CSV · Bảng {index} · Trang {table.page}
+    </a>
+  );
 }
 
 function App() {
@@ -29,7 +46,12 @@ function App() {
   const [pageMarkdowns, setPageMarkdowns] = useState<string[]>([]);
   const [removedLines, setRemovedLines] = useState(0);
   const [headings, setHeadings] = useState(0);
-  const [columnPages,setColumnPages]=useState(0);
+  const [columnPages, setColumnPages] = useState(0);
+  const [structureStats, setStructureStats] = useState({
+    links: 0,
+    notes: 0,
+    lists: 0,
+  });
   const [tables, setTables] = useState<ConvertedTable[]>([]);
   const [compare, setCompare] = useState(false);
   const [page, setPage] = useState(1);
@@ -65,7 +87,8 @@ function App() {
     setEmptyPages(0);
     setPageMarkdowns([]);
     setRemovedLines(0);
-    setHeadings(0); setTables([]);
+    setHeadings(0);
+    setTables([]);
     setCompare(false);
     setPage(1);
     setCopyStatus("idle");
@@ -126,7 +149,14 @@ function App() {
         setMarkdown(data.markdown);
         setPageMarkdowns(data.pageMarkdowns);
         setRemovedLines(data.removedLines);
-        setColumnPages(data.columnPages); setHeadings(data.headings); setTables(data.tables);
+        setStructureStats({
+          links: data.linkCount,
+          notes: data.noteCount,
+          lists: data.listCount,
+        });
+        setColumnPages(data.columnPages);
+        setHeadings(data.headings);
+        setTables(data.tables);
         setCopyStatus("idle");
         setEmptyPages(data.emptyPages);
         setDownloadBlob(
@@ -194,8 +224,8 @@ function App() {
         <section className="tool-card" aria-label="Chuyển PDF sang Markdown">
           <p className="hint">
             Trích chữ, ghép đoạn và nhận diện tiêu đề theo cỡ chữ. Chưa có OCR,
-            ô gộp hay hình ảnh; thứ tự đọc có thể sai với tài liệu nhiều cột. Các
-            quy tắc định dạng là ước lượng, hãy đối chiếu với PDF gốc.
+            ô gộp hay hình ảnh; thứ tự đọc có thể sai với tài liệu nhiều cột.
+            Các quy tắc định dạng là ước lượng, hãy đối chiếu với PDF gốc.
           </p>
           <FileDropZone
             t={{
@@ -251,14 +281,95 @@ function App() {
                 />
                 Bỏ header/footer lặp
               </label>
-              <label><input type="checkbox" checked={options.detectTables} onChange={event=>updateOptions({...options,detectTables:event.target.checked})} />Nhận diện bảng đơn giản</label>
-              <label><input type="checkbox" checked={options.restoreColumns} onChange={event=>updateOptions({...options,restoreColumns:event.target.checked})} />Khôi phục thứ tự 2 cột</label>
-              <label><input type="checkbox" checked={options.joinPages} onChange={event=>updateOptions({...options,joinPages:event.target.checked})} />Gộp trang (bỏ mốc trang)</label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={options.detectTables}
+                  onChange={(event) =>
+                    updateOptions({
+                      ...options,
+                      detectTables: event.target.checked,
+                    })
+                  }
+                />
+                Nhận diện bảng đơn giản
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={options.restoreColumns}
+                  onChange={(event) =>
+                    updateOptions({
+                      ...options,
+                      restoreColumns: event.target.checked,
+                    })
+                  }
+                />
+                Khôi phục thứ tự 2 cột
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={options.joinPages}
+                  onChange={(event) =>
+                    updateOptions({
+                      ...options,
+                      joinPages: event.target.checked,
+                    })
+                  }
+                />
+                Gộp trang (bỏ mốc trang)
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={options.preserveLinks}
+                  onChange={(event) =>
+                    updateOptions({
+                      ...options,
+                      preserveLinks: event.target.checked,
+                    })
+                  }
+                />
+                Giữ liên kết
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={options.preserveLists}
+                  onChange={(event) =>
+                    updateOptions({
+                      ...options,
+                      preserveLists: event.target.checked,
+                    })
+                  }
+                />
+                Giữ danh sách
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={options.preserveFootnotes}
+                  onChange={(event) =>
+                    updateOptions({
+                      ...options,
+                      preserveFootnotes: event.target.checked,
+                    })
+                  }
+                />
+                Nhận diện chú thích cuối trang
+              </label>
               <small>
-                Chế độ 2 cột chỉ đổi thứ tự khi có khoảng trống chia cột rõ, đọc cột trái trước cột phải. Gộp trang bỏ tiêu đề trang, không tự nối câu qua ranh giới trang.
-                Bảng cần hàng/cột thẳng, không ô gộp. Bảng 2 cột cần dữ liệu số để giảm nhầm với bố cục nhiều cột. Dòng đầu dạng chữ được dùng làm tiêu đề; hãy kiểm tra lại.
-                Chỉ bỏ dòng nhỏ lặp ở mép ít nhất 3 trang. Bạn có thể tắt từng
-                tùy chọn và xem kết quả cập nhật.
+                Chú thích chỉ được ghép khi có dấu số nhỏ trong thân bài khớp
+                với chú thích nhỏ ở cuối trang. Liên kết ngoài chỉ mở khi bạn
+                nhấn, preview không tải ảnh ngoài. Chế độ 2 cột chỉ đổi thứ tự
+                khi có khoảng trống chia cột rõ, đọc cột trái trước cột phải.
+                Gộp trang bỏ tiêu đề trang, không tự nối câu qua ranh giới
+                trang. Bảng cần hàng/cột thẳng, không ô gộp. Bảng 2 cột cần dữ
+                liệu số để giảm nhầm với bố cục nhiều cột. Dòng đầu dạng chữ
+                được dùng làm tiêu đề; hãy kiểm tra lại. Chỉ bỏ dòng nhỏ lặp ở
+                mép ít nhất 3 trang. Bạn có thể tắt từng tùy chọn và xem kết quả
+                cập nhật.
               </small>
             </fieldset>
           )}
@@ -301,12 +412,23 @@ function App() {
                   : ""}
               </p>
               <p className="hint">
-                {headings} tiêu đề và {tables.length} bảng được nhận diện. {options.restoreColumns ? `Đã khôi phục 2 cột trên ${columnPages} trang; trang không rõ giữ nguyên thứ tự.` : ""}{" "}
+                {headings} tiêu đề và {tables.length} bảng được nhận diện.{" "}
+                {structureStats.links} liên kết, {structureStats.lists} mục danh
+                sách, {structureStats.notes} chú thích.{" "}
+                {options.restoreColumns
+                  ? `Đã khôi phục 2 cột trên ${columnPages} trang; trang không rõ giữ nguyên thứ tự.`
+                  : ""}{" "}
                 {removedLines > 0
                   ? `Đã bỏ ${removedLines} dòng header/footer lặp; tắt tùy chọn nếu muốn giữ lại.`
                   : "Không bỏ dòng header/footer nào."}
               </p>
-              {tables.length>0 && <div className="md-csv-links" aria-label="Tải bảng CSV">{tables.map((table,i)=><CsvDownload key={i} table={table} index={i+1} />)}</div>}
+              {tables.length > 0 && (
+                <div className="md-csv-links" aria-label="Tải bảng CSV">
+                  {tables.map((table, i) => (
+                    <CsvDownload key={i} table={table} index={i + 1} />
+                  ))}
+                </div>
+              )}
               <div className="md-actions">
                 <a
                   className="primary"

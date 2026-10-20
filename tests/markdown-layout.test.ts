@@ -99,7 +99,7 @@ describe("layout-aware Markdown", () => {
       line("1. A list item", 116),
       line("Another column", 120, 12, 350),
     ]);
-    expect(md).toContain("Body line\n\n1\\. A list item\n\nAnother column");
+    expect(md).toContain("Body line\n\n1. A list item\n\nAnother column");
   });
   it("removes repeated small margin text and variable page numbers, never repeated body text", () => {
     const pages = Array.from({ length: 4 }, (_, i) =>
