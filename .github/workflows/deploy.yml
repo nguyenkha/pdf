@@ -41,11 +41,17 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
+        # WebKit is the slow one: two shards keep it level with Chromium.
         include:
           - project: chromium
             browser: chromium
+            shard: 1/1
           - project: mobile
             browser: webkit
+            shard: 1/2
+          - project: mobile
+            browser: webkit
+            shard: 2/2
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
@@ -64,10 +70,18 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ matrix.browser }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm exec playwright install --with-deps ${{ matrix.browser }}
-      - run: pnpm test:e2e --project=${{ matrix.project }} --workers=4
+      - run: pnpm test:e2e --project=${{ matrix.project }} --shard=${{ matrix.shard }} --workers=4
   corpus:
     needs: build
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - project: iphone-webkit
+            browser: webkit
+          - project: desktop-chromium
+            browser: chromium
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
@@ -84,14 +98,14 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-corpus-${{ hashFiles('pnpm-lock.yaml') }}
-      - run: pnpm exec playwright install --with-deps chromium webkit
+          key: playwright-${{ matrix.browser }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - run: pnpm exec playwright install --with-deps ${{ matrix.browser }}
       - run: sudo apt-get update && sudo apt-get install -y ghostscript
       - name: Corpus and memory budget
         run: |
           echo "| Browser | File | Time | Peak memory |" >> "$GITHUB_STEP_SUMMARY"
           echo "|---|---|---|---|" >> "$GITHUB_STEP_SUMMARY"
-          pnpm test:corpus
+          pnpm test:corpus --project=${{ matrix.project }}
   deploy:
     # Other branches can run the checks by hand; only main is published.
     if: github.ref == 'refs/heads/main'
