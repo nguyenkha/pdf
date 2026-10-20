@@ -17,6 +17,7 @@ import { metadata } from "./i18n/metadata";
 // shifted the page below it (Lighthouse CLS 0.22).
 import CompressTool from "./tools/compress/CompressTool";
 import { toolFromPath, type ToolProps } from "./app/tools";
+import { faqFor } from "./app/faq";
 import { ToolSwitcher } from "./components/ToolSwitcher";
 import { ToolsMenu } from "./components/ToolsMenu";
 import { config } from "./app/config";
@@ -230,24 +231,16 @@ function App({
               <p>{t.whyText}</p>
             </div>
           </div>
-          {home && <section className="faq">
+          {/* This tool's questions, then the ones every tool shares. */}
+          <section className="faq">
             <h2>{t.faq}</h2>
-            {(
-              [
-                [t.q1, t.a1],
-                [t.q2, t.a2],
-                [t.q3, t.a3],
-                [t.q4, t.a4],
-                [t.q5, t.a5],
-                [t.q6, t.a6],
-              ] as const
-            ).map(([q, a]) => (
-              <details key={q}>
-                <summary>{q}</summary>
-                <p>{a}</p>
+            {faqFor(activeTool.id).map(([question, answer]) => (
+              <details key={question}>
+                <summary>{t[question as keyof Messages]}</summary>
+                <p>{t[answer as keyof Messages]}</p>
               </details>
             ))}
-          </section>}
+          </section>
           {/* The short version on every tool page; details on /privacy/. */}
           <section className="privacy-section" id="privacy">
             <h2>{t.privacyTitle}</h2>

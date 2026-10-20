@@ -1,12 +1,13 @@
 import { metadata } from "../src/i18n/metadata.ts";
 import { SIZE_PAGES } from "../src/app/sizes.ts";
+import { faqFor } from "../src/app/faq.ts";
 
 // Mirrors the built tools in src/app/tools.ts (that file imports React
 // components); the locale home page redirects to compress. MORE_PLANNED mirrors its
 // unnamed "more tools coming" placeholder.
 const TOOLS = [
-  { slug: "compress", nameKey: "compress" },
-  { slug: "merge", nameKey: "toolMerge" },
+  { id: "compress", slug: "compress", nameKey: "compress" },
+  { id: "merge", slug: "merge", nameKey: "toolMerge" },
 ];
 const MORE_PLANNED = true;
 import fs from "node:fs";
@@ -122,7 +123,6 @@ function socialTags(locale, t, title, description, url) {
     .map(([kind, key, value]) => `<meta ${kind}="${key}" content="${escape(value)}">`)
     .join("");
 }
-const FAQ = [1, 2, 3, 4, 5, 6];
 // Matches ToolSwitcher: built tools plus the unnamed placeholder.
 const switcher = (t, locale) =>
   TOOLS.length < 2 && !MORE_PLANNED
@@ -142,6 +142,7 @@ for (const locale of locales) {
   const sizeLinks = `<nav class="sizes"><span>${escape(t.sizesTitle)}:</span>${SIZE_PAGES.map((slug) => `<a href="/${locale}/${sizePath(slug)}" title="${escape(fill(t.sizeLink, { size: sizeLabel(slug) }))}">${sizeLabel(slug)}</a>`).join("")}</nav>`;
   for (const suffix of families.slice(0, -1)) {
     const tool = toolPages.find((entry) => `${entry.slug}/` === suffix);
+    const faq = faqFor(tool ? tool.id : "compress");
     const text = (key) => {
       if (!t[key]) throw new Error(`seo: missing string ${key} for ${locale}`);
       return t[key];
@@ -171,22 +172,17 @@ for (const locale of locales) {
         image: `https://pdf.kha.do/og/${locale}.png`,
         offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
       },
-      // The FAQ answers are about compressing; other tools have none yet.
-      ...(tool
-        ? []
-        : [
-            {
-              "@context": "https://schema.org",
-              "@type": "FAQPage",
-              mainEntity: FAQ.map((i) => ({
-                "@type": "Question",
-                name: t["q" + i],
-                acceptedAnswer: { "@type": "Answer", text: t["a" + i] },
-              })),
-            },
-          ]),
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        mainEntity: faq.map(([q, a]) => ({
+          "@type": "Question",
+          name: text(q),
+          acceptedAnswer: { "@type": "Answer", text: text(a) },
+        })),
+      },
     ];
-    const content = `${header}<main><div class="hero"><div class="eyebrow">${escape(t.privacy)}</div><h1>${escape(h1)}</h1><p>${escape(intro)}</p></div><div id="tool">${switcher(t, locale)}<section class="tool-card placeholder" aria-label="${escape(tool ? t[tool.nameKey] : t.compress)}"></section></div><section class="content"><h2>${escape(t.how)}</h2><p>${escape(tool ? text(`${tool.nameKey}HowText`) : t.howText)}</p><h2>${escape(t.why)}</h2><p>${escape(t.whyText)}</p></section>${tool ? "" : `<section class="faq"><h2>${escape(t.faq)}</h2>${FAQ.map((i) => `<h3>${escape(t["q" + i])}</h3><p>${escape(t["a" + i])}</p>`).join("")}</section>`}<section class="privacy-section"><h2>${escape(t.privacyTitle)}</h2><p class="philosophy">${escape(t.philosophy)}</p><p>${escape(t.privacyBody)}</p><a class="more-link" href="/${locale}/privacy/">${escape(t.privacyMore)} →</a></section>${tool ? "" : sizeLinks}</main>`;
+    const content = `${header}<main><div class="hero"><div class="eyebrow">${escape(t.privacy)}</div><h1>${escape(h1)}</h1><p>${escape(intro)}</p></div><div id="tool">${switcher(t, locale)}<section class="tool-card placeholder" aria-label="${escape(tool ? t[tool.nameKey] : t.compress)}"></section></div><section class="content"><h2>${escape(t.how)}</h2><p>${escape(tool ? text(`${tool.nameKey}HowText`) : t.howText)}</p><h2>${escape(t.why)}</h2><p>${escape(t.whyText)}</p></section><section class="faq"><h2>${escape(t.faq)}</h2>${faq.map(([q, a]) => `<h3>${escape(text(q))}</h3><p>${escape(text(a))}</p>`).join("")}</section><section class="privacy-section"><h2>${escape(t.privacyTitle)}</h2><p class="philosophy">${escape(t.philosophy)}</p><p>${escape(t.privacyBody)}</p><a class="more-link" href="/${locale}/privacy/">${escape(t.privacyMore)} →</a></section>${tool ? "" : sizeLinks}</main>`;
     const html = base(
       locale,
       title,
