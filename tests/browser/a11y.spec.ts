@@ -51,6 +51,12 @@ for (const scheme of ["light", "dark"] as const)
       await expect(page.getByLabel("Original PDF, page 1")).toBeVisible({ timeout: 30000 });
       await audit(page, "markdown result");
     });
+    test("markdown OCR offer", async ({ page }) => {
+      await page.goto("/en/markdown/");
+      await page.locator("input[type=file]").setInputFiles("tests/fixtures/scanned-text.pdf");
+      await expect(page.getByRole("button", { name: "Recognize text" })).toBeVisible({ timeout: 30000 });
+      await audit(page, "markdown OCR offer");
+    });
     test("password prompt, batch and privacy page", async ({ page }) => {
       test.setTimeout(180000);
       await page.goto("/en/compress/");

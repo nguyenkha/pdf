@@ -53,8 +53,46 @@ test("unlocks a password-protected PDF first", async ({ page }) => {
   await page.getByRole("button", { name: "Markdown", exact: true }).click();
   await expect(page.getByLabel("Nội dung Markdown")).toHaveValue(/<!-- Trang 1 -->/);
 });
-test("explains when a PDF has no text layer", async ({ page }) => {
+test("offers OCR for a scan and reads it on the device", async ({ page }) => {
+  // CI runners are much slower than a laptop at recognition.
+  test.setTimeout(240000);
+  const requests: string[] = [];
+  page.on("request", (request) => requests.push(request.url()));
   await page.goto("/en/markdown/");
-  await page.locator("input[type=file]").setInputFiles("tests/fixtures/scan.pdf");
-  await expect(page.getByRole("alert")).toHaveText(/no text layer.*OCR/, { timeout: 30000 });
+  await page.locator("input[type=file]").setInputFiles("tests/fixtures/scanned-text.pdf");
+  await expect(page.getByText("No text layer found: this looks like a scan.")).toBeVisible({ timeout: 30000 });
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(page.getByLabel("Language of the document")).toHaveValue("en");
+  // Nothing of the recognizer loads until it is asked for.
+  expect(requests.filter((url) => /\/ocr\/|tesseract/.test(url))).toEqual([]);
+  await page.getByRole("button", { name: "Recognize text" }).click();
+  await expect(page.getByRole("heading", { name: "Converted 1 pages" })).toBeVisible({ timeout: 180000 });
+  const preview = page.locator(".md-preview");
+  await expect(preview.getByRole("heading", { name: "Scanned Report" })).toBeVisible();
+  // Wrapped lines of one paragraph are joined again.
+  await expect(preview.locator("p")).toContainText([
+    /^This page has no text layer\. It was printed and scanned, so its words exist only as pixels in an image\.$/,
+    /^Optical character recognition reads those pixels back into text that can be searched and copied\.$/,
+  ]);
+  // The scan became text, so it is not repeated as a picture.
+  await expect(preview.locator("img")).toHaveCount(0);
+  await expect(page.getByText(/recognized with OCR and may contain mistakes/)).toBeVisible();
+  // Everything, the recognizer included, came from this site.
+  expect(requests.filter((url) => !url.startsWith("http://127.0.0.1:4173/") && !url.startsWith("blob:") && !url.startsWith("data:"))).toEqual([]);
+  expect(requests.some((url) => url.includes("/ocr/lang/eng.traineddata.gz"))).toBe(true);
+});
+test("reads only the scanned pages of a mixed PDF", async ({ page }) => {
+  test.setTimeout(240000);
+  await page.goto("/vi/markdown/");
+  await page.locator("input[type=file]").setInputFiles("tests/fixtures/mixed-scan.pdf");
+  const preview = page.locator(".md-preview");
+  await expect(preview).toContainText("Typed Introduction", { timeout: 30000 });
+  await expect(page.getByText("1 trang không có lớp chữ. Nhận dạng chữ bằng OCR?")).toBeVisible();
+  // The file is English although the page is Vietnamese: English is always read too.
+  await expect(page.getByLabel("Ngôn ngữ trong file")).toHaveValue("vi");
+  await page.getByRole("button", { name: "Nhận dạng chữ" }).click();
+  await expect(preview).toContainText("Scanned Report", { timeout: 180000 });
+  await expect(preview).toContainText("Optical character recognition reads those pixels");
+  await expect(preview).toContainText("Typed Introduction");
+  await expect(page.getByText("Nhận dạng chữ bằng OCR?")).toHaveCount(0);
 });

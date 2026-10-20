@@ -261,3 +261,16 @@ a.chip-button:focus-visible {
 .md-preview h6 {
   color: var(--text-strong);
 }
+.ocr select {
+  flex: 1;
+  min-width: 0;
+  height: 42px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+}
+.md-result .ocr {
+  margin-top: 0;
+}

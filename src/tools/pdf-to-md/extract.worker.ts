@@ -8,12 +8,15 @@ import {
   documentTitle,
   type ConversionOptions,
   type TextPage,
+  type TextPart,
 } from "./markdown";
 
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 let pages: TextPage[] | undefined;
 let title = "";
 let files = new Map<string, Blob>();
+// Pages whose text came from OCR; their scan picture is not repeated as an image.
+let recognized = new Set<number>();
 // Bounds for what images may cost: count, pixels per side, total bytes.
 const MAX_IMAGES = 300;
 const MAX_SIDE = 2000;
@@ -84,16 +87,19 @@ const imageObject = (page: Page, id: string) =>
   });
 type Request =
   | { type: "extract"; file: File; options: ConversionOptions }
-  | { type: "format"; options: ConversionOptions };
+  | { type: "format"; options: ConversionOptions }
+  | { type: "ocr"; pages: { index: number; parts: TextPart[] }[]; options: ConversionOptions };
+const hasText = (page: TextPage) => page.parts.some((part) => part.str.trim());
 self.onmessage = async (event: MessageEvent<Request>) => {
   const request = event.data;
-  if (request.type !== "extract" && request.type !== "format") return;
+  if (!["extract", "format", "ocr"].includes(request.type)) return;
   let task: ReturnType<typeof pdfjs.getDocument> | undefined;
   try {
     if (request.type === "extract") {
       const { file } = request;
       pages = undefined;
       files = new Map();
+      recognized = new Set();
       const data = new Uint8Array(await file.arrayBuffer());
       if (String.fromCharCode(...data.subarray(0, 5)) !== "%PDF-")
         throw new Error("invalid");
@@ -190,10 +196,9 @@ self.onmessage = async (event: MessageEvent<Request>) => {
       }
       await task.destroy();
       task = undefined;
-      if (
-        extracted.every((page) => page.parts.every((part) => !part.str.trim()))
-      )
-        throw new Error("no-text");
+      pages = extracted;
+      // Kept for OCR: the page could still offer to read the scan.
+      if (!extracted.some(hasText)) throw new Error("no-text");
       // Logos and backgrounds sit on most pages; real figures rarely repeat.
       for (const page of extracted)
         for (const image of page.images ?? []) {
@@ -205,11 +210,24 @@ self.onmessage = async (event: MessageEvent<Request>) => {
       pages = extracted;
     }
     if (!pages) throw new Error("invalid");
+    if (request.type === "ocr")
+      for (const { index, parts } of request.pages) {
+        const page = pages[index];
+        if (!page) continue;
+        recognized.add(index);
+        page.parts = parts;
+        // The scan itself is now text: drop pictures covering most of the page.
+        page.images = page.images?.filter(
+          (image) => image.width * image.height < page.width * page.height * 0.6,
+        );
+      }
     const result = convertDocument(title, pages, request.options);
     self.postMessage({
       type: "result",
       ...result,
       images: [...new Set(result.imagePaths)].map((path) => ({ path, blob: files.get(path)! })),
+      textless: pages.flatMap((page, index) => (hasText(page) || recognized.has(index) ? [] : [index])),
+      recognized: recognized.size,
       pages: pages.length,
     });
   } catch (error) {
@@ -221,7 +239,7 @@ self.onmessage = async (event: MessageEvent<Request>) => {
           : error instanceof Error && /memory|allocation/i.test(error.message)
             ? "memory"
             : "invalid";
-    self.postMessage({ type: "error", code });
+    self.postMessage({ type: "error", code, pages: code === "no-text" ? pages?.length : undefined });
   } finally {
     await task?.destroy();
   }

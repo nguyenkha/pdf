@@ -5,6 +5,8 @@ import { safeUrl } from "../src/tools/pdf-to-md/structure";
 import { InlineMarkdown } from "../src/tools/pdf-to-md/InlineMarkdown";
 import { MarkdownPreview } from "../src/tools/pdf-to-md/MarkdownPreview";
 import { findImages } from "../src/tools/pdf-to-md/images";
+import { partsFromLines } from "../src/tools/pdf-to-md/ocr";
+import type { Line } from "tesseract.js";
 import {
   convertDocument,
   defaultOptions,
@@ -152,7 +154,7 @@ it("finds painted images with their page box and skips icons", () => {
     argsArray: [[], [300, 0, 0, 200, 50, 150], ["img_1", 900, 600], [], [], [10, 0, 0, 10, 0, 0], ["icon", 16, 16], []],
   };
   expect(findImages(list, [1, 0, 0, 1, 0, 0], ops)).toEqual([
-    { id: "img_1", x: 50, y: 150, width: 300, height: 200 },
+    { id: "img_1", x: 50, y: 150, width: 300, height: 200, pixels: 900 },
   ]);
 });
 it("never turns PDF text into HTML, images, comments or script links", () => {
@@ -183,4 +185,23 @@ it("never turns PDF text into HTML, images, comments or script links", () => {
   expect(result.markdown).not.toContain("<img");
   expect(result.markdown).not.toContain("<!--");
   expect(result.markdown).not.toMatch(/(^|[^\\])!\[/);
+});
+it("turns OCR lines into text parts, split at table-like gaps", () => {
+  const word = (text: string, x0: number, x1: number, confidence = 90) => ({
+    text,
+    confidence,
+    bbox: { x0, y0: 100, x1, y1: 130 },
+  });
+  const line = (words: ReturnType<typeof word>[]) =>
+    ({ words, rowAttributes: { rowHeight: 30 }, baseline: { y0: 126, y1: 126 }, bbox: { x0: 0, y0: 100, x1: 900, y1: 130 } }) as unknown as Line;
+  const parts = partsFromLines(
+    [line([word("Name", 100, 180), word("of", 190, 220), word("noise", 230, 300, 10), word("Count", 600, 700)]), line([word("漢", 100, 130), word("字", 135, 165)])],
+    2,
+  );
+  expect(parts.map((p) => [p.str, p.transform[4], p.transform[5], p.hasEOL])).toEqual([
+    ["Name of", 50, 63, false],
+    ["Count", 300, 63, true],
+    ["漢字", 50, 63, true],
+  ]);
+  expect(parts[0].height).toBeCloseTo(15);
 });

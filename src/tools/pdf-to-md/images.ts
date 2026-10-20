@@ -5,6 +5,8 @@ export type ImagePlacement = {
   y: number;
   width: number;
   height: number;
+  /** The image's own size in pixels, when the PDF states it. */
+  pixels?: number;
 };
 /** An image kept for the Markdown: its file in the ZIP and its place on the page. */
 export type PageImage = {
@@ -55,7 +57,14 @@ export function findImages(
       const width = Math.max(...xs) - x,
         height = Math.max(...ys) - y;
       if (width >= MIN_SIDE && height >= MIN_SIDE)
-        found.push({ id: args[0], x, y, width, height });
+        found.push({
+          id: args[0],
+          x,
+          y,
+          width,
+          height,
+          ...(typeof args[1] === "number" ? { pixels: args[1] } : {}),
+        });
     }
   }
   return found;

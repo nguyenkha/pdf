@@ -8,6 +8,8 @@ Original pdf.kha.do code: Copyright (c) 2026 kha.do, AGPL-3.0-or-later. Third-pa
 | WASM Zoo distribution adapter/build recipes | Reproducible distribution | MIT; does not relicense the Ghostscript binary |
 | PDF.js (`pdfjs-dist`) | Parsing, text, annotations, validation previews; local CMaps and standard fonts | Apache-2.0; included font notices apply |
 | pdf-lib 1.17.1 with `@pdf-lib/standard-fonts`, `@pdf-lib/upng`, pako and tslib | Merging PDFs by copying pages | MIT (pako: MIT and Zlib; tslib: 0BSD) |
+| tesseract.js 7.0.0 and tesseract.js-core 7.0.0 (Tesseract OCR with Leptonica, compiled to WASM) | Optional on-device text recognition for scanned pages, loaded only when asked for | Apache-2.0 (Leptonica: BSD 2-Clause) |
+| Tesseract `tessdata_best` integer models via `@tesseract.js-data/*` 1.0.0 (eng, vie, chi_sim, spa, ara, fra, por, rus, hin, jpn, kor, deu) | OCR language data, hosted with the site | Apache-2.0 (models); MIT (npm packaging) |
 | React, React DOM, scheduler | UI | MIT |
 | Lucide React | Icons | ISC |
 
@@ -19,6 +21,8 @@ Upstream sources:
 - https://github.com/ArtifexSoftware/ghostpdl
 - https://github.com/mozilla/pdf.js
 - https://github.com/Hopding/pdf-lib
+- https://github.com/naptha/tesseract.js and https://github.com/naptha/tesseract.js-core
+- https://github.com/tesseract-ocr/tesseract, https://github.com/tesseract-ocr/tessdata_best and https://github.com/DanBloomberg/leptonica
 - https://github.com/facebook/react
 - https://github.com/lucide-icons/lucide
 

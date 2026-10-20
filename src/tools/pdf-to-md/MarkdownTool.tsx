@@ -1,6 +1,7 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight, Columns2, Copy, FileDown, RotateCcw, Table } from "lucide-react";
 import type { ToolProps } from "../../app/tools";
+import type { Locale } from "../../i18n/config";
 import type { Messages } from "../../i18n";
 import { fill } from "../../i18n/fill";
 import { validateFile } from "../../lib/pdf";
@@ -17,6 +18,8 @@ import { MarkdownPreview } from "./MarkdownPreview";
 import { ImageUrlsContext, PreviewLabelsContext, type PreviewLabels } from "./labels";
 import { defaultOptions, type ConversionOptions } from "./markdown";
 import type { ConvertedTable } from "./tables";
+import { OcrPrompt } from "./OcrPrompt";
+import type { OcrProgress } from "./ocr";
 import "./tool.css";
 // The PDF parser for page comparison loads only when someone opens it.
 const PdfPagePreview = lazy(() => import("./PdfPagePreview"));
@@ -33,7 +36,13 @@ type Result = {
   noteCount: number;
   listCount: number;
   images: { path: string; blob: Blob }[];
+  /** Pages still without text, by index; OCR can read them. */
+  textless: number[];
+  /** Pages whose text came from OCR. */
+  recognized: number;
 };
+// The OCR module and its engine load only when someone asks for OCR.
+const loadOcr = () => import("./ocr");
 const TIMEOUT = 120_000;
 const OPTION_KEYS = [
   ["detectHeadings", "optHeadings"],
@@ -71,6 +80,12 @@ export default function MarkdownTool({ t, locale }: ToolProps) {
   const [locked, setLocked] = useState(false);
   const [unlocking, setUnlocking] = useState(false);
   const [unlockError, setUnlockError] = useState<string>();
+  // A PDF with no text at all: the worker keeps it and offers OCR instead of failing.
+  const [scan, setScan] = useState(0);
+  const [ocrLanguage, setOcrLanguage] = useState<Locale>(locale);
+  const [ocr, setOcr] = useState<OcrProgress>();
+  const [ocrError, setOcrError] = useState("");
+  const ocrAbort = useRef<AbortController | undefined>(undefined);
   const worker = useRef<Worker | undefined>(undefined);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   // Words written into the Markdown follow the interface language.
@@ -85,6 +100,8 @@ export default function MarkdownTool({ t, locale }: ToolProps) {
     [t],
   );
   const stop = () => {
+    ocrAbort.current?.abort();
+    ocrAbort.current = undefined;
     worker.current?.terminate();
     worker.current = undefined;
     clearTimeout(timer.current);
@@ -115,8 +132,14 @@ export default function MarkdownTool({ t, locale }: ToolProps) {
       clearTimeout(timer.current);
       setBusy(false);
       setUpdating(false);
+      setOcr(undefined);
       if (data.type === "result") {
+        setScan(0);
         setResult(data);
+        return;
+      }
+      if (data.code === "no-text") {
+        setScan(data.pages);
         return;
       }
       stop();
@@ -124,13 +147,7 @@ export default function MarkdownTool({ t, locale }: ToolProps) {
         setLocked(true);
         return;
       }
-      setError(
-        data.code === "no-text"
-          ? t.mdNoText
-          : data.code === "memory"
-            ? t.memory
-            : t.mdFailed,
-      );
+      setError(data.code === "memory" ? t.memory : t.mdFailed);
     };
     job.onerror = () => fail(t.failed);
     job.postMessage({ type: "extract", file: source, options: { ...chosen, labels } });
@@ -141,6 +158,8 @@ export default function MarkdownTool({ t, locale }: ToolProps) {
     setError("");
     setLocked(false);
     setUnlockError(undefined);
+    setScan(0);
+    setOcrError("");
     if (files.length !== 1) return setError(t.oneFile);
     if (validateFile(files[0])) return setError(t.invalid);
     setFile(files[0]);
@@ -155,6 +174,31 @@ export default function MarkdownTool({ t, locale }: ToolProps) {
     setUpdating(true);
     timer.current = setTimeout(() => fail(t.mdTimeout), TIMEOUT);
     worker.current.postMessage({ type: "format", options: { ...next, labels } });
+  }
+  // Pages are drawn and read here, then handed to the worker as text parts.
+  async function recognize(indexes: number[]) {
+    if (!file || !worker.current) return;
+    const controller = new AbortController();
+    ocrAbort.current = controller;
+    setOcrError("");
+    setOcr({ stage: "loading" });
+    try {
+      const { recognizePages } = await loadOcr();
+      const pages = await recognizePages(file, indexes, ocrLanguage, setOcr, controller.signal);
+      if (controller.signal.aborted || !worker.current) return;
+      setUpdating(Boolean(result));
+      timer.current = setTimeout(() => fail(t.mdTimeout), TIMEOUT);
+      worker.current.postMessage({ type: "ocr", pages, options: { ...options, labels } });
+    } catch {
+      if (controller.signal.aborted) return;
+      setOcr(undefined);
+      setOcrError(t.ocrFailed);
+    }
+  }
+  function cancelOcr() {
+    ocrAbort.current?.abort();
+    ocrAbort.current = undefined;
+    setOcr(undefined);
   }
   // Same check and rewrite as the compress tool's password step.
   async function unlock(password: string) {
@@ -181,8 +225,48 @@ export default function MarkdownTool({ t, locale }: ToolProps) {
     setError("");
     setLocked(false);
     setBusy(false);
+    setScan(0);
+    setOcr(undefined);
+    setOcrError("");
   }
   const step = result ? 3 : file ? 2 : 1;
+  // The same place shows the offer, then OCR progress, then any OCR error.
+  function ocrPanel(title: string, indexes: number[]) {
+    if (ocr)
+      return (
+        <Progress
+          t={t}
+          title={t.ocrRunning}
+          done={ocr.stage === "page" ? ocr.done : undefined}
+          total={ocr.stage === "page" ? ocr.total : undefined}
+          detail={
+            ocr.stage === "loading"
+              ? t.ocrLoading
+              : fill(t.pageOf, { page: ocr.page, pages: ocr.total })
+          }
+          onCancel={cancelOcr}
+        />
+      );
+    return (
+      <>
+        <OcrPrompt
+          t={t}
+          locale={locale}
+          title={title}
+          language={ocrLanguage}
+          onLanguage={setOcrLanguage}
+          onStart={() =>
+            void recognize(indexes.length ? indexes : Array.from({ length: scan }, (_, i) => i))
+          }
+        />
+        {ocrError && (
+          <p className="error" role="alert">
+            {ocrError}
+          </p>
+        )}
+      </>
+    );
+  }
   const previewLabels: PreviewLabels = {
     preview: t.mdPreview,
     table: t.mdTable,
@@ -203,36 +287,17 @@ export default function MarkdownTool({ t, locale }: ToolProps) {
       {locked && file && (
         <PasswordPrompt t={t} busy={unlocking} error={unlockError} onSubmit={unlock} />
       )}
-      {busy && !result && (
-        <div className="processing">
-          <div className="progress-head">
-            <strong>{t.mdConverting}</strong>
-            {progress && (
-              <span aria-hidden="true">
-                {Math.floor((progress.page / progress.total) * 100)}%
-              </span>
-            )}
-          </div>
-          <div
-            className="progress"
-            role="progressbar"
-            aria-label={t.mdConverting}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={progress ? Math.floor((progress.page / progress.total) * 100) : 0}
-          >
-            <span style={{ width: `${progress ? (progress.page / progress.total) * 100 : 3}%` }} />
-          </div>
-          {progress && (
-            <p className="progress-detail" role="status">
-              {fill(t.pageOf, { page: progress.page, pages: progress.total })}
-            </p>
-          )}
-          <button type="button" className="secondary" onClick={reset}>
-            {t.cancel}
-          </button>
-        </div>
+      {busy && !result && !ocr && (
+        <Progress
+          t={t}
+          title={t.mdConverting}
+          done={progress?.page}
+          total={progress?.total}
+          detail={progress && fill(t.pageOf, { page: progress.page, pages: progress.total })}
+          onCancel={reset}
+        />
       )}
+      {scan > 0 && file && !result && ocrPanel(t.ocrTitle, [])}
       {result && file && (
         <PreviewLabelsContext.Provider value={previewLabels}>
           <MarkdownResult
@@ -244,6 +309,10 @@ export default function MarkdownTool({ t, locale }: ToolProps) {
             updating={updating}
             onOptions={update}
             onReset={reset}
+            ocr={
+              result.textless.length > 0 &&
+              ocrPanel(fill(t.ocrPagesTitle, { count: result.textless.length }), result.textless)
+            }
           />
         </PreviewLabelsContext.Provider>
       )}
@@ -264,6 +333,7 @@ function MarkdownResult({
   updating,
   onOptions,
   onReset,
+  ocr,
 }: {
   t: Messages;
   locale: string;
@@ -273,6 +343,8 @@ function MarkdownResult({
   updating: boolean;
   onOptions: (next: ConversionOptions) => void;
   onReset: () => void;
+  /** The OCR offer for pages without text, shown with the result's notes. */
+  ocr?: ReactNode;
 }) {
   const [view, setView] = useState<"preview" | "source">("preview");
   const [comparing, setComparing] = useState(false);
@@ -340,7 +412,9 @@ function MarkdownResult({
     .filter(([, count]) => Number(count) > 0)
     .map(([label, count]) => fill(String(label), { count: number.format(Number(count)) }));
   const notes = [
-    result.emptyPages > 0 && fill(t.mdEmptyPages, { count: result.emptyPages }),
+    result.recognized > 0 && fill(t.ocrDoneNote, { count: result.recognized }),
+    // While OCR is still on offer, the offer itself names these pages.
+    !result.textless.length && result.emptyPages > 0 && fill(t.mdEmptyPages, { count: result.emptyPages }),
     result.removedLines > 0 && fill(t.mdRemovedLines, { count: result.removedLines }),
     options.restoreColumns && result.columnPages > 0 && fill(t.mdColumnPages, { count: result.columnPages }),
   ].filter(Boolean);
@@ -394,6 +468,7 @@ function MarkdownResult({
           {note}
         </p>
       ))}
+      {ocr}
       {result.tables.length > 0 && (
         <div className="md-tables">
           <strong>
@@ -533,4 +608,47 @@ function CsvLink({
       {fill(t.mdTableCsv, { index, page: table.page })}
     </a>
   ) : null;
+}
+function Progress({
+  t,
+  title,
+  done,
+  total,
+  detail,
+  onCancel,
+}: {
+  t: Messages;
+  title: string;
+  done?: number;
+  total?: number;
+  detail?: string;
+  onCancel: () => void;
+}) {
+  const percent = done !== undefined && total ? Math.min(100, (done / total) * 100) : undefined;
+  return (
+    <div className="processing">
+      <div className="progress-head">
+        <strong>{title}</strong>
+        {percent !== undefined && <span aria-hidden="true">{Math.floor(percent)}%</span>}
+      </div>
+      <div
+        className="progress"
+        role="progressbar"
+        aria-label={title}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.floor(percent ?? 0)}
+      >
+        <span style={{ width: `${percent ?? 3}%` }} />
+      </div>
+      {detail && (
+        <p className="progress-detail" role="status">
+          {detail}
+        </p>
+      )}
+      <button type="button" className="secondary" onClick={onCancel}>
+        {t.cancel}
+      </button>
+    </div>
+  );
 }
