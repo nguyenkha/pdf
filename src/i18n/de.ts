@@ -186,4 +186,11 @@ export default {
   mergeUnlockedNote: "Das zusammengefügte PDF hat kein Passwort. Schütze es bei Bedarf vor der Weitergabe erneut.",
   compressThis: "Dieses PDF komprimieren",
   batchDoneTitle: "{done} von {count} PDFs komprimiert",
+  signedPrompt: "Dieses PDF ist digital signiert. Komprimieren erzeugt eine neue Datei, daher sind die digitalen Signaturen danach nicht mehr gültig.",
+  signedContinue: "Ohne Signaturen komprimieren",
+  signedHint: "Stempel und Unterschriftsbilder bleiben sichtbar. Behalte das Original dort, wo die Signatur geprüft werden muss.",
+  signedNote: "Die digitalen Signaturen wurden entfernt; Stempel und Unterschriftsbilder sind weiter auf der Seite. Nutze das Original dort, wo Signaturen geprüft werden.",
+  batchSigned: "digital signiert, einzeln komprimieren",
+  mergeSignedNote: "Die digitalen Signaturen in {names} sind im zusammengeführten PDF nicht gültig; Stempel und Unterschriftsbilder sind weiter auf der Seite.",
+  preservationFailed: "Die komprimierte Kopie würde Text oder Inhalt dieses PDFs verändern (etwa Buchstaben mit Akzent, die sich nicht mehr richtig kopieren lassen), daher wurde nichts geändert. Behalte das Original.",
 } satisfies Messages;

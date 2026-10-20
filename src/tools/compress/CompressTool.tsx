@@ -1,10 +1,11 @@
 import { useRef, useState, useEffect } from "react";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, Signature } from "lucide-react";
 import type { Messages } from "../../i18n";
 import type { Locale } from "../../i18n/config";
 import { validateFile, LARGE_FILE_BYTES } from "../../lib/pdf";
 import { planOptions, suggestedLimit } from "../../lib/plan";
 import { estimateFile, probeFile, runCompression, type JobProgress } from "./run";
+import { removeSignatures } from "../merge/run";
 import type { CompressOptions } from "../../engines/ghostscript";
 import type { PdfSummary } from "../../engines/validate";
 import { ENGINE_BASE } from "../../engines/core";
@@ -76,6 +77,10 @@ export default function CompressTool({ t, locale, preset, shared }: Props) {
   const [summary, setSummary] = useState<PdfSummary>();
   const [password, setPassword] = useState<string>();
   const [locked, setLocked] = useState(false);
+  // Digitally signed: compressing breaks the signatures, so ask first.
+  const [signed, setSigned] = useState(false);
+  const [unsigning, setUnsigning] = useState(false);
+  const [unsigned, setUnsigned] = useState(false);
   const [checking, setChecking] = useState(false);
   // A size landing page starts on that limit; otherwise the recommendation.
   const [plan, setPlan] = useState<PlanChoice>({
@@ -139,10 +144,31 @@ export default function CompressTool({ t, locale, preset, shared }: Props) {
     setSummary(undefined);
     setPassword(undefined);
     setLocked(false);
+    setSigned(false);
+    setUnsigned(false);
     setChecking(false);
     setResult(undefined);
     setError("");
     setBusy(false);
+  }
+  // Flattens the signatures into the page (what readers see stays), then
+  // checks the copy like any other file.
+  async function unsign() {
+    if (!file) return;
+    setUnsigning(true);
+    try {
+      const blob = await removeSignatures(file).promise;
+      const copy = new File([blob], file.name, { type: "application/pdf" });
+      setSigned(false);
+      setUnsigned(true);
+      setFile(copy);
+      await probe(copy, password);
+    } catch (failure) {
+      setSigned(false);
+      setError(errorMessage(t, failure));
+    } finally {
+      setUnsigning(false);
+    }
   }
   async function probe(next: File, secret?: string) {
     const id = ++generation.current;
@@ -172,7 +198,8 @@ export default function CompressTool({ t, locale, preset, shared }: Props) {
       if (message.startsWith("password")) {
         setLocked(true);
         if (message === "password-incorrect") setError(t.passwordWrong);
-      } else setError(errorMessage(t, failure));
+      } else if (message === "signed") setSigned(true);
+      else setError(errorMessage(t, failure));
     } finally {
       if (id === generation.current) {
         setChecking(false);
@@ -260,6 +287,7 @@ export default function CompressTool({ t, locale, preset, shared }: Props) {
         target: chosen.target,
         lossy: output.lossy,
         unlocked: Boolean(password),
+        unsigned,
       });
     } catch (failure) {
       if (id !== generation.current) return;
@@ -277,7 +305,7 @@ export default function CompressTool({ t, locale, preset, shared }: Props) {
     stop();
     setBusy(false);
   }
-  const step = batch ? (batchDone ? 3 : 2) : result ? 3 : file && (summary || locked) ? 2 : 1;
+  const step = batch ? (batchDone ? 3 : 2) : result ? 3 : file && (summary || locked || signed) ? 2 : 1;
   return (
     <section className="tool-card" aria-label={t.compress} ref={card}>
       <Steps t={t} current={step} />
@@ -310,6 +338,18 @@ export default function CompressTool({ t, locale, preset, shared }: Props) {
           <span className="spinner small" aria-hidden="true" />
           {t.checking}
         </p>
+      )}
+      {file && signed && (
+        <div className="password signed">
+          <p>
+            <Signature size={16} aria-hidden="true" />
+            {t.signedPrompt}
+          </p>
+          <button type="button" className="primary" disabled={unsigning} onClick={unsign}>
+            {t.signedContinue}
+          </button>
+          <small>{t.signedHint}</small>
+        </div>
       )}
       {file && locked && (
         <PasswordPrompt

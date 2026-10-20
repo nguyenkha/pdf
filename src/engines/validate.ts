@@ -48,14 +48,18 @@ async function load(task: ReturnType<typeof open>) {
 // The rewrite engine cannot promise preservation of these features.
 async function rejectUnsupported(doc: Awaited<ReturnType<typeof load>>) {
   const layers = await doc.getOptionalContentConfig();
+  const fields = await doc.getFieldObjects();
   if (
     doc.isPureXfa ||
-    (await doc.getFieldObjects()) ||
     (await doc.getAttachments()) ||
     (await doc.getJSActions()) ||
     Object.keys(layers.getGroups() ?? {}).length
   )
     throw new Error("unsupported");
+  if (!fields) return;
+  // Only digital signatures: rewriting breaks them, which the person may accept.
+  const types = Object.values(fields).flatMap((field) => field.map((widget: { type?: string }) => widget.type));
+  throw new Error(types.every((type) => type === "signature") ? "signed" : "unsupported");
 }
 /**
  * tagged: has an accessibility structure tree, which rewriting drops.

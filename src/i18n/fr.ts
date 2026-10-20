@@ -187,4 +187,11 @@ export default {
   mergeUnlockedNote: "Le PDF fusionné n’a pas de mot de passe. Protégez-le à nouveau avant de le partager si besoin.",
   compressThis: "Compresser ce PDF",
   batchDoneTitle: "{done} PDF sur {count} compressés",
+  signedPrompt: "Ce PDF est signé numériquement. Le compresser crée un nouveau fichier : ses signatures numériques ne seront plus valides.",
+  signedContinue: "Compresser sans les signatures",
+  signedHint: "Les tampons et images de signature restent visibles. Gardez l'original là où la signature doit être vérifiée.",
+  signedNote: "Les signatures numériques ont été retirées ; leurs tampons et images restent sur la page. Utilisez l'original là où les signatures sont vérifiées.",
+  batchSigned: "signé numériquement, compressez-le seul",
+  mergeSignedNote: "Les signatures numériques de {names} ne sont pas valides dans le PDF fusionné ; leurs tampons et images restent sur la page.",
+  preservationFailed: "La copie compressée modifierait le texte ou le contenu de ce PDF (par exemple des lettres accentuées qui ne se copient plus bien) : rien n'a été modifié. Gardez l'original.",
 } satisfies Messages;

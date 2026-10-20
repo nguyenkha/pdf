@@ -86,7 +86,9 @@ export function BatchTool({
         const message =
           failure instanceof Error && failure.message.startsWith("password")
             ? t.batchPassword
-            : failure instanceof Error && failure.message === "target"
+            : failure instanceof Error && failure.message === "signed"
+              ? t.batchSigned
+              : failure instanceof Error && failure.message === "target"
               ? t.targetInvalid
               : errorMessage(t, failure);
         update(index, { status: "error", message });

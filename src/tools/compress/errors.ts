@@ -4,7 +4,9 @@ export function errorMessage(t: Messages, failure: unknown) {
   const message = failure instanceof Error ? failure.message.toLowerCase() : "";
   if (message === "password-incorrect") return t.passwordWrong;
   if (message.includes("password")) return t.password;
-  if (["unsupported", "preservation"].includes(message)) return t.unsupported;
+  if (message === "signed") return t.signedPrompt;
+  if (message === "preservation") return t.preservationFailed;
+  if (message === "unsupported") return t.unsupported;
   if (message === "corrupt" || message.includes("invalid pdf"))
     return t.corrupt;
   if (/memory|allocation/.test(message)) return t.memory;

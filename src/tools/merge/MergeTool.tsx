@@ -44,7 +44,7 @@ export default function MergeTool({ t, locale }: ToolProps) {
   const [items, setItems] = useState<Item[]>([]);
   const [error, setError] = useState("");
   const [progress, setProgress] = useState<number>();
-  const [result, setResult] = useState<{ blob: Blob; pages: number }>();
+  const [result, setResult] = useState<{ blob: Blob; pages: number; signed: number[] }>();
   const [dragging, setDragging] = useState<number>();
   const [descending, setDescending] = useState(false);
   const job = useRef<{ cancel: () => void } | undefined>(undefined);
@@ -204,6 +204,7 @@ export default function MergeTool({ t, locale }: ToolProps) {
           count={items.length}
           pages={result.pages}
           unlocked={items.some((item) => item.unlocked)}
+          signed={result.signed.map((index) => items[index]?.file.name).filter(Boolean)}
           onReset={reset}
         />
       ) : !items.length ? (
@@ -368,6 +369,7 @@ function MergeResult({
   count,
   pages,
   unlocked,
+  signed,
   onReset,
 }: {
   t: Messages;
@@ -377,6 +379,8 @@ function MergeResult({
   count: number;
   pages: number;
   unlocked: boolean;
+  /** Sources whose digital signatures were flattened into the pages. */
+  signed: string[];
   onReset: () => void;
 }) {
   const [handing, setHanding] = useState(false);
@@ -404,6 +408,9 @@ function MergeResult({
         )}
       </ResultActions>
       {unlocked && <p className="result-note">{t.mergeUnlockedNote}</p>}
+      {signed.length > 0 && (
+        <p className="result-note">{fill(t.mergeSignedNote, { names: signed.join(", ") })}</p>
+      )}
       <button type="button" className="link-button" onClick={onReset}>
         <RotateCcw size={15} aria-hidden="true" />
         {t.mergeAnother}

@@ -11,6 +11,8 @@ export type CompressionResult = {
   target?: number;
   lossy: boolean;
   unlocked?: boolean;
+  /** Digital signatures were flattened before compressing. */
+  unsigned?: boolean;
 };
 // pdf.js for the comparison loads only when someone opens it.
 const ComparePreview = lazy(() => import("./ComparePreview"));
@@ -86,6 +88,7 @@ export function ResultDownload({
       {reduced && result.unlocked && (
         <p className="result-note">{t.unlockedNotice}</p>
       )}
+      {reduced && result.unsigned && <p className="result-note">{t.signedNote}</p>}
       <button type="button" className="link-button" onClick={onReset}>
         <RotateCcw size={15} aria-hidden="true" />
         {t.another}

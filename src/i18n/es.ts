@@ -186,4 +186,11 @@ export default {
   mergeUnlockedNote: "El PDF unido no tiene contraseña. Protégelo de nuevo antes de compartirlo si hace falta.",
   compressThis: "Comprimir este PDF",
   batchDoneTitle: "{done} de {count} PDF comprimidos",
+  signedPrompt: "Este PDF tiene firma digital. Comprimirlo crea un archivo nuevo, así que sus firmas digitales dejarán de ser válidas.",
+  signedContinue: "Comprimir sin las firmas",
+  signedHint: "Los sellos y las imágenes de firma siguen visibles. Conserva el original donde haya que verificar la firma.",
+  signedNote: "Se quitaron las firmas digitales; sus sellos e imágenes siguen en la página. Usa el original donde se verifiquen firmas.",
+  batchSigned: "tiene firma digital, comprímelo por separado",
+  mergeSignedNote: "Las firmas digitales de {names} no son válidas en el PDF combinado; sus sellos e imágenes siguen en la página.",
+  preservationFailed: "La copia comprimida cambiaría el texto o el contenido de este PDF (por ejemplo, letras con tilde que ya no se copian bien), así que no se cambió nada. Conserva el original.",
 } satisfies Messages;

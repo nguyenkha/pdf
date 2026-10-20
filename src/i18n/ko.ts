@@ -184,4 +184,11 @@ export default {
   mergeUnlockedNote: "합친 PDF에는 비밀번호가 없어요. 공유하기 전에 필요하면 다시 보호하세요.",
   compressThis: "이 PDF 압축",
   batchDoneTitle: "PDF {count}개 중 {done}개를 압축했어요",
+  signedPrompt: "이 PDF에는 전자 서명이 있습니다. 압축하면 새 파일이 만들어지므로 전자 서명은 더 이상 유효하지 않습니다.",
+  signedContinue: "서명을 빼고 압축",
+  signedHint: "도장과 서명 이미지는 그대로 보입니다. 서명 검증이 필요한 곳에는 원본 파일을 사용하세요.",
+  signedNote: "전자 서명을 제거했습니다. 도장과 서명 이미지는 페이지에 남아 있습니다. 서명을 검증하는 곳에는 원본을 사용하세요.",
+  batchSigned: "전자 서명이 있어 따로 압축해야 합니다",
+  mergeSignedNote: "{names}의 전자 서명은 합친 PDF에서 유효하지 않습니다. 도장과 서명 이미지는 페이지에 남아 있습니다.",
+  preservationFailed: "압축본은 이 PDF의 글자나 내용을 바꾸게 되므로(예: 악센트 글자가 제대로 복사되지 않음) 아무것도 바꾸지 않았습니다. 원본을 사용하세요.",
 } satisfies Messages;

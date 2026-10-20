@@ -186,4 +186,11 @@ export default {
   mergeUnlockedNote: "File gộp không có mật khẩu. Nếu cần, hãy đặt lại mật khẩu trước khi chia sẻ.",
   compressThis: "Nén PDF này",
   batchDoneTitle: "Đã nén {done}/{count} PDF",
+  signedPrompt: "PDF này có chữ ký số. Nén sẽ tạo file mới nên chữ ký số không còn hiệu lực.",
+  signedContinue: "Vẫn nén (bỏ chữ ký số)",
+  signedHint: "Con dấu và hình chữ ký vẫn hiển thị. Hãy giữ file gốc cho nơi cần kiểm tra chữ ký số.",
+  signedNote: "Đã bỏ chữ ký số; con dấu và hình chữ ký vẫn còn trên trang. Hãy dùng file gốc khi cần kiểm tra chữ ký số.",
+  batchSigned: "có chữ ký số, hãy nén riêng file này",
+  mergeSignedNote: "Chữ ký số trong {names} không còn hiệu lực ở file gộp; con dấu và hình chữ ký vẫn còn trên trang.",
+  preservationFailed: "Bản nén sẽ làm sai chữ hoặc nội dung của PDF này (ví dụ chữ có dấu không còn copy đúng), nên file được giữ nguyên. Hãy dùng file gốc.",
 } satisfies Messages;

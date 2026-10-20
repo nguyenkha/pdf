@@ -94,3 +94,18 @@ test("hands the merged PDF to compress without storing it", async ({ page, brows
   const cached = await page.evaluate(async () => (await Promise.all((await caches.keys()).map(async (key) => (await (await caches.open(key)).keys()).map((request) => request.url)))).flat());
   expect(cached.some((url) => url.includes("shared") || url.includes("merged"))).toBe(false);
 });
+test("keeps signature stamps visible when merging a signed PDF", async ({ page }) => {
+  test.setTimeout(120000);
+  await page.goto("/en/merge/");
+  await page.locator("input[type=file]").setInputFiles(["tests/fixtures/signed.pdf", "tests/fixtures/text-vector.pdf"]);
+  await expect(page.locator(".merge-list li")).toHaveCount(2);
+  await page.getByRole("button", { name: "Merge 2 PDFs" }).click();
+  await expect(page.getByText(/Digital signatures in signed\.pdf are not valid in the merged PDF/)).toBeVisible({ timeout: 60000 });
+  const download = page.waitForEvent("download");
+  await page.getByRole("link", { name: "Download PDF" }).click();
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(await readFile((await (await download).path())!)), verbosity: 0 }).promise;
+  const first = await doc.getPage(1);
+  expect(await first.getAnnotations()).toEqual([]);
+  const text = (await first.getTextContent()).items.map((item) => ("str" in item ? item.str : "")).join(" ");
+  expect(text).toContain("SYNTHETIC STAMP");
+});

@@ -178,4 +178,11 @@ export default {
   mergeUnlockedNote: "合并后的 PDF 没有密码。如有需要，分享前请重新加密保护。",
   compressThis: "压缩此 PDF",
   batchDoneTitle: "已压缩 {done}/{count} 个 PDF",
+  signedPrompt: "此 PDF 带有数字签名。压缩会生成新文件，数字签名将不再有效。",
+  signedContinue: "压缩并去除签名",
+  signedHint: "印章和签名图像仍会显示。需要验证签名的场合请保留原文件。",
+  signedNote: "已去除数字签名；印章和签名图像仍在页面上。需要验证签名时请使用原文件。",
+  batchSigned: "带有数字签名，请单独压缩",
+  mergeSignedNote: "{names} 中的数字签名在合并后的 PDF 中不再有效；印章和签名图像仍在页面上。",
+  preservationFailed: "压缩后的文件会改变此 PDF 的文字或内容（例如带音调的字母无法正确复制），因此未做任何更改。请保留原文件。",
 } satisfies Messages;

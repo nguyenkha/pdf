@@ -184,4 +184,11 @@ export default {
   mergeUnlockedNote: "結合した PDF にはパスワードがありません。必要に応じて、共有前に再度保護してください。",
   compressThis: "この PDF を圧縮",
   batchDoneTitle: "{count} 個中 {done} 個の PDF を圧縮しました",
+  signedPrompt: "この PDF には電子署名があります。圧縮すると新しいファイルになるため、電子署名は無効になります。",
+  signedContinue: "署名を外して圧縮",
+  signedHint: "印影や署名の画像は表示されたままです。署名の検証が必要な場面では元のファイルを使ってください。",
+  signedNote: "電子署名を外しました。印影や署名の画像はページに残っています。署名を検証する場面では元のファイルを使ってください。",
+  batchSigned: "電子署名があります。このファイルは個別に圧縮してください",
+  mergeSignedNote: "{names} の電子署名は結合後の PDF では無効です。印影や署名の画像はページに残っています。",
+  preservationFailed: "圧縮するとこの PDF の文字や内容が変わってしまう（例: アクセント付きの文字が正しくコピーできなくなる）ため、変更していません。元のファイルを使ってください。",
 } satisfies Messages;

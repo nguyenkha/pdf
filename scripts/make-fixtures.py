@@ -40,3 +40,16 @@ page=form.add(f'<< /Type /Page /Parent {tree} 0 R /MediaBox [0 0 595 842] /Resou
 form.objects[tree-1]=f'<< /Type /Pages /Count 1 /Kids [{page} 0 R] >>'.encode()
 form.objects[catalog-1]=f'<< /Type /Catalog /Pages {tree} 0 R /AcroForm << /Fields [{widget} 0 R] /DA (/F1 12 Tf 0 g) /DR << /Font << /F1 {font} 0 R >> >> >> >>'.encode()
 form.save(OUT/'form.pdf',catalog)
+
+# A digitally signed page (synthetic, no real certificate): a visible signature
+# widget whose appearance is a red stamp, as e-signed PDFs show them.
+signed=PDF();catalog=signed.add('');tree=signed.add('');font=signed.add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>')
+rng=random.Random(1729);photo=signed.add(stream(zlib.compress(bytes(rng.randrange(256) for _ in range(450*450*3)),6),'/Type /XObject /Subtype /Image /Width 450 /Height 450 /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode'))
+content=signed.add(stream(b'BT /F1 20 Tf 72 700 Td (Signed fixture) Tj ET q 300 0 0 300 72 250 cm /Im1 Do Q'))
+stamp=signed.add(stream(b'1 0 0 RG 3 w 4 4 192 52 re S BT /F1 14 Tf 1 0 0 rg 20 24 Td (SYNTHETIC STAMP) Tj ET',f'/Type /XObject /Subtype /Form /BBox [0 0 200 60] /Resources << /Font << /F1 {font} 0 R >> >>'))
+value=signed.add('<< /Type /Sig /Filter /Adobe.PPKLite /SubFilter /adbe.pkcs7.detached /ByteRange [0 0 0 0] /Contents <00> /M (D:20260101000000Z) >>')
+widget=signed.add(f'<< /Type /Annot /Subtype /Widget /FT /Sig /T (Signature1) /V {value} 0 R /Rect [72 600 272 660] /F 132 /AP << /N {stamp} 0 R >> >>')
+page=signed.add(f'<< /Type /Page /Parent {tree} 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 {font} 0 R >> /XObject << /Im1 {photo} 0 R >> >> /Contents {content} 0 R /Annots [{widget} 0 R] >>')
+signed.objects[tree-1]=f'<< /Type /Pages /Count 1 /Kids [{page} 0 R] >>'.encode()
+signed.objects[catalog-1]=f'<< /Type /Catalog /Pages {tree} 0 R /AcroForm << /Fields [{widget} 0 R] /SigFlags 3 >> >>'.encode()
+signed.save(OUT/'signed.pdf',catalog)

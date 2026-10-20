@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
+import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 async function expectSuccess(page: Page) {
   await expect(page.locator('.result, .error')).toBeVisible({timeout:90000});
   await expect(page.getByRole('alert')).toHaveCount(0);
@@ -165,6 +166,27 @@ test("estimates the result and compares before/after", async ({ page }) => {
   await expect(page.locator(".compare canvas")).toHaveCount(2);
   await expect(page.getByText("page 1 of 1")).toBeVisible({ timeout: 30000 });
 });
+test("offers to compress a signed PDF without its signatures", async ({ page }) => {
+  test.setTimeout(180000);
+  await page.goto("/en/compress/");
+  await page.locator("input[type=file]").setInputFiles("tests/fixtures/signed.pdf");
+  await expect(page.getByText("This PDF is digitally signed.")).toBeVisible({ timeout: 30000 });
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await page.getByRole("button", { name: "Compress without the signatures" }).click();
+  await page.getByRole("button", { name: "Compress PDF", exact: true }).click();
+  await expectSuccess(page);
+  await expect(page.getByText(/digital signatures were removed/)).toBeVisible();
+  const download = page.waitForEvent("download");
+  await page.getByRole("link", { name: "Download PDF" }).click();
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(await readFile((await (await download).path())!)), verbosity: 0 }).promise;
+  // No signature field is left, but the stamp it showed is drawn on the page.
+  expect(await doc.getFieldObjects()).toBeNull();
+  const pdfPage = await doc.getPage(1);
+  expect(await pdfPage.getAnnotations()).toEqual([]);
+  const text = (await pdfPage.getTextContent()).items.map((item) => ("str" in item ? item.str : "")).join(" ");
+  expect(text).toContain("SYNTHETIC STAMP");
+  expect(text).toContain("Signed fixture");
+});
 test("compresses several PDFs and downloads them as one ZIP", async ({ page }) => {
   test.setTimeout(240000);
   await page.goto("/en/compress/");
@@ -172,13 +194,15 @@ test("compresses several PDFs and downloads them as one ZIP", async ({ page }) =
     "tests/fixtures/scan.pdf",
     "tests/fixtures/text-vector.pdf",
     "tests/fixtures/password.pdf",
+    "tests/fixtures/signed.pdf",
   ]);
-  await expect(page.getByText("PDFs: 3")).toBeVisible();
-  await page.getByRole("button", { name: "Compress 3 PDFs" }).click();
+  await expect(page.getByText("PDFs: 4")).toBeVisible();
+  await page.getByRole("button", { name: "Compress 4 PDFs" }).click();
   const zip = page.getByRole("link", { name: "Download all (ZIP)" });
   await expect(zip).toBeVisible({ timeout: 180000 });
   await expect(page.getByText(/already optimized, original kept/)).toBeVisible();
   await expect(page.getByText(/password-protected, compress it on its own/)).toBeVisible();
+  await expect(page.getByText(/digitally signed, compress it on its own/)).toBeVisible();
   const download = page.waitForEvent("download");
   await zip.click();
   const file = await (await download).path();

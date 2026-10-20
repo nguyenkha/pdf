@@ -9,6 +9,8 @@ import {
   type PDFObject,
 } from "pdf-lib";
 
+import { flattenSignatureFields } from "./signatures";
+
 export type MergeSource = { name: string; bytes: Uint8Array };
 const name = (key: string) => PDFName.of(key);
 const text = (value: PDFObject | undefined) =>
@@ -67,18 +69,23 @@ const isInternalLink = (annot: PDFDict) => {
  * are re-pointed at that page in the merged file: copied as is, named
  * destinations would dangle, which also stops strict readers such as the
  * compress engine. Links that cannot be resolved are dropped. Bookmarks and form fields are
- * not carried over; encrypted sources must be unlocked first.
+ * not carried over; encrypted sources must be unlocked first. Digital
+ * signatures cannot survive a merge: their appearance is drawn into the page
+ * first, so stamps and signature images still show, and `signed` lists the
+ * sources that had them.
  */
 export async function mergePdfs(
   sources: MergeSource[],
   onSource: (index: number) => void = () => {},
-): Promise<{ bytes: Uint8Array; pages: number }> {
+): Promise<{ bytes: Uint8Array; pages: number; signed: number[] }> {
   const output = await PDFDocument.create();
+  const signed: number[] = [];
   for (const [index, source] of sources.entries()) {
     onSource(index);
     try {
       const input = await PDFDocument.load(source.bytes);
       if (!input.getPageCount()) throw new Error("no pages");
+      if (flattenSignatureFields(input)) signed.push(index);
       const sourcePages = input.getPages();
       const pages = await output.copyPages(input, input.getPageIndices());
       for (const page of pages) output.addPage(page);
@@ -119,5 +126,5 @@ export async function mergePdfs(
   }
   output.setProducer("pdf.kha.do");
   output.setCreator("pdf.kha.do");
-  return { bytes: await output.save(), pages: output.getPageCount() };
+  return { bytes: await output.save(), pages: output.getPageCount(), signed };
 }

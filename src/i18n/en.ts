@@ -183,4 +183,11 @@ export default {
   mergeUnlockedNote: "The merged PDF has no password. Protect it again before sharing if needed.",
   compressThis: "Compress this PDF",
   batchDoneTitle: "Compressed {done} of {count} PDFs",
+  signedPrompt: "This PDF is digitally signed. Compressing makes a new file, so its digital signatures will no longer be valid.",
+  signedContinue: "Compress without the signatures",
+  signedHint: "Stamps and signature images stay visible. Keep the original wherever the signature must be verified.",
+  signedNote: "The digital signatures were removed; their stamps and images are still on the page. Keep the original for anything that verifies signatures.",
+  batchSigned: "digitally signed, compress it on its own",
+  mergeSignedNote: "Digital signatures in {names} are not valid in the merged PDF; their stamps and images are still on the page.",
+  preservationFailed: "The compressed copy would change this PDF's text or content (for example accented letters that no longer copy correctly), so nothing was changed. Keep the original.",
 };
