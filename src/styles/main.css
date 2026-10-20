@@ -194,6 +194,62 @@ a {
   height: 43px;
   flex-shrink: 0;
 }
+.tools-menu {
+  position: relative;
+}
+.tools-menu-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+.tools-menu-button:hover,
+.tools-menu-button[aria-expanded="true"] {
+  border-color: var(--border-strong);
+}
+.tools-menu ul {
+  position: absolute;
+  inset-inline-end: 0;
+  top: calc(100% + 6px);
+  z-index: 10;
+  min-width: 220px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+.tools-menu li a,
+.tools-menu li.soon {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.tools-menu li a:hover {
+  background: var(--surface-2);
+}
+.tools-menu li a[aria-current="page"] {
+  color: var(--accent-text);
+  font-weight: 650;
+}
+.tools-menu li.soon {
+  color: var(--muted);
+  font-size: 13px;
+}
 .site-header nav,
 .header-actions {
   display: flex;
@@ -344,7 +400,7 @@ main {
 }
 /* Static first paint holds the card's space until the app renders. */
 .tool-card.placeholder {
-  min-height: 371px;
+  min-height: 308px;
 }
 .tool-title {
   display: flex;
@@ -1068,31 +1124,25 @@ input[type="number"],
   margin: 0 auto 40px;
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   justify-content: center;
-  gap: 4px 0;
+  gap: 0 14px;
   font-size: 12px;
   color: var(--muted);
 }
-.sizes span {
-  margin-inline-end: 8px;
-}
+.sizes span,
 .sizes a {
   /* WCAG 2.2 target size: at least 24 x 24 px per link. */
   display: inline-flex;
   align-items: center;
   min-height: 28px;
+}
+.sizes a {
   min-width: 24px;
   color: var(--muted);
   text-decoration: underline;
   text-decoration-color: var(--border-strong);
   text-underline-offset: 3px;
-}
-.sizes a:not(:last-child)::after {
-  content: "·";
-  display: inline-block;
-  margin: 0 8px;
-  text-decoration: none;
-  color: var(--border-strong);
 }
 .sizes a:hover,
 .sizes a[aria-current="page"] {
@@ -1255,6 +1305,24 @@ footer a:hover {
   .language select {
     max-width: 104px;
   }
+  /* Icon-only on phones; the list opens the same way. */
+  .tools-menu-button span,
+  .tools-menu-button svg:last-child {
+    display: none;
+  }
+  .tools-menu ul {
+    position: fixed;
+    top: 62px;
+    left: 16px;
+    right: 16px;
+  }
+  .tools-menu-button {
+    width: 44px;
+    padding: 0;
+    justify-content: center;
+    border: 0;
+    background: transparent;
+  }
   main {
     padding: 0 16px;
   }
@@ -1278,7 +1346,7 @@ footer a:hover {
     border-radius: 16px;
   }
   .tool-card.placeholder {
-    min-height: 360px;
+    min-height: 303px;
   }
   .tool-title {
     margin-bottom: 14px;

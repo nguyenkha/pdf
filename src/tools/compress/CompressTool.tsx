@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react";
-import { FileArchive, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import type { Messages } from "../../i18n";
 import type { Locale } from "../../i18n/config";
 import { validateFile, LARGE_FILE_BYTES } from "../../lib/pdf";
@@ -280,15 +280,6 @@ export default function CompressTool({ t, locale, preset, shared }: Props) {
   const step = batch ? (batchDone ? 3 : 2) : result ? 3 : file && (summary || locked) ? 2 : 1;
   return (
     <section className="tool-card" aria-label={t.compress} ref={card}>
-      <div className="tool-title">
-        <span className="tool-icon">
-          <FileArchive size={21} aria-hidden="true" />
-        </span>
-        <div>
-          <h2>{t.compress}</h2>
-          <p>{t.tagline}</p>
-        </div>
-      </div>
       <Steps t={t} current={step} />
       {batch ? (
         <BatchTool

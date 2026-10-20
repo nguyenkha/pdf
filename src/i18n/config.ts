@@ -8,6 +8,7 @@ export const locales = [
   "ru",
   "hi",
   "ja",
+  "ko",
   "de",
   "vi",
 ] as const;
@@ -22,6 +23,7 @@ export const names = [
   "Русский",
   "हिन्दी",
   "日本語",
+  "한국어",
   "Deutsch",
   "Tiếng Việt",
 ];

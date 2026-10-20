@@ -19,6 +19,7 @@ import { metadata } from "./i18n/metadata";
 import CompressTool from "./tools/compress/CompressTool";
 import { toolFromPath, type ToolProps } from "./app/tools";
 import { ToolSwitcher } from "./components/ToolSwitcher";
+import { ToolsMenu } from "./components/ToolsMenu";
 import { config } from "./app/config";
 import { SIZE_PAGES, sizeFromPath, sizeFromSlug, sizePath } from "./app/sizes";
 import { fill } from "./i18n/fill";
@@ -125,8 +126,7 @@ function App({
           <img className="brand-logo dark-only" src="/icons/icon-dark.svg" alt="" />
           pdf.kha.do
         </a>
-        <nav aria-label={t.tools}>
-          <a href={privacyPage ? `/${locale}/#tool` : "#tool"}>{t.tools}</a>
+        <nav aria-label={t.about}>
           <a href={privacyPage ? `/${locale}/#about` : "#about"}>{t.about}</a>
           {config.githubUrl && (
             <a href={config.githubUrl} target="_blank" rel="noreferrer">
@@ -136,6 +136,7 @@ function App({
           )}
         </nav>
         <div className="header-actions">
+          <ToolsMenu t={t} locale={locale} active={privacyPage ? undefined : activeTool} />
           <label className="language">
             <Globe size={16} />
             <select
@@ -207,7 +208,6 @@ function App({
             </div>
             <h1>{preset ? fill(t.sizeHero, { size: preset.label }) : t.hero}</h1>
             <p>{preset ? fill(t.sizeIntro, { size: preset.label }) : t.sub}</p>
-            <p className="support">{t.support}</p>
           </div>
           <div id="tool">
             <ToolSwitcher t={t} locale={locale} active={activeTool} />

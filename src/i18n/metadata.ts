@@ -35,6 +35,10 @@ export const metadata = {
     "PDF 圧縮・軽量化｜無料・アップロード不要 | pdf.kha.do",
     "PDF を無料でブラウザー上で圧縮。アップロード不要、登録不要、透かしなし。PDF を 100 KB や 1 MB など、必要なサイズまで軽量化できます。",
   ],
+  ko: [
+    "PDF 압축, PDF 용량 줄이기 무료 | pdf.kha.do",
+    "PDF를 무료로 브라우저에서 바로 압축하세요. 업로드 없음, 가입 없음, 워터마크 없음. PDF 용량을 100 KB, 1 MB 등 원하는 크기로 줄일 수 있어요.",
+  ],
   de: [
     "PDF verkleinern & komprimieren, kostenlos | pdf.kha.do",
     "PDF kostenlos im Browser komprimieren und verkleinern. Ohne Upload, ohne Anmeldung, ohne Wasserzeichen. Auf 100 KB, 1 MB oder jede gewünschte Größe.",

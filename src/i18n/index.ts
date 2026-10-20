@@ -11,6 +11,7 @@ const loaders: Record<Locale, () => Promise<{ default: Messages }>> = {
   ru: () => import("./ru"),
   hi: () => import("./hi"),
   ja: () => import("./ja"),
+  ko: () => import("./ko"),
   de: () => import("./de"),
   vi: () => import("./vi"),
 };
