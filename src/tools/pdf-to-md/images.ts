@@ -7,6 +7,8 @@ export type ImagePlacement = {
   height: number;
   /** The image's own size in pixels, when the PDF states it. */
   pixels?: number;
+  /** Viewport matrix of the image's unit square: tells upright from turned. */
+  matrix: number[];
 };
 /** An image kept for the Markdown: its file in the ZIP and its place on the page. */
 export type PageImage = {
@@ -63,6 +65,7 @@ export function findImages(
           y,
           width,
           height,
+          matrix,
           ...(typeof args[1] === "number" ? { pixels: args[1] } : {}),
         });
     }

@@ -12,6 +12,18 @@ await page.setContent(`<body style="margin:0;padding:140px 120px;background:#fdf
   <p>Optical character recognition reads those pixels back into text that can be searched and copied.</p>
 </body>`);
 const scan = await page.screenshot({ type: "jpeg", quality: 80 });
+// A ruled table, scanned a little crooked, with empty cells in the total rows.
+const cell = 'style="border:2px solid #222;padding:10px 16px"';
+await page.setContent(`<body style="margin:0;padding:140px 120px;background:#fdfdfb;color:#111;font:30px/1.4 Georgia,serif">
+  <div style="transform:rotate(0.6deg);transform-origin:top left">
+  <h1 style="font:bold 56px/1.2 Arial,sans-serif;margin:0 0 50px">Invoice</h1>
+  <table style="border-collapse:collapse;width:100%">
+    ${[["Item", "Qty", "Price", "Amount"], ["Paper", "10", "8.50", "85.00"], ["Toner", "2", "62.00", "124.00"], ["Folders", "50", "0.60", "30.00"], ["Total", "", "", "239.00"]]
+      .map((row) => `<tr>${row.map((value) => `<td ${cell}>${value}</td>`).join("")}</tr>`)
+      .join("")}
+  </table></div>
+</body>`);
+const table = await page.screenshot({ type: "jpeg", quality: 80 });
 await browser.close();
 
 /** A minimal PDF: pages are either the scan image or one line of real text. */
@@ -23,10 +35,11 @@ function pdf(pages) {
   add("<< /Type /Catalog /Pages 2 0 R >>");
   add("");
   const font = add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
-  const image = add(stream(scan, "/Type /XObject /Subtype /Image /Width 1240 /Height 1754 /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode"));
+  const picture = pages.includes("table") ? table : scan;
+  const image = add(stream(picture, "/Type /XObject /Subtype /Image /Width 1240 /Height 1754 /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode"));
   const kids = pages.map((kind) => {
     const content =
-      kind === "scan"
+      kind !== "text"
         ? "q 595 0 0 842 0 0 cm /Im1 Do Q"
         : "BT /F1 24 Tf 72 760 Td (Typed Introduction) Tj ET BT /F1 12 Tf 72 720 Td (This first page has a real text layer.) Tj ET";
     const contents = add(stream(Buffer.from(content)));
@@ -47,3 +60,4 @@ function pdf(pages) {
 }
 fs.writeFileSync("tests/fixtures/scanned-text.pdf", pdf(["scan"]));
 fs.writeFileSync("tests/fixtures/mixed-scan.pdf", pdf(["text", "scan"]));
+fs.writeFileSync("tests/fixtures/scanned-table.pdf", pdf(["table"]));

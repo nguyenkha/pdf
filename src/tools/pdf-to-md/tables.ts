@@ -124,8 +124,9 @@ function confident(rows: Row[]): boolean {
 export function detectTables(
   parts: TextPart[],
   rulings: Ruling[] = [],
+  scanned = false,
 ): TableRegion[] {
-  const tables: TableRegion[] = detectGridTables(parts, rulings);
+  const tables: TableRegion[] = detectGridTables(parts, rulings, scanned);
   const claimed = new Set(tables.flatMap((table) => [...table.parts]));
   const rows = visualRows(parts.filter((part) => !claimed.has(part)));
   for (let i = 0; i < rows.length; ) {

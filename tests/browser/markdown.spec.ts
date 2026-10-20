@@ -78,8 +78,20 @@ test("offers OCR for a scan and reads it on the device", async ({ page }) => {
   await expect(preview.locator("img")).toHaveCount(0);
   await expect(page.getByText(/recognized with OCR and may contain mistakes/)).toBeVisible();
   // Everything, the recognizer included, came from this site.
-  expect(requests.filter((url) => !url.startsWith("http://127.0.0.1:4173/") && !url.startsWith("blob:") && !url.startsWith("data:"))).toEqual([]);
+  const origin = new URL(page.url()).origin + "/";
+  expect(requests.filter((url) => !url.startsWith(origin) && !url.startsWith("blob:") && !url.startsWith("data:"))).toEqual([]);
   expect(requests.some((url) => url.includes("/ocr/lang/eng.traineddata.gz"))).toBe(true);
+});
+test("turns a scanned ruled table into a table", async ({ page }) => {
+  test.setTimeout(240000);
+  await page.goto("/en/markdown/");
+  await page.locator("input[type=file]").setInputFiles("tests/fixtures/scanned-table.pdf");
+  await page.getByRole("button", { name: "Recognize text" }).click();
+  const table = page.locator(".md-preview table");
+  await expect(table).toBeVisible({ timeout: 180000 });
+  await expect(table.locator("tr")).toHaveCount(5);
+  await expect(table.locator("tr").last().locator("td")).toHaveText(["Total", "", "", "239.00"]);
+  await expect(page.getByRole("link", { name: /Table 1/ })).toBeVisible();
 });
 test("reads only the scanned pages of a mixed PDF", async ({ page }) => {
   test.setTimeout(240000);

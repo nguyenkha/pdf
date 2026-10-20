@@ -38,6 +38,8 @@ export type TextPage = {
   links?: PdfLink[];
   images?: PageImage[];
   rulings?: Ruling[];
+  /** Text read by OCR: already in reading order, rules found on the scan. */
+  scanned?: boolean;
 };
 /**
  * Words written into the Markdown itself; the site passes its UI language.
@@ -219,7 +221,8 @@ export function convertDocument(
   const labels = { ...defaultLabels, ...options.labels };
   let columnPages = 0;
   const lines = pages.map((page) => {
-    const ordered = options.restoreColumns
+    // OCR's layout analysis has already put columns in reading order.
+    const ordered = options.restoreColumns && !page.scanned
       ? restoreReadingOrder(page.parts, page.width, page.height, page.rulings)
       : { parts: page.parts, reordered: false };
     if (ordered.reordered) columnPages++;
@@ -298,6 +301,7 @@ export function convertDocument(
       ? detectTables(
           kept.flatMap((line) => line.parts),
           pages[index].rulings,
+          pages[index].scanned,
         )
       : [];
     const emitted = new Set<(typeof regions)[number]>();

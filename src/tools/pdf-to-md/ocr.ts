@@ -1,13 +1,16 @@
-import type { Line, Worker as TesseractWorker } from "tesseract.js";
+import type { Paragraph, Worker as TesseractWorker } from "tesseract.js";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import workerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
 import type { Locale } from "../../i18n/config";
 import { ocrLanguages } from "./ocr-data";
-import { findImages } from "./images";
+import { findImages, type ImagePlacement } from "./images";
+import { imageObject, imageSource } from "./pdf-image";
+import type { Ruling } from "./rulings";
+import { scanRulings } from "./scan-rulings";
 import type { TextPart } from "./text";
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
-export type OcrPage = { index: number; parts: TextPart[] };
+export type OcrPage = { index: number; parts: TextPart[]; rulings: Ruling[] };
 export type OcrProgress =
   | { stage: "loading" }
   /** `done` counts whole pages plus the fraction of the current one. */
@@ -20,43 +23,102 @@ const MAX_PIXELS = 12_000_000;
 // Words below this confidence are usually noise from pictures or stains.
 const MIN_CONFIDENCE = 35;
 const CJK = /[぀-ヿ㐀-鿿가-힯豈-﫿]/;
+const median = (values: number[]) => {
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted.length ? sorted[Math.floor(sorted.length / 2)] : 0;
+};
 /**
- * Turns Tesseract's lines into text parts in PDF viewport units, the same
- * shape the text layer gives, so headings, lists, tables and columns are
- * found the same way. A line is split where a wide gap suggests a table cell.
+ * Turns Tesseract's paragraphs into text parts in PDF viewport units, the
+ * same shape the text layer gives, so headings, lists, tables and columns are
+ * found the same way. Coordinates are turned level first: on a scan that sits
+ * a degree off, rows of a table would otherwise not line up. A line is split
+ * where a wide gap suggests a table cell.
  */
-export function partsFromLines(lines: Line[], scale: number, rtl = false): TextPart[] {
+/** How far the scan is turned, from the slope of its long text lines. */
+export const skewAngle = (paragraphs: Paragraph[]) =>
+  median(
+    paragraphs
+      .flatMap((paragraph) => paragraph.lines)
+      .filter((line) => line.baseline && line.baseline.x1 - line.baseline.x0 > 200)
+      .map((line) => Math.atan2(line.baseline.y1 - line.baseline.y0, line.baseline.x1 - line.baseline.x0)),
+  );
+/** Typical text height in pixels, to tell table rules from letters. */
+export const textHeight = (paragraphs: Paragraph[]) =>
+  median(paragraphs.flatMap((paragraph) => paragraph.lines.map((line) => line.rowAttributes?.rowHeight || line.bbox.y1 - line.bbox.y0)));
+export function partsFromParagraphs(
+  paragraphs: Paragraph[],
+  {
+    scale,
+    origin = [0, 0],
+    rtl = false,
+    angle = skewAngle(paragraphs),
+    rules = [],
+  }: {
+    /** Image pixels per PDF unit. */
+    scale: number;
+    /** Where the image's top-left corner sits on the page. */
+    origin?: [number, number];
+    rtl?: boolean;
+    angle?: number;
+    /** Table rules found on the level scan, in its pixels: text never crosses one. */
+    rules?: Ruling[];
+  },
+): TextPart[] {
+  const verticals = rules.filter((rule) => rule.x1 === rule.x2);
+  const cos = Math.cos(angle),
+    sin = Math.sin(angle);
+  const level = (x: number, y: number) => [x * cos + y * sin, -x * sin + y * cos];
   const parts: TextPart[] = [];
-  for (const line of lines) {
-    const words = line.words.filter((word) => word.text.trim() && word.confidence >= MIN_CONFIDENCE);
-    if (!words.length) continue;
-    const rowHeight = line.rowAttributes?.rowHeight || line.bbox.y1 - line.bbox.y0;
-    // Tesseract's row height (ascender to descender) is close to the font size.
-    const size = Math.max(4, rowHeight / scale);
-    const baseline = Math.max(line.baseline?.y0 ?? 0, line.baseline?.y1 ?? 0) || line.bbox.y1;
-    const segments: (typeof words)[] = [];
-    for (const word of words) {
-      const last = segments.at(-1)?.at(-1);
-      if (last && word.bbox.x0 - last.bbox.x1 <= rowHeight * 1.5) segments.at(-1)!.push(word);
-      else segments.push([word]);
-    }
-    segments.forEach((segment, index) => {
-      const str = segment
-        .map((word) => word.text.trim())
-        .join(" ")
-        // Tesseract spaces out CJK characters; written text has none.
-        .replace(new RegExp(`(${CJK.source}) (?=${CJK.source})`, "g"), "$1");
-      const x0 = segment[0].bbox.x0 / scale;
-      const x1 = segment.at(-1)!.bbox.x1 / scale;
-      parts.push({
-        str,
-        transform: [size, 0, 0, size, x0, baseline / scale],
-        width: x1 - x0,
-        height: size,
-        hasEOL: index === segments.length - 1,
-        dir: rtl ? "rtl" : "ltr",
+  for (const paragraph of paragraphs) {
+    const heights = paragraph.lines.map((line) => line.rowAttributes?.rowHeight || line.bbox.y1 - line.bbox.y0);
+    const typical = median(heights);
+    for (const [index, line] of paragraph.lines.entries()) {
+      // A line's row height wobbles with its letters: near the paragraph's
+      // typical height it takes that one; a clear outlier (a heading Tesseract
+      // kept in the paragraph) keeps its own.
+      const rowHeight = Math.abs(heights[index] - typical) <= typical * 0.25 ? typical : heights[index];
+      const size = Math.max(4, rowHeight / scale);
+      // Noise is a whole doubtful line; a doubtful word in a clear line is usually real.
+      const words = line.words.filter(
+        (word) => word.text.trim() && (word.confidence >= MIN_CONFIDENCE || line.confidence >= 70),
+      );
+      if (!words.length) continue;
+      const baseline = line.baseline?.x1 > line.baseline?.x0 ? line.baseline : undefined;
+      const baselineAt = (x: number) =>
+        baseline
+          ? baseline.y0 + ((x - baseline.x0) * (baseline.y1 - baseline.y0)) / (baseline.x1 - baseline.x0)
+          : line.bbox.y1;
+      const segments: (typeof words)[] = [];
+      for (const word of words) {
+        const last = segments.at(-1)?.at(-1);
+        const [left, y] = last ? level(last.bbox.x1, baselineAt(last.bbox.x1)) : [0, 0];
+        const [right] = level(word.bbox.x0, baselineAt(word.bbox.x0));
+        const ruled = verticals.some(
+          (rule) => rule.x1 > left && rule.x1 < right && y >= rule.y1 && y - rowHeight <= rule.y2,
+        );
+        if (last && !ruled && word.bbox.x0 - last.bbox.x1 <= rowHeight * 1.5) segments.at(-1)!.push(word);
+        else segments.push([word]);
+      }
+      segments.forEach((segment, index) => {
+        const str = segment
+          .map((word) => word.text.trim())
+          .join(" ")
+          // Tesseract spaces out CJK characters; written text has none.
+          .replace(new RegExp(`(${CJK.source}) (?=${CJK.source})`, "g"), "$1");
+        const first = segment[0].bbox.x0,
+          last = segment.at(-1)!.bbox.x1;
+        const [x0, y] = level(first, baselineAt(first));
+        const [x1] = level(last, baselineAt(last));
+        parts.push({
+          str,
+          transform: [size, 0, 0, size, origin[0] + x0 / scale, origin[1] + y / scale],
+          width: (x1 - x0) / scale,
+          height: size,
+          hasEOL: index === segments.length - 1,
+          dir: rtl ? "rtl" : "ltr",
+        });
       });
-    });
+    }
   }
   return parts;
 }
@@ -72,7 +134,7 @@ export async function recognizePages(
   signal: AbortSignal,
 ): Promise<OcrPage[]> {
   onProgress({ stage: "loading" });
-  const { createWorker } = (await import("tesseract.js/dist/tesseract.esm.min.js")).default;
+  const { createWorker, PSM } = (await import("tesseract.js/dist/tesseract.esm.min.js")).default;
   const languages = ocrLanguages(locale);
   let recognizer: TesseractWorker | undefined;
   let position = 0;
@@ -109,6 +171,9 @@ export async function recognizePages(
           });
       },
     });
+    // tesseract.js defaults to one uniform block; a page needs layout analysis
+    // to keep columns apart and table rows in.
+    await recognizer.setParameters({ tessedit_pageseg_mode: PSM.AUTO });
     const doc = await task.promise;
     const pages: OcrPage[] = [];
     for (const [at, index] of indexes.entries()) {
@@ -121,29 +186,119 @@ export async function recognizePages(
         MAX_SIDE / Math.max(base.width, base.height),
         Math.sqrt(MAX_PIXELS / (base.width * base.height)),
       );
-      const scan = findImages(await page.getOperatorList(), base.transform, pdfjs.OPS)
-        .filter((image) => image.pixels && image.width * image.height >= base.width * base.height * 0.3)
-        .map((image) => image.pixels! / image.width);
-      const scale = scan.length ? Math.min(limit, Math.max(MIN_SCALE, ...scan)) : limit;
-      const viewport = page.getViewport({ scale });
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.ceil(viewport.width);
-      canvas.height = Math.ceil(viewport.height);
-      const context = canvas.getContext("2d");
-      if (!context) throw new Error("canvas");
-      await page.render({ canvasContext: context, viewport, background: "white" }).promise;
+      const images = findImages(await page.getOperatorList(), base.transform, pdfjs.OPS);
+      // A scan is one upright picture over the page: read its own pixels, which
+      // every browser decodes alike, instead of a resampled rendering.
+      const scan = images.find((image) => isScan(image, base.width, base.height));
+      const pixels = scan && images.length === 1 ? await scanPixels(page, scan, limit) : undefined;
+      let canvas: HTMLCanvasElement;
+      let scale: number;
+      let origin: [number, number] = [0, 0];
+      if (pixels) {
+        canvas = pixels;
+        scale = canvas.width / scan!.width;
+        origin = [scan!.x, scan!.y];
+      } else {
+        // Otherwise render the page, at the resolution of any scan on it.
+        const native = images
+          .filter((image) => image.pixels && image.width * image.height >= base.width * base.height * 0.3)
+          .map((image) => image.pixels! / image.width);
+        scale = native.length ? Math.min(limit, Math.max(MIN_SCALE, ...native)) : limit;
+        const viewport = page.getViewport({ scale });
+        canvas = document.createElement("canvas");
+        canvas.width = Math.ceil(viewport.width);
+        canvas.height = Math.ceil(viewport.height);
+        const context = canvas.getContext("2d");
+        if (!context) throw new Error("canvas");
+        await page.render({ canvasContext: context, viewport, background: "white" }).promise;
+      }
       page.cleanup();
       const { data } = await recognizer.recognize(canvas, {}, { blocks: true, text: false });
+      const paragraphs = (data.blocks ?? []).flatMap((block) => block.paragraphs);
+      const angle = skewAngle(paragraphs);
+      const rules = tableRules(canvas, angle, textHeight(paragraphs) || 30);
+      const rulings = rules.map((rule) => ({
+        x1: origin[0] + rule.x1 / scale,
+        y1: origin[1] + rule.y1 / scale,
+        x2: origin[0] + rule.x2 / scale,
+        y2: origin[1] + rule.y2 / scale,
+      }));
       // Free the page bitmap before the next one; phones are tight on memory.
       canvas.width = canvas.height = 0;
-      const lines = (data.blocks ?? []).flatMap((block) =>
-        block.paragraphs.flatMap((paragraph) => paragraph.lines),
-      );
-      pages.push({ index, parts: partsFromLines(lines, scale, languages[0] === "ara") });
+      pages.push({
+        index,
+        parts: partsFromParagraphs(paragraphs, { scale, origin, rtl: languages[0] === "ara", angle, rules }),
+        rulings,
+      });
     }
     return pages;
   } finally {
     signal.removeEventListener("abort", stop);
     stop();
   }
+}
+/**
+ * Table and form rules drawn on the scan, found on a level copy of the page so
+ * they share the coordinates of the level text parts.
+ */
+function tableRules(canvas: HTMLCanvasElement, angle: number, text: number): Ruling[] {
+  const pad = Math.ceil(canvas.width * Math.abs(Math.sin(angle))) + 2;
+  const level = document.createElement("canvas");
+  level.width = canvas.width;
+  level.height = canvas.height + pad * 2;
+  const context = level.getContext("2d", { willReadFrequently: true });
+  if (!context) return [];
+  context.fillStyle = "#fff";
+  context.fillRect(0, 0, level.width, level.height);
+  context.translate(0, pad);
+  context.rotate(-angle);
+  context.drawImage(canvas, 0, 0);
+  const { data } = context.getImageData(0, 0, level.width, level.height);
+  level.width = level.height = 0;
+  const gray = new Uint8Array(data.length / 4);
+  for (let i = 0; i < gray.length; i++)
+    gray[i] = (data[i * 4] * 299 + data[i * 4 + 1] * 587 + data[i * 4 + 2] * 114) / 1000;
+  return scanRulings(gray, canvas.width, canvas.height + pad * 2, {
+    horizontal: text * 3,
+    vertical: text * 1.5,
+  }, text).map((rule) => ({ ...rule, y1: rule.y1 - pad, y2: rule.y2 - pad }));
+}
+/** Covers most of the page, drawn upright: not mirrored, turned or sheared. */
+function isScan(image: ImagePlacement, width: number, height: number) {
+  const [a, b, c, d] = image.matrix;
+  const sx = image.pixels ? image.pixels / image.width : 0;
+  return (
+    image.width * image.height >= width * height * 0.8 &&
+    a > 0 &&
+    d < 0 &&
+    Math.abs(b) < 1e-3 * a &&
+    Math.abs(c) < 1e-3 * a &&
+    sx > 0
+  );
+}
+/** The scan's own pixels in a canvas, enlarged only if very coarse. */
+async function scanPixels(
+  page: Parameters<typeof imageObject>[0],
+  scan: ImagePlacement,
+  limit: number,
+): Promise<HTMLCanvasElement | undefined> {
+  const object = await imageObject(page, scan.id);
+  const source = object && imageSource(object, (width, height) => Object.assign(document.createElement("canvas"), { width, height }));
+  if (!object || !source) return;
+  const native = object.width / scan.width;
+  // The PDF may stretch pixels: then the page rendering is the safer reading.
+  if (Math.abs(object.height / scan.height - native) > native * 0.02) return;
+  const scale = Math.min(limit, Math.max(MIN_SCALE, native));
+  const canvas = document.createElement("canvas");
+  // At the scan's own size, keep its exact pixel grid: rounding the page size
+  // instead would resample every row by a fraction and blur thin strokes.
+  const exact = scale === native;
+  canvas.width = exact ? object.width : Math.round(scan.width * scale);
+  canvas.height = exact ? object.height : Math.round(scan.height * scale);
+  const context = canvas.getContext("2d");
+  if (!context) return;
+  context.fillStyle = "#fff";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(source, 0, 0, canvas.width, canvas.height);
+  return canvas;
 }

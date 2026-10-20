@@ -1,5 +1,6 @@
-import { extractRulings } from "./rulings";
+import { extractRulings, type Ruling } from "./rulings";
 import { findImages, type PageImage } from "./images";
+import { imageObject, imageSource, type PdfImage } from "./pdf-image";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import { safeUrl } from "./structure";
 import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
@@ -21,44 +22,13 @@ let recognized = new Set<number>();
 const MAX_IMAGES = 300;
 const MAX_SIDE = 2000;
 const MAX_BYTES = 150 * 1024 * 1024;
-type PdfImage = {
-  bitmap?: ImageBitmap;
-  width: number;
-  height: number;
-  kind?: number;
-  data?: Uint8Array | Uint8ClampedArray;
-};
 /** Turns a pdf.js image object into a PNG (with transparency) or JPEG. */
 async function encode(image: PdfImage): Promise<Blob | undefined> {
   if (!image.width || !image.height || typeof OffscreenCanvas === "undefined") return;
   const scale = Math.min(1, MAX_SIDE / Math.max(image.width, image.height));
   const width = Math.max(1, Math.round(image.width * scale));
   const height = Math.max(1, Math.round(image.height * scale));
-  let source: CanvasImageSource | undefined = image.bitmap;
-  if (!source && image.data) {
-    const rgba = new Uint8ClampedArray(image.width * image.height * 4);
-    const { data, kind } = image;
-    if (kind === 3) rgba.set(data.subarray(0, rgba.length));
-    else if (kind === 2)
-      for (let i = 0, j = 0; j < rgba.length; i += 3, j += 4) {
-        rgba[j] = data[i];
-        rgba[j + 1] = data[i + 1];
-        rgba[j + 2] = data[i + 2];
-        rgba[j + 3] = 255;
-      }
-    else if (kind === 1) {
-      const row = Math.ceil(image.width / 8);
-      for (let y = 0; y < image.height; y++)
-        for (let x = 0; x < image.width; x++) {
-          const on = (data[y * row + (x >> 3)] >> (7 - (x & 7))) & 1;
-          rgba.fill(on ? 255 : 0, (y * image.width + x) * 4, (y * image.width + x) * 4 + 3);
-          rgba[(y * image.width + x) * 4 + 3] = 255;
-        }
-    } else return;
-    const raw = new OffscreenCanvas(image.width, image.height);
-    raw.getContext("2d")!.putImageData(new ImageData(rgba, image.width, image.height), 0, 0);
-    source = raw;
-  }
+  const source = imageSource(image, (w, h) => new OffscreenCanvas(w, h));
   if (!source) return;
   const canvas = new OffscreenCanvas(width, height);
   const context = canvas.getContext("2d");
@@ -75,20 +45,10 @@ async function encode(image: PdfImage): Promise<Blob | undefined> {
     ? canvas.convertToBlob({ type: "image/png" })
     : canvas.convertToBlob({ type: "image/jpeg", quality: 0.85 });
 }
-type Page = Awaited<ReturnType<Awaited<ReturnType<typeof pdfjs.getDocument>["promise"]>["getPage"]>>;
-/** A resolved image object; undefined if pdf.js never delivers it. */
-const imageObject = (page: Page, id: string) =>
-  new Promise<PdfImage | undefined>((resolve) => {
-    const timer = setTimeout(() => resolve(undefined), 3000);
-    (id.startsWith("g_") ? page.commonObjs : page.objs).get(id, (value: unknown) => {
-      clearTimeout(timer);
-      resolve(value as PdfImage);
-    });
-  });
 type Request =
   | { type: "extract"; file: File; options: ConversionOptions }
   | { type: "format"; options: ConversionOptions }
-  | { type: "ocr"; pages: { index: number; parts: TextPart[] }[]; options: ConversionOptions };
+  | { type: "ocr"; pages: { index: number; parts: TextPart[]; rulings: Ruling[] }[]; options: ConversionOptions };
 const hasText = (page: TextPage) => page.parts.some((part) => part.str.trim());
 self.onmessage = async (event: MessageEvent<Request>) => {
   const request = event.data;
@@ -211,11 +171,14 @@ self.onmessage = async (event: MessageEvent<Request>) => {
     }
     if (!pages) throw new Error("invalid");
     if (request.type === "ocr")
-      for (const { index, parts } of request.pages) {
+      for (const { index, parts, rulings } of request.pages) {
         const page = pages[index];
         if (!page) continue;
         recognized.add(index);
         page.parts = parts;
+        // Rules found on the scan stand in for the vector rules a scan lacks.
+        page.rulings = rulings;
+        page.scanned = true;
         // The scan itself is now text: drop pictures covering most of the page.
         page.images = page.images?.filter(
           (image) => image.width * image.height < page.width * page.height * 0.6,

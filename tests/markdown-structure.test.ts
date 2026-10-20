@@ -5,8 +5,9 @@ import { safeUrl } from "../src/tools/pdf-to-md/structure";
 import { InlineMarkdown } from "../src/tools/pdf-to-md/InlineMarkdown";
 import { MarkdownPreview } from "../src/tools/pdf-to-md/MarkdownPreview";
 import { findImages } from "../src/tools/pdf-to-md/images";
-import { partsFromLines } from "../src/tools/pdf-to-md/ocr";
-import type { Line } from "tesseract.js";
+import { partsFromParagraphs } from "../src/tools/pdf-to-md/ocr";
+import { scanRulings } from "../src/tools/pdf-to-md/scan-rulings";
+import type { Paragraph } from "tesseract.js";
 import {
   convertDocument,
   defaultOptions,
@@ -154,7 +155,7 @@ it("finds painted images with their page box and skips icons", () => {
     argsArray: [[], [300, 0, 0, 200, 50, 150], ["img_1", 900, 600], [], [], [10, 0, 0, 10, 0, 0], ["icon", 16, 16], []],
   };
   expect(findImages(list, [1, 0, 0, 1, 0, 0], ops)).toEqual([
-    { id: "img_1", x: 50, y: 150, width: 300, height: 200, pixels: 900 },
+    { id: "img_1", x: 50, y: 150, width: 300, height: 200, pixels: 900, matrix: [300, 0, 0, 200, 50, 150] },
   ]);
 });
 it("never turns PDF text into HTML, images, comments or script links", () => {
@@ -186,22 +187,85 @@ it("never turns PDF text into HTML, images, comments or script links", () => {
   expect(result.markdown).not.toContain("<!--");
   expect(result.markdown).not.toMatch(/(^|[^\\])!\[/);
 });
-it("turns OCR lines into text parts, split at table-like gaps", () => {
-  const word = (text: string, x0: number, x1: number, confidence = 90) => ({
+it("turns OCR lines into level text parts, split at table-like gaps", () => {
+  const word = (text: string, x0: number, x1: number, y: number, confidence = 90) => ({
     text,
     confidence,
-    bbox: { x0, y0: 100, x1, y1: 130 },
+    bbox: { x0, y0: y - 26, x1, y1: y + 4 },
   });
-  const line = (words: ReturnType<typeof word>[]) =>
-    ({ words, rowAttributes: { rowHeight: 30 }, baseline: { y0: 126, y1: 126 }, bbox: { x0: 0, y0: 100, x1: 900, y1: 130 } }) as unknown as Line;
-  const parts = partsFromLines(
-    [line([word("Name", 100, 180), word("of", 190, 220), word("noise", 230, 300, 10), word("Count", 600, 700)]), line([word("漢", 100, 130), word("字", 135, 165)])],
-    2,
-  );
-  expect(parts.map((p) => [p.str, p.transform[4], p.transform[5], p.hasEOL])).toEqual([
-    ["Name of", 50, 63, false],
-    ["Count", 300, 63, true],
-    ["漢字", 50, 63, true],
+  // A scan turned slightly: the baseline drops 10 px over 1000 px.
+  const tilt = (x: number, y: number) => y + x / 100;
+  const line = (words: ReturnType<typeof word>[], y: number, confidence = 90) =>
+    ({
+      words: words.map((w) => ({ ...w, bbox: { ...w.bbox, y0: tilt(w.bbox.x0, w.bbox.y0), y1: tilt(w.bbox.x0, w.bbox.y1) } })),
+      confidence,
+      rowAttributes: { rowHeight: 30 },
+      baseline: { x0: 0, y0: tilt(0, y), x1: 1000, y1: tilt(1000, y) },
+      bbox: { x0: 0, y0: y - 26, x1: 1000, y1: y + 4 },
+    });
+  const paragraph = { lines: [
+    line([word("Name", 100, 180, 126), word("of", 190, 220, 126), word("Count", 800, 900, 126)], 126),
+    line([word("Total", 100, 180, 200, 20), word("42", 800, 840, 200)], 200),
+    line([word("~", 100, 120, 260, 10)], 260, 30),
+    line([word("漢", 100, 130, 300), word("字", 135, 165, 300)], 300),
+  ] } as unknown as Paragraph;
+  const parts = partsFromParagraphs([paragraph], { scale: 2 });
+  const row = (str: string) => parts.find((p) => p.str === str)!;
+  // Cells of one row share a baseline once the tilt is taken out.
+  expect(row("Count").transform[5]).toBeCloseTo(row("Name of").transform[5], 0);
+  expect(row("42").transform[5]).toBeCloseTo(row("Total").transform[5], 0);
+  expect(parts.map((p) => [p.str, p.hasEOL])).toEqual([
+    ["Name of", false],
+    ["Count", true],
+    // A low-confidence word in a clear line stays; a doubtful line goes.
+    ["Total", false],
+    ["42", true],
+    ["漢字", true],
   ]);
   expect(parts[0].height).toBeCloseTo(15);
+});
+it("finds the drawn rules of a scanned table, not letters or filled shapes", () => {
+  const width = 400,
+    height = 300;
+  const gray = new Uint8Array(width * height).fill(240);
+  const ink = (x0: number, y0: number, x1: number, y1: number) => {
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) gray[y * width + x] = 30;
+  };
+  // A 2 x 2 ruled table, two pixels thick, with a scanner gap in one rule.
+  for (const y of [20, 80, 140]) ink(20, y, 300, y + 1);
+  for (let x = 150; x < 153; x++) gray[80 * width + x] = gray[81 * width + x] = 240;
+  for (const x of [20, 160, 300]) ink(x, 20, x + 1, 141);
+  // A letter stroke and a filled box.
+  ink(330, 20, 332, 40);
+  ink(20, 200, 300, 260);
+  const rules = scanRulings(gray, width, height, { horizontal: 60, vertical: 30 });
+  // Within a pixel: a rule is followed across two rows (or columns) of pixels.
+  const near = (values: number[][]) => values.map((row) => row.map(Math.round));
+  expect(near(rules.filter((r) => r.y1 === r.y2).map((r) => [r.y1, r.x1, r.x2]))).toEqual([
+    [20, 20, 301],
+    [80, 20, 301],
+    [140, 20, 301],
+  ]);
+  expect(near(rules.filter((r) => r.x1 === r.x2).map((r) => [r.x1, r.y1, r.y2]))).toEqual([
+    [20, 20, 141],
+    [160, 20, 141],
+    [300, 20, 141],
+  ]);
+});
+it("keeps one rule whole when the scan shifts part of it by a row", () => {
+  const width = 400,
+    height = 60;
+  const gray = new Uint8Array(width * height).fill(235);
+  const ink = (x0: number, y0: number, x1: number, y1: number) => {
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) gray[y * width + x] = 60;
+  };
+  // Left half on rows 20-21, right half a row lower, as a slightly tilted scan gives.
+  ink(10, 20, 200, 21);
+  ink(195, 22, 390, 23);
+  const rules = scanRulings(gray, width, height, { horizontal: 60, vertical: 30 }, 20);
+  expect(rules).toHaveLength(1);
+  expect(rules[0].x1).toBe(10);
+  expect(rules[0].x2).toBe(390);
+  expect(rules[0].y1).toBeGreaterThan(20);
+  expect(rules[0].y1).toBeLessThan(23);
 });

@@ -12,8 +12,7 @@ export type GridTable = {
   parts: Set<TextPart>;
   spans: SpannedCell[];
 };
-const tolerance = 1.5;
-const clusters = (values: number[]) => {
+const clusters = (values: number[], tolerance: number) => {
   const groups: number[][] = [];
   for (const value of [...values].sort((a, b) => a - b)) {
     const group = groups.at(-1);
@@ -26,7 +25,13 @@ const clusters = (values: number[]) => {
 export function detectGridTables(
   parts: TextPart[],
   rulings: Ruling[],
+  /**
+   * Rules found on a scan: placed less exactly and broken in places, so a rule
+   * counts as drawn when it covers most of a cell side.
+   */
+  scanned = false,
 ): GridTable[] {
+  const tolerance = scanned ? 3 : 1.5;
   if (rulings.length > 4000) return [];
   const parent = rulings.map((_, i) => i);
   const find = (i: number): number =>
@@ -55,8 +60,8 @@ export function detectGridTables(
   for (const lines of groups.values()) {
     const vertical = lines.filter((l) => l.x1 === l.x2),
       horizontal = lines.filter((l) => l.y1 === l.y2);
-    const xs = clusters(vertical.map((l) => l.x1)),
-      ys = clusters(horizontal.map((l) => l.y1));
+    const xs = clusters(vertical.map((l) => l.x1), tolerance),
+      ys = clusters(horizontal.map((l) => l.y1), tolerance);
     const cols = xs.length - 1,
       rows = ys.length - 1;
     if (cols < 2 || cols > 20 || rows < 2 || rows > 100 || cols * rows > 1500)
@@ -85,6 +90,17 @@ export function detectGridTables(
         amount += Math.max(0, b - covered);
         covered = Math.max(covered, b);
       }
+      if (scanned) {
+        // Union of what is drawn along this side, as a share of its length.
+        let union = 0,
+          reach = start;
+        for (const [a, b] of clipped) {
+          union += Math.max(0, b - Math.max(a, reach));
+          reach = Math.max(reach, b);
+        }
+        const share = union / (end - start);
+        return share >= 0.5 ? true : share <= 0.15 ? false : undefined;
+      }
       if (covered >= end - tolerance) return true;
       return amount <= tolerance ? false : undefined;
     };
@@ -104,15 +120,18 @@ export function detectGridTables(
         xs[col],
         xs[col + 1],
       );
+    // A scan may lose a stretch of the outer border; inner rules still decide cells.
     if (
-      Array.from(
-        { length: rows },
-        (_, r) => v(0, r) === true && v(cols, r) === true,
-      ).some((ok) => !ok) ||
-      Array.from(
-        { length: cols },
-        (_, c) => h(0, c) === true && h(rows, c) === true,
-      ).some((ok) => !ok)
+      (!scanned &&
+        Array.from(
+          { length: rows },
+          (_, r) => v(0, r) === true && v(cols, r) === true,
+        ).some((ok) => !ok)) ||
+      (!scanned &&
+        Array.from(
+          { length: cols },
+          (_, c) => h(0, c) === true && h(rows, c) === true,
+        ).some((ok) => !ok))
     )
       continue;
     const cells = Array.from({ length: rows * cols }, (_, i) => i);
