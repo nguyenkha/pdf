@@ -102,6 +102,10 @@ function socialTags(locale, t, title, description, url) {
     .join("");
 }
 const FAQ = [1, 2, 3, 4, 5, 6];
+const credits = (t) =>
+  `<p class="credits">${escape(t.credits)
+    .replace("{gs}", '<a href="https://www.ghostscript.com/">Ghostscript</a>')
+    .replace("{pdfjs}", '<a href="https://mozilla.github.io/pdf.js/">pdf.js</a>')}</p>`;
 for (const locale of locales) {
   const t = (await import(`../src/i18n/${locale}.ts`)).default;
   const sizeLinks = `<nav class="sizes"><span>${escape(t.sizesTitle)}:</span>${SIZE_PAGES.map((slug) => `<a href="/${locale}/${sizePath(slug)}" title="${escape(fill(t.sizeLink, { size: sizeLabel(slug) }))}">${sizeLabel(slug)}</a>`).join("")}</nav>`;
@@ -139,7 +143,7 @@ for (const locale of locales) {
         })),
       },
     ];
-    const content = `<main><div class="hero"><h1>${escape(h1)}</h1><p>${escape(intro)}</p><p>${escape(t.support)}</p></div><section class="content"><h2>${escape(t.how)}</h2><p>${escape(t.howText)}</p><h2>${escape(t.why)}</h2><p>${escape(t.whyText)}</p></section><section class="faq"><h2>${escape(t.faq)}</h2>${FAQ.map((i) => `<h3>${escape(t["q" + i])}</h3><p>${escape(t["a" + i])}</p>`).join("")}</section><section class="privacy-section"><h2>${escape(t.privacyTitle)}</h2><p>${escape(t.siteLoads)}</p><p>${escape(t.privacyBody)}</p></section>${sizeLinks}</main>`;
+    const content = `<main><div class="hero"><h1>${escape(h1)}</h1><p>${escape(intro)}</p><p>${escape(t.support)}</p></div><section class="content"><h2>${escape(t.how)}</h2><p>${escape(t.howText)}</p><h2>${escape(t.why)}</h2><p>${escape(t.whyText)}</p></section><section class="faq"><h2>${escape(t.faq)}</h2>${FAQ.map((i) => `<h3>${escape(t["q" + i])}</h3><p>${escape(t["a" + i])}</p>`).join("")}</section><section class="privacy-section"><h2>${escape(t.privacyTitle)}</h2><p>${escape(t.siteLoads)}</p><p>${escape(t.privacyBody)}</p>${credits(t)}</section>${sizeLinks}</main>`;
     const html = base(
       locale,
       title,
@@ -152,7 +156,7 @@ for (const locale of locales) {
     writePage(locale, suffix, html);
   }
   const privacyUrl = `https://pdf.kha.do/${locale}/privacy/`;
-  const privacyContent = `<main class="privacy-page"><a href="/${locale}/">pdf.kha.do</a><h1>${escape(t.privacyTitle)}</h1><p class="philosophy">${escape(t.philosophy)}</p><p>${escape(t.siteLoads)}</p><p>${escape(t.privacyBody)}</p><p>${escape(t.limitations)}</p><h2>${escape(t.how)}</h2><p>${escape(t.howText)}</p><p>${escape(t.support)}</p></main>`;
+  const privacyContent = `<main class="privacy-page"><a href="/${locale}/">pdf.kha.do</a><h1>${escape(t.privacyTitle)}</h1><p class="philosophy">${escape(t.philosophy)}</p><p>${escape(t.siteLoads)}</p><p>${escape(t.privacyBody)}</p>${credits(t)}<p>${escape(t.limitations)}</p><h2>${escape(t.how)}</h2><p>${escape(t.howText)}</p><p>${escape(t.support)}</p></main>`;
   const privacyHtml = base(
     locale,
     `${t.privacyTitle} | pdf.kha.do`,
@@ -160,7 +164,6 @@ for (const locale of locales) {
     privacyUrl,
     alternates("privacy/"),
   )
-    .replace(/<script type="module"[^>]*><\/script>/, "")
     .replace('<div id="root"></div>', `<div id="root">${privacyContent}</div>`);
   writePage(locale, "privacy/", privacyHtml);
 }

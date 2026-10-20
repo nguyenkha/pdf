@@ -1,7 +1,10 @@
 import {
   compressWithGhostscript,
   ghostscriptArgs,
+  mergeArgs,
+  splitPages,
   type CompressOptions,
+  type PageRange,
   type EnginePass,
 } from "../engines/ghostscript";
 import { inspectPdf, probePdf } from "../engines/validate";
@@ -11,9 +14,9 @@ import { verifyShape } from "../lib/shape";
 // Overall progress: reading and the first preservation scan, then the passes.
 const READ = 0.02;
 const ANALYZE = 0.12;
-let child: Worker | undefined;
+const MIN_SPLIT_PAGES = 12;
+const children = new Set<Worker>();
 let cancelled = false;
-let input: File | undefined;
 async function inspect(
   source: Blob,
   secret: string | undefined,
@@ -22,23 +25,31 @@ async function inspect(
   // pdf.js owns the buffer it is given, so this worker keeps no copy.
   return inspectPdf(new Uint8Array(await source.arrayBuffer()), secret, onPage, true);
 }
-const runPass: EnginePass = (profile, onPage) =>
-  new Promise((resolve, reject) => {
-    child = new Worker(new URL("./ghostscript.worker.ts", import.meta.url), {
+let input: File | undefined;
+let split: PageRange[] = [];
+// One Ghostscript run in its own worker; the worker is dropped afterwards.
+function runGhostscript(
+  inputs: { path: string; blob: Blob }[],
+  args: string[],
+  onPage: () => void,
+) {
+  return new Promise<{ bytes: Uint8Array; heapBytes: number }>((resolve, reject) => {
+    const child = new Worker(new URL("./ghostscript.worker.ts", import.meta.url), {
       type: "module",
     });
+    children.add(child);
     const timeout = setTimeout(() => {
-      child?.terminate();
+      finish();
       reject(new Error("timeout"));
     }, 120_000 + pageCount * 3_000);
     const finish = () => {
       clearTimeout(timeout);
-      child?.terminate();
-      child = undefined;
+      child.terminate();
+      children.delete(child);
     };
     child.onmessage = (event) => {
       const result = event.data;
-      if (result.type === "page") return onPage(result.page);
+      if (result.type === "page") return onPage();
       finish();
       if (result.type === "error") reject(new Error(result.code));
       else resolve({ bytes: result.bytes, heapBytes: result.heapBytes });
@@ -47,8 +58,54 @@ const runPass: EnginePass = (profile, onPage) =>
       finish();
       reject(new Error("initialization"));
     };
-    child.postMessage({ file: input, args: ghostscriptArgs(profile, password) });
+    child.postMessage({ inputs, args });
   });
+}
+// Desktop only: page ranges run side by side, then are joined. Phones keep
+// one run at a time, since every Ghostscript worker holds the whole input.
+function parallelism() {
+  const nav = navigator as Navigator & {
+    deviceMemory?: number;
+    userAgentData?: { mobile?: boolean };
+  };
+  const mobile =
+    nav.userAgentData?.mobile ?? /Mobi|Android|iPhone|iPad/i.test(nav.userAgent);
+  if (mobile) return 1;
+  const cores = Math.floor((nav.hardwareConcurrency || 2) / 2);
+  const memory = nav.deviceMemory ? Math.floor(nav.deviceMemory / 2) : 4;
+  return Math.max(1, Math.min(4, cores, memory));
+}
+const runPass: EnginePass = async (profile, onPage) => {
+  let done = 0;
+  const page = () => onPage(++done);
+  if (split.length < 2)
+    return runGhostscript(
+      [{ path: "/input.pdf", blob: input! }],
+      ghostscriptArgs(profile, password),
+      page,
+    );
+  const parts = await Promise.all(
+    split.map((range) =>
+      runGhostscript(
+        [{ path: "/input.pdf", blob: input! }],
+        ghostscriptArgs(profile, password, range),
+        page,
+      ),
+    ),
+  );
+  const merged = await runGhostscript(
+    parts.map((part, i) => ({
+      path: `/part${i}.pdf`,
+      blob: new Blob([part.bytes as BlobPart]),
+    })),
+    mergeArgs(parts.length),
+    () => {},
+  );
+  return {
+    bytes: merged.bytes,
+    heapBytes: Math.max(merged.heapBytes, ...parts.map((part) => part.heapBytes)),
+  };
+};
 let password: string | undefined;
 let pageCount = 0;
 type Request =
@@ -59,7 +116,7 @@ self.onmessage = async (event: MessageEvent<Request>) => {
   const request = event.data;
   if (request.type === "cancel") {
     cancelled = true;
-    child?.terminate();
+    for (const child of children) child.terminate();
     self.postMessage({ type: "cancelled" });
     self.close();
     return;
@@ -85,6 +142,12 @@ self.onmessage = async (event: MessageEvent<Request>) => {
     );
     const pages = before.pages.length;
     pageCount = pages;
+    // Splitting cuts bookmarks and page-to-page links, and only pays off on
+    // longer documents.
+    split =
+      !before.linked && pages >= MIN_SPLIT_PAGES
+        ? splitPages(pages, parallelism())
+        : [];
     if (cancelled) return;
     let released: Blob | undefined;
     const result = await compressWithGhostscript(
@@ -122,6 +185,6 @@ self.onmessage = async (event: MessageEvent<Request>) => {
         message: error instanceof Error ? error.message : "processing",
       });
   } finally {
-    child?.terminate();
+    for (const child of children) child.terminate();
   }
 };

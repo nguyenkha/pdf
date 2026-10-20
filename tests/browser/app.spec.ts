@@ -141,3 +141,12 @@ test("explains a reload caused by running out of memory mid-job", async ({ page 
   await page.reload();
   await expect(page.getByRole("alert")).toHaveCount(0);
 });
+test("privacy page keeps the site header, footer and credits", async ({ page }) => {
+  await page.goto("/vi/privacy/");
+  await expect(page.locator(".site-header")).toBeVisible();
+  await expect(page.locator("footer")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Ghostscript" }).first()).toBeVisible();
+  await page.getByLabel("Ngôn ngữ").selectOption("en");
+  await expect(page).toHaveURL(/\/en\/privacy\/$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Privacy");
+});

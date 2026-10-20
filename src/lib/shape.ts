@@ -8,7 +8,8 @@ export type PageShape = {
   annotations: string[];
   thumbnail?: Uint8Array;
 };
-export type PdfShape = { pages: PageShape[] };
+/** linked: has bookmarks or page-to-page links, which splitting would cut. */
+export type PdfShape = { pages: PageShape[]; linked?: boolean };
 
 export function verifyShape(before: PdfShape, after: PdfShape): void {
   if (before.pages.length !== after.pages.length)

@@ -124,4 +124,5 @@ export default {
   taggedNotice: "Ce PDF contient des balises d'accessibilité pour les lecteurs d'écran. La copie compressée conserve le texte, les liens et les pages, mais pas ces balises.",
   crashed: "La dernière compression s'est arrêtée car le navigateur manquait de mémoire. Essayez « Fichier le plus petit », moins de pages ou un ordinateur.",
   grayscale: "Niveaux de gris (plus petit, plus long)",
+  credits: "La compression repose sur {gs}, le moteur PDF open source d'Artifex, compilé en WebAssembly ; la vérification utilise {pdfjs} de Mozilla. Merci, Ghostscript.",
 } satisfies Messages;

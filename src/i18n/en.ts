@@ -120,4 +120,5 @@ export default {
   taggedNotice: "This PDF has accessibility tags for screen readers. The compressed copy keeps text, links and pages, but not those tags.",
   crashed: "The last compression stopped because the browser ran out of memory. Try \"Smallest file\", fewer pages, or a computer.",
   grayscale: "Grayscale (smaller, takes longer)",
+  credits: "Compression is powered by {gs}, the open-source PDF engine by Artifex, compiled to WebAssembly; result checks use Mozilla's {pdfjs}. Thank you, Ghostscript.",
 };

@@ -123,4 +123,5 @@ export default {
   taggedNotice: "Este PDF tem marcações de acessibilidade para leitores de tela. A cópia comprimida mantém texto, links e páginas, mas não essas marcações.",
   crashed: "A última compressão parou porque o navegador ficou sem memória. Tente \"Menor arquivo\", menos páginas ou um computador.",
   grayscale: "Tons de cinza (menor, demora mais)",
+  credits: "A compressão usa o {gs}, o motor de PDF de código aberto da Artifex, compilado para WebAssembly; a verificação usa o {pdfjs} da Mozilla. Obrigado, Ghostscript.",
 } satisfies Messages;

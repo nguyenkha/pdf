@@ -9,7 +9,7 @@ async function process(page: Page, fixture: string) {
   await expect(page.locator('.result, .error')).toBeVisible({ timeout: 90000 });
   await expect(page.getByRole('alert')).toHaveCount(0);
 }
-for (const [fixture, pages, selectable] of [['mixed', 1, true], ['multipage', 3, true], ['scan', 1, false]] as const) {
+for (const [fixture, pages, selectable] of [['mixed', 1, true], ['multipage', 3, true], ['long', 15, true], ['scan', 1, false]] as const) {
   test(`${fixture}: output opens with all pages and selectable text/links preserved`, async ({ page }) => {
     await process(page, fixture);
     const downloadEvent = page.waitForEvent('download');
@@ -30,7 +30,8 @@ for (const [fixture, pages, selectable] of [['mixed', 1, true], ['multipage', 3,
         expect((await p.getOperatorList()).fnArray.length).toBeGreaterThan(0);
         if (selectable) {
           const content = (await p.getTextContent()).items.map(item => 'str' in item ? item.str : '').join('');
-          expect(content).toContain(`Selectable page ${number}`);
+          // long.pdf repeats multipage.pdf's three pages.
+          expect(content).toContain(`Selectable page ${fixture === 'long' ? ((number - 1) % 3) + 1 : number}`);
           expect((await p.getAnnotations()).some(annotation => annotation.url === 'https://example.org/')).toBe(true);
         }
       }

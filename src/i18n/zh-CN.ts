@@ -115,4 +115,5 @@ export default {
   taggedNotice: "此 PDF 含有供屏幕阅读器使用的无障碍标签。压缩后的副本会保留文字、链接和页面，但不保留这些标签。",
   crashed: "上次压缩因浏览器内存不足而中断。请尝试“最小文件”、减少页数或使用电脑。",
   grayscale: "灰度（更小，耗时更长）",
+  credits: "压缩由 Artifex 开源的 PDF 引擎 {gs} 驱动，并编译为 WebAssembly；结果检查使用 Mozilla 的 {pdfjs}。感谢 Ghostscript。",
 } satisfies Messages;

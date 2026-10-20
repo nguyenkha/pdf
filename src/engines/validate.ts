@@ -107,6 +107,7 @@ export async function inspectPdf(
     await rejectUnsupported(doc);
     const sample = samplePages(doc.numPages);
     const pages: PageShape[] = [];
+    let linked = Boolean((await doc.getOutline())?.length);
     for (let number = 1; number <= doc.numPages; number++) {
       onPage(number, doc.numPages);
       const page = await doc.getPage(number);
@@ -115,6 +116,7 @@ export async function inspectPdf(
         ? (await page.getOperatorList()).fnArray
         : undefined;
       const annotations = await page.getAnnotations();
+      linked ||= annotations.some((annotation) => annotation.dest);
       const viewport = page.getViewport({ scale: 1 });
       const shape: PageShape = {
         text: text.items
@@ -164,7 +166,7 @@ export async function inspectPdf(
       pages.push(shape);
       page.cleanup();
     }
-    return { pages };
+    return { pages, linked };
   } finally {
     await task.destroy();
   }

@@ -14,6 +14,8 @@ import {
   attemptsFor,
   ghostscriptArgs,
   compressWithGhostscript,
+  splitPages,
+  mergeArgs,
 } from "../src/engines/ghostscript";
 import {
   limitChoices,
@@ -362,5 +364,25 @@ describe("image-heavy scans", () => {
     seen.length = 0;
     await run({ preference: "quality", imageQuality: "auto" });
     expect(seen[0]).toBe(101);
+  });
+});
+
+describe("page ranges", () => {
+  it("splits pages into contiguous near-equal ranges", () => {
+    expect(splitPages(23, 4)).toEqual([
+      { first: 1, last: 5 },
+      { first: 6, last: 11 },
+      { first: 12, last: 17 },
+      { first: 18, last: 23 },
+    ]);
+    expect(splitPages(2, 4)).toHaveLength(2);
+  });
+  it("limits a pass to its range and merges without recompressing", () => {
+    const args = ghostscriptArgs({ quality: 82, dpi: 0, qfactor: 0.4 }, undefined, { first: 6, last: 11 });
+    expect(args).toContain("-dFirstPage=6");
+    expect(args).toContain("-dLastPage=11");
+    const merge = mergeArgs(3);
+    expect(merge.slice(-3)).toEqual(["/part0.pdf", "/part1.pdf", "/part2.pdf"]);
+    expect(merge).toContain("-dPassThroughJPEGImages=true");
   });
 });

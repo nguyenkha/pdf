@@ -959,6 +959,11 @@ input[type="number"],
   padding: 20px 25px;
   background: var(--surface-2);
 }
+.credits a {
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 .privacy-section .philosophy,
 .privacy-page .philosophy {
   font-weight: 700;
@@ -994,7 +999,7 @@ footer a:hover {
 }
 .privacy-page {
   max-width: 760px;
-  margin: 75px auto 110px;
+  margin: 56px auto 96px;
   padding: 0 24px;
 }
 .privacy-page > a {

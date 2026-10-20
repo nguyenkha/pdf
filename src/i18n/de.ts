@@ -123,4 +123,5 @@ export default {
   taggedNotice: "Dieses PDF enthält Barrierefreiheits-Tags für Screenreader. Die komprimierte Kopie behält Text, Links und Seiten, aber nicht diese Tags.",
   crashed: "Die letzte Komprimierung wurde abgebrochen, weil dem Browser der Speicher ausging. Versuchen Sie „Kleinste Datei\", weniger Seiten oder einen Computer.",
   grayscale: "Graustufen (kleiner, dauert länger)",
+  credits: "Die Komprimierung nutzt {gs}, die Open-Source-PDF-Engine von Artifex, kompiliert zu WebAssembly; die Prüfung nutzt {pdfjs} von Mozilla. Danke, Ghostscript.",
 } satisfies Messages;

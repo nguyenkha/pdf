@@ -121,4 +121,5 @@ export default {
   taggedNotice: "この PDF にはスクリーンリーダー向けのアクセシビリティタグがあります。圧縮後もテキスト、リンク、ページは保たれますが、タグは保持されません。",
   crashed: "ブラウザーのメモリー不足で前回の圧縮が止まりました。「最小サイズ」、ページを減らす、またはパソコンでお試しください。",
   grayscale: "グレースケール（小さく、時間がかかる）",
+  credits: "圧縮には Artifex のオープンソース PDF エンジン {gs} を WebAssembly で使用し、結果の確認には Mozilla の {pdfjs} を使っています。ありがとう、Ghostscript。",
 } satisfies Messages;

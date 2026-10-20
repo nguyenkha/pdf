@@ -101,7 +101,28 @@ export function attemptsFor(options: CompressOptions): Profile[] {
   return [{ quality: 101, dpi: 0 }, ...rows];
 }
 
-export function ghostscriptArgs(profile: Profile, password?: string): string[] {
+export type PageRange = { first: number; last: number };
+/** Splits pages into `parts` contiguous ranges of near-equal size. */
+export function splitPages(pages: number, parts: number): PageRange[] {
+  const count = Math.max(1, Math.min(parts, pages));
+  return Array.from({ length: count }, (_, i) => ({
+    first: Math.floor((i * pages) / count) + 1,
+    last: Math.floor(((i + 1) * pages) / count),
+  }));
+}
+/** Joins already-compressed parts without touching their images again. */
+export function mergeArgs(parts: number): string[] {
+  const args = ghostscriptArgs({ quality: 101, dpi: 0 });
+  return [
+    ...args.slice(0, -1),
+    ...Array.from({ length: parts }, (_, i) => `/part${i}.pdf`),
+  ];
+}
+export function ghostscriptArgs(
+  profile: Profile,
+  password?: string,
+  range?: PageRange,
+): string[] {
   // No -q: the worker counts "Page N" lines for progress and discards the rest.
   const args = [
     "-dSAFER",
@@ -120,6 +141,7 @@ export function ghostscriptArgs(profile: Profile, password?: string): string[] {
     `-dDownsampleGrayImages=${profile.dpi > 0}`,
   ];
   if (password) args.push(`-sPDFPassword=${password}`);
+  if (range) args.push(`-dFirstPage=${range.first}`, `-dLastPage=${range.last}`);
   if (profile.dpi)
     args.push(
       "-dColorImageDownsampleType=/Bicubic",

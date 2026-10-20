@@ -20,6 +20,27 @@ import { SIZE_PAGES, sizeFromPath, sizeFromSlug, sizePath } from "./app/sizes";
 import { fill } from "./i18n/fill";
 import "./styles/main.css";
 const CompressTool = React.lazy(tools[0].load);
+// The engines this site is built on, linked inside the translated sentence.
+function Credits({ text }: { text: string }) {
+  const links: Record<string, [string, string]> = {
+    gs: ["Ghostscript", "https://www.ghostscript.com/"],
+    pdfjs: ["pdf.js", "https://mozilla.github.io/pdf.js/"],
+  };
+  return (
+    <p className="credits">
+      {text.split(/(\{\w+\})/).map((part, index) => {
+        const link = links[part.slice(1, -1)];
+        return link ? (
+          <a key={index} href={link[1]} target="_blank" rel="noreferrer">
+            {link[0]}
+          </a>
+        ) : (
+          part
+        );
+      })}
+    </p>
+  );
+}
 const preset = sizeFromPath(location.pathname);
 // Keeps /privacy/ or a size page when the locale changes.
 const suffix = location.pathname.endsWith("/privacy/")
@@ -84,20 +105,7 @@ function App({
     try { localStorage.setItem("theme", v); } catch { /* Storage is optional. */ }
     setTheme(v);
   }
-  if (location.pathname.endsWith("/privacy/"))
-    return (
-      <main className="privacy-page">
-        <a href={`/${locale}/`}>pdf.kha.do</a>
-        <h1>{t.privacyTitle}</h1>
-        <p className="philosophy">{t.philosophy}</p>
-        <p>{t.siteLoads}</p>
-        <p>{t.privacyBody}</p>
-        <p>{t.limitations}</p>
-        <h2>{t.how}</h2>
-        <p>{t.howText}</p>
-        <p>{t.support}</p>
-      </main>
-    );
+  const privacyPage = location.pathname.endsWith("/privacy/");
   return (
     <>
       <header className="site-header">
@@ -107,8 +115,8 @@ function App({
           pdf.kha.do
         </a>
         <nav aria-label={t.tools}>
-          <a href="#tool">{t.tools}</a>
-          <a href="#about">{t.about}</a>
+          <a href={privacyPage ? `/${locale}/#tool` : "#tool"}>{t.tools}</a>
+          <a href={privacyPage ? `/${locale}/#about` : "#about"}>{t.about}</a>
           {config.githubUrl && (
             <a href={config.githubUrl} target="_blank" rel="noreferrer">
               {t.github}
@@ -167,76 +175,91 @@ function App({
           </button>
         </div>
       </header>
-      <main>
-        <div className="hero">
-          <div className="eyebrow">
-            <ShieldCheck size={15} />
-            {t.privacy}
-          </div>
-          <h1>{preset ? fill(t.sizeHero, { size: preset.label }) : t.hero}</h1>
-          <p>{preset ? fill(t.sizeIntro, { size: preset.label }) : t.sub}</p>
-          <p className="support">{t.support}</p>
-        </div>
-        <div id="tool">
-          <Suspense fallback={<div className="tool-card">{t.loading}</div>}>
-            <CompressTool t={t} locale={locale} preset={preset} />
-          </Suspense>
-        </div>
-        <div className="content" id="about">
-          <div className="info-card how">
-            <span>01</span>
-            <h2>{t.how}</h2>
-            <p>{t.howText}</p>
-          </div>
-          <div className="info-card why">
-            <span>02</span>
-            <h2>{t.why}</h2>
-            <p>{t.whyText}</p>
-          </div>
-        </div>
-        <section className="faq">
-          <h2>{t.faq}</h2>
-          {(
-            [
-              [t.q1, t.a1],
-              [t.q2, t.a2],
-              [t.q3, t.a3],
-              [t.q4, t.a4],
-              [t.q5, t.a5],
-              [t.q6, t.a6],
-            ] as const
-          ).map(([q, a]) => (
-            <details key={q}>
-              <summary>{q}</summary>
-              <p>{a}</p>
-            </details>
-          ))}
-        </section>
-        <section className="privacy-section" id="privacy">
-          <h2>{t.privacyTitle}</h2>
+      {privacyPage ? (
+        <main className="privacy-page">
+          <h1>{t.privacyTitle}</h1>
           <p className="philosophy">{t.philosophy}</p>
           <p>{t.siteLoads}</p>
           <p>{t.privacyBody}</p>
+          <Credits text={t.credits} />
           <p>{t.limitations}</p>
-        </section>
-        {/* Plain links for the size pages: useful to crawlers, quiet for people. */}
-        <nav className="sizes" aria-label={t.sizesTitle}>
-          <span>{t.sizesTitle}:</span>
-          {SIZE_PAGES.map((slug) => {
-            const size = sizeFromSlug(slug)!;
-            return (
-              <a
-                key={slug}
-                href={`/${locale}/${sizePath(slug)}`}
-                title={fill(t.sizeLink, { size: size.label })}
-                aria-current={preset?.slug === slug ? "page" : undefined}
-              >
-                {size.label}
-              </a>
-            );
-          })}
-        </nav>
-      </main>
+          <h2>{t.how}</h2>
+          <p>{t.howText}</p>
+          <p>{t.support}</p>
+        </main>
+      ) : (
+        <main>
+          <div className="hero">
+            <div className="eyebrow">
+              <ShieldCheck size={15} />
+              {t.privacy}
+            </div>
+            <h1>{preset ? fill(t.sizeHero, { size: preset.label }) : t.hero}</h1>
+            <p>{preset ? fill(t.sizeIntro, { size: preset.label }) : t.sub}</p>
+            <p className="support">{t.support}</p>
+          </div>
+          <div id="tool">
+            <Suspense fallback={<div className="tool-card">{t.loading}</div>}>
+              <CompressTool t={t} locale={locale} preset={preset} />
+            </Suspense>
+          </div>
+          <div className="content" id="about">
+            <div className="info-card how">
+              <span>01</span>
+              <h2>{t.how}</h2>
+              <p>{t.howText}</p>
+            </div>
+            <div className="info-card why">
+              <span>02</span>
+              <h2>{t.why}</h2>
+              <p>{t.whyText}</p>
+            </div>
+          </div>
+          <section className="faq">
+            <h2>{t.faq}</h2>
+            {(
+              [
+                [t.q1, t.a1],
+                [t.q2, t.a2],
+                [t.q3, t.a3],
+                [t.q4, t.a4],
+                [t.q5, t.a5],
+                [t.q6, t.a6],
+              ] as const
+            ).map(([q, a]) => (
+              <details key={q}>
+                <summary>{q}</summary>
+                <p>{a}</p>
+              </details>
+            ))}
+          </section>
+          <section className="privacy-section" id="privacy">
+            <h2>{t.privacyTitle}</h2>
+            <p className="philosophy">{t.philosophy}</p>
+            <p>{t.siteLoads}</p>
+            <p>{t.privacyBody}</p>
+            <Credits text={t.credits} />
+            <p>{t.limitations}</p>
+          </section>
+          {/* Plain links for the size pages: useful to crawlers, quiet for people. */}
+          <nav className="sizes" aria-label={t.sizesTitle}>
+            <span>{t.sizesTitle}:</span>
+            {SIZE_PAGES.map((slug) => {
+              const size = sizeFromSlug(slug)!;
+              return (
+                <a
+                  key={slug}
+                  href={`/${locale}/${sizePath(slug)}`}
+                  title={fill(t.sizeLink, { size: size.label })}
+                  aria-current={preset?.slug === slug ? "page" : undefined}
+                >
+                  {size.label}
+                </a>
+              );
+            })}
+          </nav>
+        </main>
+      )}
       <footer>
         <span className="copyright">© {new Date().getFullYear()} Kha Do</span>
         <span className="hosted">
