@@ -1,3 +1,5 @@
+import { createElement } from "react";
+
 function readable(text: string): string {
   return text
     .replace(/\\([\\`*_{}[\]()#+.!|~-])/g, "$1")
@@ -15,10 +17,13 @@ export function MarkdownPreview({ markdown }: { markdown: string }) {
         .split(/\n\s*\n/)
         .map((block, index) => {
           if (block === "---") return <hr key={index} />;
-          if (block.startsWith("## "))
-            return <h3 key={index}>{readable(block.slice(3))}</h3>;
-          if (block.startsWith("# "))
-            return <h2 key={index}>{readable(block.slice(2))}</h2>;
+          const heading = /^(#{1,6}) (.*)$/.exec(block);
+          if (heading)
+            return createElement(
+              `h${Math.min(6, heading[1].length + 1)}`,
+              { key: index },
+              readable(heading[2]),
+            );
           if (/^\*[^*]+\*$/.test(block))
             return (
               <p key={index}>

@@ -71,3 +71,96 @@
   border-top: 1px solid var(--border);
   margin: 28px 0;
 }
+.md-options {
+  display: grid;
+  gap: 12px;
+  margin: 20px 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.md-options label {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 14px;
+  cursor: pointer;
+}
+.md-options input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+.md-options small {
+  color: var(--muted);
+  line-height: 1.6;
+}
+.md-actions,
+.md-page-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.md-actions a.primary {
+  width: auto;
+  flex: 1;
+}
+.md-page-controls {
+  justify-content: space-between;
+}
+.md-comparison {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.md-comparison section {
+  min-width: 0;
+}
+.md-pane-title {
+  font-size: 15px;
+  margin: 0 0 12px;
+}
+.md-pdf-page {
+  min-height: 240px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+.md-pdf-page canvas:not([hidden]) {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.md-preview h4 {
+  font-size: 18px;
+  margin: 22px 0 12px;
+}
+.md-preview h5,
+.md-preview h6 {
+  font-size: 16px;
+  margin: 20px 0 10px;
+}
+@media (min-width: 1000px) {
+  .md-experiment:has(.md-comparison) {
+    max-width: 1280px;
+  }
+}
+@media (max-width: 700px) {
+  .md-comparison {
+    grid-template-columns: 1fr;
+  }
+}
+.md-experiment .tool-card {
+  width: 100%;
+}
+.md-actions > .secondary {
+  width: auto;
+  flex: 1;
+  min-width: 160px;
+}
+.md-page-controls > .secondary {
+  width: auto;
+}

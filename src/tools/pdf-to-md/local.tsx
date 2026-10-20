@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { FileDropZone } from "../../components/FileDropZone";
 import { useObjectUrl } from "../../hooks/useObjectUrl";
 import { validateFile, formatSize } from "../../lib/pdf";
 import vi from "../../i18n/vi";
 import { MarkdownPreview } from "./MarkdownPreview";
+import { defaultOptions, type ConversionOptions } from "./markdown";
+const PdfPagePreview = lazy(() => import("./PdfPagePreview"));
 import "../../styles/main.css";
 import "./local.css";
 
@@ -16,6 +18,23 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<{ page: number; total: number }>();
   const [emptyPages, setEmptyPages] = useState(0);
+  const [options, setOptions] = useState<ConversionOptions>(defaultOptions);
+  const [pageMarkdowns, setPageMarkdowns] = useState<string[]>([]);
+  const [removedLines, setRemovedLines] = useState(0);
+  const [headings, setHeadings] = useState(0);
+  const [compare, setCompare] = useState(false);
+  const [page, setPage] = useState(1);
+  const [formatting, setFormatting] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<"idle" | "done" | "failed">(
+    "idle",
+  );
+  const source = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    if (copyStatus === "failed") {
+      source.current?.focus();
+      source.current?.select();
+    }
+  }, [copyStatus, view]);
   const worker = useRef<Worker | undefined>(undefined);
   const timeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [downloadBlob, setDownloadBlob] = useState<Blob>();
@@ -35,6 +54,13 @@ function App() {
     setError("");
     setProgress(undefined);
     setEmptyPages(0);
+    setPageMarkdowns([]);
+    setRemovedLines(0);
+    setHeadings(0);
+    setCompare(false);
+    setPage(1);
+    setCopyStatus("idle");
+    setFormatting(false);
     if (files.length !== 1 || validateFile(files[0])) {
       setFile(undefined);
       setError("Chọn một file PDF hợp lệ.");
@@ -42,12 +68,13 @@ function App() {
     }
     setFile(files[0]);
   }
-  function start() {
+  function start(chosen: ConversionOptions = options) {
     if (!file || busy) return;
     stop();
     setError("");
     setBusy(true);
     setProgress(undefined);
+    setFormatting(false);
     try {
       const job = new Worker(new URL("./extract.worker.ts", import.meta.url), {
         type: "module",
@@ -68,19 +95,30 @@ function App() {
         }
         // PDF.js can emit a parser handshake while its module initializes.
         if (data.type !== "error" && data.type !== "result") return;
-        stop();
+        clearTimeout(timeout.current);
         setBusy(false);
+        setFormatting(false);
         if (data.type === "error") {
+          stop();
+          setMarkdown("");
+          setDownloadBlob(undefined);
+          setPageMarkdowns([]);
           setError(
             data.code === "no-text"
               ? "Không tìm thấy lớp chữ trong PDF. File scan cần OCR; bản thử nghiệm này chưa hỗ trợ OCR."
               : data.code === "password"
                 ? "Bản thử nghiệm chưa hỗ trợ PDF có mật khẩu. Hãy dùng bản PDF đã mở khóa."
-                : "Không đọc được PDF này. File có thể bị lỗi hoặc dùng tính năng chưa hỗ trợ.",
+                : data.code === "memory"
+                  ? "Trình duyệt không đủ bộ nhớ. Hãy thử ít trang hơn hoặc dùng máy tính."
+                  : "Không đọc được PDF này. File có thể bị lỗi hoặc dùng tính năng chưa hỗ trợ.",
           );
           return;
         }
         setMarkdown(data.markdown);
+        setPageMarkdowns(data.pageMarkdowns);
+        setRemovedLines(data.removedLines);
+        setHeadings(data.headings);
+        setCopyStatus("idle");
         setEmptyPages(data.emptyPages);
         setDownloadBlob(
           new Blob([data.markdown], { type: "text/markdown;charset=utf-8" }),
@@ -92,11 +130,40 @@ function App() {
         setBusy(false);
         setError("Không khởi động được trình đọc PDF. Thử tải lại trang.");
       };
-      job.postMessage({ file });
+      job.postMessage({ type: "extract", file, options: chosen });
     } catch {
       stop();
       setBusy(false);
       setError("Trình duyệt chưa hỗ trợ xử lý PDF bằng worker.");
+    }
+  }
+  function updateOptions(next: ConversionOptions) {
+    setOptions(next);
+    setError("");
+    if (!markdown) return;
+    if (!worker.current) {
+      start(next);
+      return;
+    }
+    setBusy(true);
+    setFormatting(true);
+    setCopyStatus("idle");
+    timeout.current = setTimeout(() => {
+      stop();
+      setBusy(false);
+      setMarkdown("");
+      setDownloadBlob(undefined);
+      setError("Không cập nhật được Markdown. Hãy chuyển lại PDF.");
+    }, 120000);
+    worker.current.postMessage({ type: "format", options: next });
+  }
+  async function copyMarkdown() {
+    try {
+      await navigator.clipboard.writeText(markdown);
+      setCopyStatus("done");
+    } catch {
+      setView("source");
+      setCopyStatus("failed");
     }
   }
   return (
@@ -117,9 +184,9 @@ function App() {
         </div>
         <section className="tool-card" aria-label="Chuyển PDF sang Markdown">
           <p className="hint">
-            Bản tối giản: chia theo trang, giữ các dòng chữ. Chưa có OCR, nhận
-            diện bảng, hình ảnh hay tiêu đề; thứ tự đọc có thể sai với tài liệu
-            nhiều cột.
+            Trích chữ, ghép đoạn và nhận diện tiêu đề theo cỡ chữ. Chưa có OCR,
+            bảng hay hình ảnh; thứ tự đọc có thể sai với tài liệu nhiều cột. Các
+            quy tắc định dạng là ước lượng, hãy đối chiếu với PDF gốc.
           </p>
           <FileDropZone
             t={{
@@ -133,24 +200,78 @@ function App() {
               <strong>{file.name}</strong> · {formatSize(file.size, "vi")}
             </p>
           )}
+          {file && (
+            <fieldset className="md-options" disabled={busy}>
+              <legend>Tùy chọn văn bản</legend>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={options.keepLineBreaks}
+                  onChange={(event) =>
+                    updateOptions({
+                      ...options,
+                      keepLineBreaks: event.target.checked,
+                    })
+                  }
+                />
+                Giữ xuống dòng gốc
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={options.detectHeadings}
+                  onChange={(event) =>
+                    updateOptions({
+                      ...options,
+                      detectHeadings: event.target.checked,
+                    })
+                  }
+                />
+                Nhận diện tiêu đề
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={options.removeMargins}
+                  onChange={(event) =>
+                    updateOptions({
+                      ...options,
+                      removeMargins: event.target.checked,
+                    })
+                  }
+                />
+                Bỏ header/footer lặp
+              </label>
+              <small>
+                Chỉ bỏ dòng nhỏ lặp ở mép ít nhất 3 trang. Bạn có thể tắt từng
+                tùy chọn và xem kết quả cập nhật.
+              </small>
+            </fieldset>
+          )}
           {error && <p role="alert">{error}</p>}
           {!busy && file && !markdown && (
-            <button className="primary" onClick={start}>
+            <button className="primary" onClick={() => start()}>
               Chuyển sang Markdown
             </button>
           )}
           {busy && (
             <div role="status">
               <p>
-                {progress
-                  ? `Đang đọc trang ${progress.page}/${progress.total}…`
-                  : "Đang mở PDF…"}
+                {formatting
+                  ? "Đang cập nhật Markdown…"
+                  : progress
+                    ? `Đang đọc trang ${progress.page}/${progress.total}…`
+                    : "Đang mở PDF…"}
               </p>
               <button
                 className="secondary"
                 onClick={() => {
                   stop();
                   setBusy(false);
+                  setFormatting(false);
+                  setMarkdown("");
+                  setDownloadBlob(undefined);
+                  setPageMarkdowns([]);
                 }}
               >
                 Hủy
@@ -165,13 +286,69 @@ function App() {
                   ? ` Có ${emptyPages} trang không có lớp chữ, được đánh dấu trong kết quả.`
                   : ""}
               </p>
-              <a
-                className="primary"
-                href={url}
-                download={file?.name.replace(/\.pdf$/i, "") + ".md"}
-              >
-                Tải Markdown
-              </a>
+              <p className="hint">
+                {headings} tiêu đề được nhận diện.{" "}
+                {removedLines > 0
+                  ? `Đã bỏ ${removedLines} dòng header/footer lặp; tắt tùy chọn nếu muốn giữ lại.`
+                  : "Không bỏ dòng header/footer nào."}
+              </p>
+              <div className="md-actions">
+                <a
+                  className="primary"
+                  href={url}
+                  download={file?.name.replace(/\.pdf$/i, "") + ".md"}
+                >
+                  Tải Markdown
+                </a>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={copyMarkdown}
+                >
+                  Copy Markdown
+                </button>
+                <button
+                  type="button"
+                  className="secondary"
+                  aria-pressed={compare}
+                  onClick={() => setCompare(!compare)}
+                >
+                  So sánh với PDF
+                </button>
+              </div>
+              {copyStatus !== "idle" && (
+                <p role="status">
+                  {copyStatus === "done"
+                    ? "Đã copy Markdown."
+                    : "Trình duyệt không cho phép copy. Nội dung đã được chọn; nhấn Ctrl+C hoặc Command+C để sao chép."}
+                </p>
+              )}
+              {compare && (
+                <div
+                  className="md-page-controls"
+                  aria-label="Chọn trang so sánh"
+                >
+                  <button
+                    type="button"
+                    className="secondary"
+                    disabled={page <= 1}
+                    onClick={() => setPage(page - 1)}
+                  >
+                    Trang trước
+                  </button>
+                  <span>
+                    Trang {page}/{pageMarkdowns.length}
+                  </span>
+                  <button
+                    type="button"
+                    className="secondary"
+                    disabled={page >= pageMarkdowns.length}
+                    onClick={() => setPage(page + 1)}
+                  >
+                    Trang sau
+                  </button>
+                </div>
+              )}
               <div className="md-views" aria-label="Chế độ xem">
                 <button
                   type="button"
@@ -190,19 +367,34 @@ function App() {
                   Markdown
                 </button>
               </div>
-              {view === "preview" ? (
-                <MarkdownPreview markdown={markdown} />
-              ) : (
-                <>
-                  <label htmlFor="md-output">Nội dung Markdown</label>
-                  <textarea
-                    id="md-output"
-                    value={markdown}
-                    readOnly
-                    spellCheck={false}
-                  />
-                </>
-              )}
+              <div className={compare ? "md-comparison" : ""}>
+                {compare && file && (
+                  <section aria-label="PDF gốc">
+                    <h2 className="md-pane-title">PDF gốc · Trang {page}</h2>
+                    <Suspense fallback={<p>Đang mở PDF…</p>}>
+                      <PdfPagePreview file={file} page={page} />
+                    </Suspense>
+                  </section>
+                )}
+                <section aria-label="Kết quả Markdown">
+                  {view === "preview" ? (
+                    <MarkdownPreview
+                      markdown={compare ? pageMarkdowns[page - 1] : markdown}
+                    />
+                  ) : (
+                    <>
+                      <label htmlFor="md-output">Nội dung Markdown</label>
+                      <textarea
+                        ref={source}
+                        id="md-output"
+                        value={markdown}
+                        readOnly
+                        spellCheck={false}
+                      />
+                    </>
+                  )}
+                </section>
+              </div>
             </div>
           )}
         </section>

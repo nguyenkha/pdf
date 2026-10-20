@@ -1,13 +1,32 @@
 # PDF to Markdown experiment
 
-Local experiment on `experiment/pdf-to-md`. Run `pnpm install --frozen-lockfile`, then `pnpm dev:pdf-to-md`. Open `http://127.0.0.1:4182/experiments/pdf-to-md/`.
+Local branch: `experiment/pdf-to-md`. Install with `pnpm install --frozen-lockfile`, start with `pnpm dev:pdf-to-md`, then open http://127.0.0.1:4182/experiments/pdf-to-md/.
 
-The separate development entry point is not included in the production Vite build or main tool navigation. No deployment or additional dependency is needed. The interface is Vietnamese for this local experiment.
+This Vietnamese development entry is excluded from the production Vite build and main navigation. No deployment or additional dependency is needed.
 
-PDF.js extracts existing text in a dedicated worker, one page at a time. The PDF engine starts only on conversion. Files and extracted text are not uploaded, logged or stored persistently. This entry point does not register a service worker. The preview renders generated headings, page breaks and plain text with React text nodes; the Markdown view uses a read-only text field; extracted HTML and Markdown syntax are escaped in the download. Cancelling terminates the worker; replacing a file revokes the prior download URL.
+## Text conversion
 
-Output has a document title and numbered page sections. There is no OCR, table recognition, image extraction, semantic heading detection or multi-column reconstruction. Image-only pages are marked; entirely image-only files and password-protected documents get an explanation rather than a misleading download. Complex layouts can have incorrect reading order. This is not a production-quality document converter.
+- Adjacent lines are joined into paragraphs. Larger vertical gaps, indentation changes and list markers preserve boundaries. **Giữ xuống dòng gốc** retains extracted line breaks.
+- Discretionary soft hyphens are removed between wrapped letters. Ordinary hyphens are preserved because the converter cannot distinguish a wrapped word from a meaningful compound such as “privacy-first”.
+- Short headings are inferred from font size relative to document body text. Bold is considered only if PDF.js exposes a descriptive font family; its opaque internal font IDs are never treated as weight information. Heading detection can be disabled. Document/page/section levels remain nested.
+- Small repeated lines in the outer 7.5% of the page are removed only if their text and position agree on at least three pages and 75% of the document. Only narrow page-number patterns are normalized; distinct invoice IDs are preserved. Repeated body text is retained. The UI reports removed lines and the option can be disabled instantly.
 
-Verification: `pnpm test:pdf-to-md` runs five unit cases and twelve Chromium/WebKit browser cases, including download contents, page count markers, unsupported files and same-origin GET-only network activity. `pnpm lint`, `pnpm typecheck` and `pnpm build` also pass.
+These are layout heuristics, not semantic understanding. Columns, tables, unusual layouts and mixed writing directions can still have incorrect reading order. Review the output. Image-only pages are marked; wholly scanned and password-protected documents get an explanation. There is no OCR or image/table extraction.
 
-The preview supports the limited Markdown emitted by this converter, not arbitrary Markdown extensions. It does not interpret raw HTML, external images or links and adds no renderer dependency.
+## Preview and export
+
+The default preview renders generated Markdown with React text nodes. **Markdown** shows the full source. **So sánh với PDF** lazily opens one original PDF page beside its corresponding Markdown, with previous/next controls; on narrow screens the panes stack. Canvas resolution is bounded. Closing comparison destroys its loading task even before loading finishes.
+
+**Copy Markdown** writes only after a click. If clipboard access fails, the source is selected for manual copying. Download always contains the whole document. The preview supports this converter's limited Markdown, not arbitrary extensions, raw HTML or remote images/links.
+
+## Privacy and memory
+
+PDF.js extracts text in a worker one page at a time. After extraction its PDF loading task is destroyed; only plain text/layout remain in worker RAM to update options without reparsing. Replacing a file or cancelling terminates that worker. PDF comparison uses a separate parser that is destroyed on close. Download object URLs are revoked on replacement/unmount.
+
+No document content is uploaded, logged or stored persistently. This entry does not register a service worker. It uses only same-origin application assets. Clipboard and downloads happen only at the user's request.
+
+## Verification
+
+`pnpm test:pdf-to-md`: 16 unit cases and 18 Chromium/WebKit browser cases covering text structure, conservative margin cleanup, option updates, page comparison, parser cleanup, clipboard success/fallback, downloads, unsupported inputs and network privacy. `pnpm lint`, `pnpm typecheck` and `pnpm build` are the other checks.
+
+`node scripts/make-md-fixture.mjs` regenerates the synthetic four-page fixture with titles, wrapped paragraphs and running headers/footers. It contains no personal document data.
