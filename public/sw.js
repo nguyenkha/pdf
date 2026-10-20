@@ -69,6 +69,7 @@ self.addEventListener("fetch", (event) => {
     html ||
     url.pathname.startsWith("/pdfjs/") ||
     url.pathname.startsWith("/engine/") ||
+    url.pathname.startsWith("/ocr/") ||
     url.pathname.startsWith("/assets/") ||
     url.pathname.startsWith("/icons/") ||
     ["/theme.js", "/redirect.js", "/manifest.webmanifest"].includes(

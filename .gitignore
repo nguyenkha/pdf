@@ -8,6 +8,7 @@ public/engine/
 .pnpm-store/
 *.tsbuildinfo
 public/pdfjs/
+public/ocr/
 
 # Local workspace files
 AGENTS.md

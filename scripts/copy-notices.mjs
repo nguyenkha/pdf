@@ -8,6 +8,8 @@ const packages = {
   'react-dom': 'node_modules/react-dom', lucide: 'node_modules/lucide-react',
   scheduler: path.dirname(require.resolve('scheduler/package.json', { paths: [fs.realpathSync('node_modules/react-dom')] })),
   'pdf-lib': 'node_modules/pdf-lib',
+  'tesseract.js': 'node_modules/tesseract.js',
+  'tesseract.js-core': path.dirname(require.resolve('tesseract.js-core/package.json', { paths: [fs.realpathSync('node_modules/tesseract.js')] })),
 };
 // pdf-lib's own dependencies are bundled with it; pnpm keeps them beside it.
 const pdfLibDeps = path.dirname(fs.realpathSync('node_modules/pdf-lib'));
