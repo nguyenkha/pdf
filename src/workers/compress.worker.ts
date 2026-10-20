@@ -4,12 +4,15 @@ import {
   type CompressOptions,
   type EnginePass,
 } from "../engines/ghostscript";
-import { inspectPdf } from "../engines/validate";
+import { inspectPdf, probePdf } from "../engines/validate";
 import { verifyShape } from "../lib/shape";
 
+// Overall progress: reading and the first preservation scan, then the passes.
+const READ = 0.02;
+const ANALYZE = 0.12;
 let child: Worker | undefined;
 let cancelled = false;
-const runPass: EnginePass = (bytes, profile) =>
+const runPass: EnginePass = (bytes, profile, onPage) =>
   new Promise((resolve, reject) => {
     child = new Worker(new URL("./ghostscript.worker.ts", import.meta.url), {
       type: "module",
@@ -17,7 +20,7 @@ const runPass: EnginePass = (bytes, profile) =>
     const timeout = setTimeout(() => {
       child?.terminate();
       reject(new Error("timeout"));
-    }, 120_000);
+    }, 120_000 + pageCount * 3_000);
     const finish = () => {
       clearTimeout(timeout);
       child?.terminate();
@@ -25,6 +28,7 @@ const runPass: EnginePass = (bytes, profile) =>
     };
     child.onmessage = (event) => {
       const result = event.data;
+      if (result.type === "page") return onPage(result.page);
       finish();
       if (result.type === "error") reject(new Error(result.code));
       else resolve({ bytes: result.bytes, heapBytes: result.heapBytes });
@@ -33,12 +37,17 @@ const runPass: EnginePass = (bytes, profile) =>
       finish();
       reject(new Error("initialization"));
     };
-    child.postMessage({ bytes, args: ghostscriptArgs(profile) });
+    child.postMessage({ bytes, args: ghostscriptArgs(profile, password) });
   });
-self.onmessage = async (
-  event: MessageEvent<{ type?: string; file: File; options: CompressOptions }>,
-) => {
-  if (event.data.type === "cancel") {
+let password: string | undefined;
+let pageCount = 0;
+type Request =
+  | { type: "cancel" }
+  | { type: "probe"; file: File; password?: string }
+  | { type?: "compress"; file: File; options: CompressOptions };
+self.onmessage = async (event: MessageEvent<Request>) => {
+  const request = event.data;
+  if (request.type === "cancel") {
     cancelled = true;
     child?.terminate();
     self.postMessage({ type: "cancelled" });
@@ -46,22 +55,40 @@ self.onmessage = async (
     return;
   }
   try {
-    self.postMessage({ type: "stage", stage: "reading" });
-    const input = new Uint8Array(await event.data.file.arrayBuffer());
+    if (request.type === "probe") {
+      const input = new Uint8Array(await request.file.arrayBuffer());
+      self.postMessage({
+        type: "result",
+        result: await probePdf(input, request.password),
+      });
+      return;
+    }
+    password = request.options.password;
+    const progress = (stage: string, value: number, page?: number, pages?: number) =>
+      self.postMessage({ type: "progress", stage, value, page, pages });
+    progress("reading", 0);
+    const input = new Uint8Array(await request.file.arrayBuffer());
     if (cancelled) return;
-    self.postMessage({ type: "stage", stage: "analyzing" });
-    const before = await inspectPdf(input);
+    progress("analyzing", READ);
+    const before = await inspectPdf(input, password, (page, pages) =>
+      progress("analyzing", READ + ((ANALYZE - READ) * page) / pages, page, pages),
+    );
+    const pages = before.pages.length;
+    pageCount = pages;
     if (cancelled) return;
     const result = await compressWithGhostscript(
       input,
-      event.data.options,
-      (stage) => self.postMessage({ type: "stage", stage }),
+      request.options,
+      ({ stage, value, page }) =>
+        progress(stage, ANALYZE + (1 - ANALYZE) * value, page, pages),
       runPass,
-      async (bytes) => {
-        const after = await inspectPdf(bytes);
+      async (bytes, onPage) => {
+        // The output is written without encryption, so it opens without a password.
+        const after = await inspectPdf(bytes, undefined, (page) => onPage(page));
         verifyShape(before, after);
       },
-      before.pages.some(page=>page.imageCount>0),
+      before.pages.some((page) => page.imageCount > 0),
+      pages,
     );
     if (!cancelled) {
       const { bytes, ...statistics } = result;
@@ -69,6 +96,7 @@ self.onmessage = async (
         type: "result",
         result: {
           ...statistics,
+          pages,
           blob: new Blob([bytes as BlobPart], { type: "application/pdf" }),
         },
       });

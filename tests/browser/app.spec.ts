@@ -7,7 +7,7 @@ async function expectSuccess(page: Page) {
 test("upload and invalid file handling", async ({ page }) => {
   await page.goto("/en/");
   await expect(
-    page.getByText("Your files never leave your device.").first(),
+    page.getByText("Your files never leave your device.").filter({ visible: true }).first(),
   ).toBeVisible();
   await page
     .locator("input[type=file]")
@@ -23,11 +23,11 @@ test("language switching and RTL", async ({ page }) => {
   await page.getByLabel("Language").selectOption("ar");
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
   await expect(
-    page.getByText("ملفاتك لا تغادر جهازك أبدًا.").first(),
+    page.getByText("ملفاتك لا تغادر جهازك أبدًا.").filter({ visible: true }).first(),
   ).toBeVisible();
   await page.locator(".language select").selectOption("vi");
   await expect(
-    page.getByText("Tệp của bạn không bao giờ rời thiết bị.").first(),
+    page.getByText("Tệp của bạn không bao giờ rời thiết bị.").filter({ visible: true }).first(),
   ).toBeVisible();
 });
 test("theme and mobile", async ({ page }) => {
@@ -36,6 +36,9 @@ test("theme and mobile", async ({ page }) => {
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator(".drop")).toBeVisible();
+  // The drop zone must start above the fold on a phone.
+  const drop = await page.locator(".drop").boundingBox();
+  expect(drop && drop.y + drop.height).toBeLessThan(844);
 });
 test("compresses a real scan and downloads a PDF", async ({ page }) => {
   test.setTimeout(180000);
@@ -55,7 +58,7 @@ test("target size attempt reports its result", async ({ page }) => {
   await page
     .locator("input[type=file]")
     .setInputFiles("tests/fixtures/scan.pdf");
-  await page.getByText("More options").click();
+  await page.getByRole("radio", { name: /Size limit/ }).check();
   await page.locator("input[type=number]").fill("200");
   await page.locator(".target-row select").selectOption("KB");
   await page.getByRole("button", { name: "Compress PDF" }).click();
@@ -67,8 +70,8 @@ test("corrupted PDF fails without a download", async ({ page }) => {
   await page
     .locator("input[type=file]")
     .setInputFiles("tests/fixtures/corrupted.pdf");
-  await page.getByRole("button", { name: "Compress PDF" }).click();
   await expect(page.getByRole("alert")).toBeVisible({ timeout: 30000 });
+  await expect(page.getByRole("button", { name: "Compress PDF" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Download PDF" })).toHaveCount(0);
 });
 test("worker initialization failure is explained", async ({ page }) => {
@@ -85,7 +88,6 @@ test("worker initialization failure is explained", async ({ page }) => {
   await page
     .locator("input[type=file]")
     .setInputFiles("tests/fixtures/text-vector.pdf");
-  await page.getByRole("button", { name: "Compress PDF" }).click();
   await expect(page.getByRole("alert")).toContainText("Compression failed");
 });
 test("processing sends no PDF bytes or metadata over the network", async ({

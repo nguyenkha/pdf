@@ -41,7 +41,7 @@ The production build writes `dist/bundle-report.json` with raw, gzip, and Brotli
 
 ## Privacy model
 
-The page fetches only its own application assets. There is no upload endpoint or remote PDF service. A File is passed to a dedicated worker, read in memory, and processed by locally hosted JavaScript/WASM. The original filename is only used to display the chosen file and name the download. Engine diagnostics are suppressed; PDF contents are not logged.
+The page fetches only its own application assets. There is no upload endpoint or remote PDF service. A File is passed to a dedicated worker, read in memory, and processed by locally hosted JavaScript/WASM. The original filename is only used to display the chosen file and name the download. Engine diagnostics are suppressed; only the page number of Ghostscript's "Page N" lines is read, for the progress bar. PDF contents are not logged. A password for a protected PDF stays in the worker for that one job and is never stored.
 
 No document data is put in localStorage, IndexedDB, or Cache Storage. Only language/theme choices are stored in localStorage. A service worker caches explicitly allowed same-origin application assets, never PDFs or blob URLs. Cancel/reset releases workers and result object URLs. Browser tests monitor HTTP requests while processing and verify no document data or metadata is sent.
 
@@ -70,7 +70,7 @@ Original application code is AGPL-3.0-or-later, **not MIT**. Dependencies retain
 
 ### Honest limitations
 
-PDF rewriting cannot preserve every PDF feature. Password-protected documents, forms/signatures, attachments, JavaScript actions, optional layers, XFA, and tagged structure are rejected when detected. Unsupported preservation changes stop processing rather than producing a download. Checks compare text, page geometry, annotation summaries and small render previews; they cannot prove complete semantic or pixel-perfect equivalence. Important documents should still be reviewed before sharing. Unusual fonts, color spaces, transparency, bookmarks, and less common PDF extensions may require an original-preserving workflow instead.
+PDF rewriting cannot preserve every PDF feature. A password-protected PDF can be compressed after the user enters its password; the compressed copy is written without encryption and the result says so. Forms/signatures, attachments, JavaScript actions, optional layers, XFA, and tagged structure are rejected when detected. Unsupported preservation changes stop processing rather than producing a download. Checks compare text, page geometry, annotation summaries and small render previews; they cannot prove complete semantic or pixel-perfect equivalence. Important documents should still be reviewed before sharing. Unusual fonts, color spaces, transparency, bookmarks, and less common PDF extensions may require an original-preserving workflow instead.
 
 There is no artificial file-size quota. Files above 80 MiB show a memory advisory and can still be attempted. Browser/engine memory limits are real; a large document can exhaust them, particularly on mobile Safari. Only one page preview is decoded at a time. A measured small scan used a 128 MiB Ghostscript heap; total process memory is higher because it also includes the ~16 MiB WASM bytes, PDF parsing, input/output buffers and rendering. Expect usage to grow with document complexity. The browser cannot report a reliable cross-platform total working set.
 

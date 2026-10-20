@@ -9,6 +9,6 @@ export interface GhostscriptCore {
 }
 export type CoreFactory = (options: {
   wasmBinary: Uint8Array;
-  print: () => void;
+  print: (line: string) => void;
   printErr: () => void;
 }) => Promise<GhostscriptCore>;

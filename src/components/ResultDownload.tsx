@@ -7,6 +7,7 @@ export type CompressionResult = {
   achieved: boolean;
   target?: number;
   lossy: boolean;
+  unlocked?: boolean;
 };
 export function ResultDownload({
   file,
@@ -57,6 +58,9 @@ export function ResultDownload({
         </a>
       )}
       {result.lossy && <p className="result-note">{t.lossyNotice}</p>}
+      {reduced && result.unlocked && (
+        <p className="result-note">{t.unlockedNotice}</p>
+      )}
       <button type="button" className="secondary" onClick={onReset}>
         <RotateCcw size={16} aria-hidden="true" />
         {t.another}

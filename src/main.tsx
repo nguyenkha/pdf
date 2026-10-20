@@ -7,7 +7,9 @@ import {
   Sun,
   Moon,
   Monitor,
+  Heart,
 } from "lucide-react";
+import { fillNodes } from "./i18n/fill";
 import { initialLocale, locales, names, type Locale } from "./i18n/config";
 import { messages, type Messages } from "./i18n";
 import en from "./i18n/en";
@@ -84,7 +86,8 @@ function App({
     <>
       <header className="site-header">
         <a className="brand" href={`/${locale}/`}>
-          <img className="brand-logo" src="/icons/icon.svg" alt="" />
+          <img className="brand-logo light-only" src="/icons/icon.svg" alt="" />
+          <img className="brand-logo dark-only" src="/icons/icon-dark.svg" alt="" />
           pdf.kha.do
         </a>
         <nav aria-label={t.tools}>
@@ -201,7 +204,25 @@ function App({
       </main>
       <footer>
         <div>
-          © {new Date().getFullYear()} kha.do · {t.hosted}
+          © {new Date().getFullYear()} kha.do ·{" "}
+          {fillNodes(t.madeWith, {
+            heart: (
+              <Heart
+                className="heart"
+                size={13}
+                fill="currentColor"
+                aria-label={t.love}
+              />
+            ),
+          })}{" "}
+          ·{" "}
+          {fillNodes(t.hostedOn, {
+            host: (
+              <a href="https://pages.github.com/" target="_blank" rel="noreferrer">
+                GitHub Pages
+              </a>
+            ),
+          })}
         </div>
         <div>
           {config.githubUrl && <a href={config.githubUrl}>{t.open}</a>}

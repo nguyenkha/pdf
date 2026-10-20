@@ -11,8 +11,12 @@ self.onmessage = async (
     if (!response.ok) throw new Error("initialization");
     const core = await createCore({
       wasmBinary: new Uint8Array(await response.arrayBuffer()),
-      // PDFs can contain sensitive text in diagnostics. Never expose engine logs.
-      print: () => {},
+      // PDFs can contain sensitive text in diagnostics. Never expose engine
+      // logs; only the page number of pdfwrite's "Page N" lines leaves here.
+      print: (line: string) => {
+        const page = /^Page (\d+)$/.exec(line.trim());
+        if (page) self.postMessage({ type: "page", page: Number(page[1]) });
+      },
       printErr: () => {},
     });
     core.FS.writeFile("/input.pdf", event.data.bytes);

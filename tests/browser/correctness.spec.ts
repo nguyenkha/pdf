@@ -46,13 +46,14 @@ for (const fixture of ['already-optimized', 'text-vector']) {
   });
 }
 
-test('WASM is absent before compression and cancellation leaves the UI usable', async ({ page }) => {
+test('WASM is absent before a PDF is chosen and cancellation leaves the UI usable', async ({ page }) => {
   const requested: string[] = [];
   page.on('request', request => requested.push(request.url()));
   await page.goto('/en/');
-  await page.locator('input[type=file]').setInputFiles('tests/fixtures/scan.pdf');
+  await page.waitForLoadState('networkidle');
   expect(requested.some(url => url.endsWith('.wasm'))).toBe(false);
   await page.route('**/engine/**/core.wasm', route => route.abort());
+  await page.locator('input[type=file]').setInputFiles('tests/fixtures/scan.pdf');
   await page.getByRole('button', { name: 'Compress PDF', exact: true }).click();
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Compress PDF', exact: true })).toBeEnabled();
@@ -79,15 +80,34 @@ test('processes offline once application and engine assets have been cached', as
   const keys = await page.evaluate(async () => (await Promise.all((await caches.keys()).map(async key => (await (await caches.open(key)).keys()).map(request => request.url)))).flat());
   expect(keys.every(url => !url.includes('scan.pdf') && !url.startsWith('blob:'))).toBe(true);
 });
-for (const [fixture, message] of [['password', 'Password-protected PDFs are not supported.'], ['form', 'This document uses features that cannot be safely preserved during compression. Keep the original.']]) {
-  test(`${fixture}: stops without changing unsupported documents`, async ({ page }) => {
-    await page.goto('/en/');
-    await page.locator('input[type=file]').setInputFiles(`tests/fixtures/${fixture}.pdf`);
-    await page.getByRole('button', {name:'Compress PDF',exact:true}).click();
-    await expect(page.getByRole('alert')).toHaveText(message,{timeout:30000});
-    await expect(page.getByRole('link',{name:'Download PDF'})).toHaveCount(0);
-  });
-}
+test('form: stops before compression without changing the document', async ({ page }) => {
+  await page.goto('/en/');
+  await page.locator('input[type=file]').setInputFiles('tests/fixtures/form.pdf');
+  await expect(page.getByRole('alert')).toHaveText('This document uses features that cannot be safely preserved during compression. Keep the original.', { timeout: 30000 });
+  await expect(page.getByRole('button', { name: 'Compress PDF', exact: true })).toHaveCount(0);
+});
+test('password: unlocks with the right password and compresses', async ({ page }) => {
+  test.setTimeout(180000);
+  await page.goto('/en/');
+  await page.locator('input[type=file]').setInputFiles('tests/fixtures/password.pdf');
+  const field = page.getByLabel('PDF password');
+  await field.fill('wrong');
+  await page.getByRole('button', { name: 'Unlock' }).click();
+  await expect(page.getByRole('alert')).toHaveText('Incorrect password. Try again.', { timeout: 30000 });
+  await field.fill('secret');
+  await page.getByRole('button', { name: 'Unlock' }).click();
+  await expect(page.getByText('Pages: 3')).toBeVisible({ timeout: 30000 });
+  await page.getByRole('button', { name: 'Compress PDF', exact: true }).click();
+  await expect(page.getByRole('progressbar')).toBeVisible();
+  await expect(page.locator('.result, .error')).toBeVisible({ timeout: 120000 });
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await expect(page.getByText(/compressed copy has no password/)).toBeVisible();
+  const downloadEvent = page.waitForEvent('download');
+  await page.getByRole('link', { name: 'Download PDF' }).click();
+  const bytes = new Uint8Array(await readFile((await (await downloadEvent).path())!));
+  const task = pdfjs.getDocument({ data: bytes, isEvalSupported: false, verbosity: 0 });
+  try { expect((await task.promise).numPages).toBe(3); } finally { await task.destroy(); }
+});
 test('drag and drop works with a standard file',async({page})=>{
   await page.goto('/en/');
   const bytes=Array.from(await readFile('tests/fixtures/text-vector.pdf'));

@@ -32,6 +32,9 @@ export function FileDropZone({
       <UploadCloud size={31} strokeWidth={1.5} aria-hidden="true" />
       <strong>{t.drop}</strong>
       <small>{t.hint}</small>
+      <span className="browse" aria-hidden="true">
+        {t.browse}
+      </span>
     </div>
   );
 }

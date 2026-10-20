@@ -1,9 +1,19 @@
 import type { CompressOptions, RunResult } from "../../engines/ghostscript";
-export type ProcessedResult = Omit<RunResult, "bytes"> & { blob: Blob };
-export function runCompression(
-  file: File,
-  options: CompressOptions,
-  onStage: (stage: string) => void,
+import type { PdfSummary } from "../../engines/validate";
+export type ProcessedResult = Omit<RunResult, "bytes"> & {
+  blob: Blob;
+  pages: number;
+};
+export type JobProgress = {
+  stage: string;
+  value: number;
+  page?: number;
+  pages?: number;
+};
+function startJob<T>(
+  message: object,
+  timeoutMs: number,
+  onProgress: (progress: JobProgress) => void = () => {},
 ) {
   const worker = new Worker(
     new URL("../../workers/compress.worker.ts", import.meta.url),
@@ -15,17 +25,17 @@ export function runCompression(
   const timeout = setTimeout(() => {
     worker.terminate();
     rejectJob(new Error("timeout"));
-  }, 5 * 60_000);
+  }, timeoutMs);
   const finish = () => {
     settled = true;
     clearTimeout(timeout);
     clearTimeout(killTimer);
     worker.terminate();
   };
-  const promise = new Promise<ProcessedResult>((resolve, reject) => {
+  const promise = new Promise<T>((resolve, reject) => {
     rejectJob = reject;
     worker.onmessage = (event) => {
-      if (event.data.type === "stage" && !settled) onStage(event.data.stage);
+      if (event.data.type === "progress" && !settled) onProgress(event.data);
       if (event.data.type === "cancelled") finish();
       if (event.data.type === "error" && !settled) {
         finish();
@@ -40,7 +50,7 @@ export function runCompression(
       finish();
       reject(new Error("initialization"));
     };
-    worker.postMessage({ file, options });
+    worker.postMessage(message);
   });
   return {
     promise,
@@ -54,4 +64,20 @@ export function runCompression(
       rejectJob(new Error("cancelled"));
     },
   };
+}
+export function runCompression(
+  file: File,
+  options: CompressOptions,
+  onProgress: (progress: JobProgress) => void,
+) {
+  return startJob<ProcessedResult>(
+    { type: "compress", file, options },
+    // Progress shows liveness; the user can cancel a long job at any time.
+    30 * 60_000,
+    onProgress,
+  );
+}
+/** Page count and support check before any options are shown. */
+export function probeFile(file: File, password?: string) {
+  return startJob<PdfSummary>({ type: "probe", file, password }, 60_000);
 }

@@ -14,6 +14,11 @@ import {
   ghostscriptArgs,
   compressWithGhostscript,
 } from "../src/engines/ghostscript";
+import {
+  limitChoices,
+  recommendedPreference,
+  suggestedLimit,
+} from "../src/lib/plan";
 
 const page = {
   text: "Text",
@@ -149,5 +154,61 @@ describe("quality-first pipeline", () => {
         },
       ),
     ).rejects.toThrow("preservation");
+  });
+});
+
+describe("page progress and passwords", () => {
+  it("passes the password to Ghostscript only when given", () => {
+    const profile = { quality: 101, dpi: 0 };
+    expect(ghostscriptArgs(profile)).not.toContainEqual(
+      expect.stringContaining("PDFPassword"),
+    );
+    expect(ghostscriptArgs(profile, "s3cret")).toContain(
+      "-sPDFPassword=s3cret",
+    );
+    expect(ghostscriptArgs(profile, "s3cret").at(-1)).toBe("/input.pdf");
+  });
+  it("reports monotonic progress that ends at 100%", async () => {
+    const values: number[] = [];
+    const sizes = [120, 80, 60];
+    let index = 0;
+    await compressWithGhostscript(
+      new Uint8Array(100),
+      { preference: "smallest", imageQuality: "auto" },
+      (progress) => values.push(progress.value),
+      async (_input, _profile, onPage) => {
+        for (let page = 1; page <= 4; page++) onPage(page);
+        return { bytes: new Uint8Array(sizes[index++] ?? 50), heapBytes: 64 };
+      },
+      async (_bytes, onPage) => {
+        for (let page = 1; page <= 4; page++) onPage(page);
+      },
+      true,
+      4,
+    );
+    expect(values.at(-1)).toBe(1);
+    expect(values.every((value, i) => i === 0 || value >= values[i - 1])).toBe(
+      true,
+    );
+    expect(new Set(values).size).toBeGreaterThan(10);
+  });
+});
+
+describe("compression plan", () => {
+  const MB = 1048576;
+  it("recommends image recompression only for image-heavy pages", () => {
+    expect(recommendedPreference(10 * MB, 10, true)).toBe("balanced");
+    expect(recommendedPreference(10 * MB, 10, false)).toBe("quality");
+    expect(recommendedPreference(1 * MB, 20, true)).toBe("quality");
+  });
+  it("offers only limits below the file size", () => {
+    expect(limitChoices(3 * MB)).toEqual([0.5 * MB, 1 * MB, 2 * MB]);
+    expect(limitChoices(0.4 * MB)).toEqual([]);
+  });
+  it("suggests the tightest limit the page count can reach", () => {
+    expect(suggestedLimit(30 * MB, 3)).toBe(0.5 * MB);
+    expect(suggestedLimit(30 * MB, 40)).toBe(5 * MB);
+    expect(suggestedLimit(3 * MB, 100)).toBe(2 * MB);
+    expect(suggestedLimit(0.3 * MB, 1)).toBeUndefined();
   });
 });

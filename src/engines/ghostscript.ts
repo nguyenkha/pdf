@@ -6,6 +6,7 @@ export type CompressOptions = {
   preference: Preference;
   imageQuality: ImageQuality;
   target?: number;
+  password?: string;
 };
 export type RunResult = {
   bytes: Uint8Array;
@@ -53,9 +54,9 @@ export function attemptsFor(options: CompressOptions): Profile[] {
   return [{ quality: 101, dpi: 0 }, ...rows];
 }
 
-export function ghostscriptArgs(profile: Profile): string[] {
+export function ghostscriptArgs(profile: Profile, password?: string): string[] {
+  // No -q: the worker counts "Page N" lines for progress and discards the rest.
   const args = [
-    "-q",
     "-dSAFER",
     "-dBATCH",
     "-dNOPAUSE",
@@ -71,6 +72,7 @@ export function ghostscriptArgs(profile: Profile): string[] {
     `-dDownsampleColorImages=${profile.dpi > 0}`,
     `-dDownsampleGrayImages=${profile.dpi > 0}`,
   ];
+  if (password) args.push(`-sPDFPassword=${password}`);
   if (profile.dpi)
     args.push(
       "-dColorImageDownsampleType=/Bicubic",
@@ -106,27 +108,53 @@ export function ghostscriptArgs(profile: Profile): string[] {
 export type EnginePass = (
   input: Uint8Array,
   profile: Profile,
+  onPage: (page: number) => void,
 ) => Promise<{ bytes: Uint8Array; heapBytes: number }>;
+export type Progress = {
+  stage: "loading" | "optimizing" | "finalizing";
+  /** Fraction of the planned passes, 0..1, never decreasing. */
+  value: number;
+  page?: number;
+};
+// Share of a pass spent in Ghostscript; the rest is the preservation check.
+const RENDER_SHARE = 0.7;
 export async function compressWithGhostscript(
   input: Uint8Array,
   options: CompressOptions,
-  onStage: (stage: string) => void,
+  onProgress: (progress: Progress) => void,
   runPass: EnginePass,
-  validate: (bytes: Uint8Array) => Promise<void>,
+  validate: (bytes: Uint8Array, onPage: (page: number) => void) => Promise<void>,
   hasImages = true,
+  pages = 1,
 ): Promise<RunResult> {
   let selected: Candidate | undefined;
   let attempts = 0;
   let heapBytes = 0;
   const profiles = hasImages ? attemptsFor(options) : attemptsFor(options).slice(0,1);
-  for (const profile of profiles) {
-    onStage(attempts ? "optimizing" : "loading");
-    const output = await runPass(input, profile);
+  const total = Math.max(1, pages);
+  let reported = 0;
+  const report = (stage: Progress["stage"], value: number, page?: number) => {
+    reported = Math.max(reported, Math.min(1, value));
+    onProgress({ stage, value: reported, page });
+  };
+  for (const [index, profile] of profiles.entries()) {
+    const span = (share: number) => (index + share) / profiles.length;
+    const stage = attempts ? "optimizing" : "loading";
+    report(stage, span(0));
+    const output = await runPass(input, profile, (page) =>
+      report("optimizing", span((RENDER_SHARE * Math.min(page, total)) / total), page),
+    );
     attempts++;
     heapBytes = Math.max(heapBytes, output.heapBytes);
     if (output.bytes.length >= input.length) continue;
-    onStage("finalizing");
-    await validate(output.bytes);
+    report("finalizing", span(RENDER_SHARE));
+    await validate(output.bytes, (page) =>
+      report(
+        "finalizing",
+        span(RENDER_SHARE + ((1 - RENDER_SHARE) * Math.min(page, total)) / total),
+        page,
+      ),
+    );
     const candidate = {
       bytes: output.bytes,
       quality: profile.quality,
@@ -147,6 +175,7 @@ export async function compressWithGhostscript(
       selected = candidate;
     }
   }
+  report("finalizing", 1);
   const bytes = selected?.bytes ?? input;
   return {
     bytes,

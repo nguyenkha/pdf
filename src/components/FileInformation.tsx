@@ -1,10 +1,12 @@
 import { FileText, X } from "lucide-react";
 import { formatSize } from "../lib/pdf";
 import type { Messages } from "../i18n";
+import { fill } from "../i18n/fill";
 export function FileInformation({
   file,
   locale,
   t,
+  pages,
   busy,
   onRemove,
   onSelect,
@@ -12,6 +14,7 @@ export function FileInformation({
   file: File;
   locale: string;
   t: Messages;
+  pages?: number;
   busy: boolean;
   onRemove: () => void;
   onSelect: (files: File[]) => void;
@@ -21,7 +24,11 @@ export function FileInformation({
       <FileText aria-hidden="true" />
       <div className="file-details">
         <strong>{file.name}</strong>
-        <small>{formatSize(file.size, locale)}</small>
+        <small>
+          {formatSize(file.size, locale)}
+          {pages !== undefined &&
+            ` · ${fill(t.pagesCount, { pages: new Intl.NumberFormat(locale).format(pages) })}`}
+        </small>
       </div>
       {!busy && (
         <label className="replace-file">

@@ -2,6 +2,7 @@ import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
 import type { PdfShape, PageShape } from "../lib/shape";
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+const IMAGE_OPS: number[] = [pdfjs.OPS.paintImageXObject, pdfjs.OPS.paintInlineImageXObject, pdfjs.OPS.paintImageMaskXObject];
 
 type CanvasPair = { canvas: OffscreenCanvas | null; context: OffscreenCanvasRenderingContext2D | null };
 class WorkerCanvasFactory {
@@ -10,9 +11,10 @@ class WorkerCanvasFactory {
   destroy(pair: CanvasPair) { if(pair.canvas){pair.canvas.width=0;pair.canvas.height=0;}pair.canvas=null;pair.context=null; }
 }
 
-export async function inspectPdf(data: Uint8Array): Promise<PdfShape> {
-  const task = pdfjs.getDocument({
+function open(data: Uint8Array, password?: string) {
+  return pdfjs.getDocument({
     data: data.slice(),
+    password,
     stopAtErrors: true,
     isEvalSupported: false,
     useSystemFonts: false,
@@ -22,21 +24,68 @@ export async function inspectPdf(data: Uint8Array): Promise<PdfShape> {
     standardFontDataUrl: new URL("/pdfjs/standard_fonts/",self.location.origin).href,
     useWorkerFetch: true, CanvasFactory: WorkerCanvasFactory,
   });
+}
+// pdf.js reports PasswordException code 1 (needed) or 2 (incorrect).
+async function load(task: ReturnType<typeof open>) {
   try {
-    const doc = await task.promise;
+    return await task.promise;
+  } catch (error) {
+    if (error instanceof Error && error.name === "PasswordException")
+      throw new Error(
+        (error as Error & { code?: number }).code === 2
+          ? "password-incorrect"
+          : "password",
+      );
+    throw error;
+  }
+}
+// The rewrite engine cannot promise preservation of these features.
+async function rejectUnsupported(doc: Awaited<ReturnType<typeof load>>) {
+  const layers = await doc.getOptionalContentConfig();
+  if (
+    doc.isPureXfa ||
+    (await doc.getFieldObjects()) ||
+    (await doc.getAttachments()) ||
+    (await doc.getJSActions()) ||
+    Object.keys(layers.getGroups() ?? {}).length
+  )
+    throw new Error("unsupported");
+}
+export type PdfSummary = { pages: number; hasImages: boolean };
+/** Cheap preflight: page count, document-level support, sampled image use. */
+export async function probePdf(
+  data: Uint8Array,
+  password?: string,
+): Promise<PdfSummary> {
+  const task = open(data, password);
+  try {
+    const doc = await load(task);
     if (!doc.numPages) throw new Error("corrupt");
-    // The rewrite engine cannot promise preservation of these features.
-    const layers = await doc.getOptionalContentConfig();
-    if (
-      doc.isPureXfa ||
-      (await doc.getFieldObjects()) ||
-      (await doc.getAttachments()) ||
-      (await doc.getJSActions()) ||
-      Object.keys(layers.getGroups() ?? {}).length
-    )
-      throw new Error("unsupported");
+    await rejectUnsupported(doc);
+    let hasImages = false;
+    for (let number = 1; number <= Math.min(doc.numPages, 3) && !hasImages; number++) {
+      const page = await doc.getPage(number);
+      hasImages = (await page.getOperatorList()).fnArray.some((operator) => IMAGE_OPS.includes(operator));
+      page.cleanup();
+    }
+    return { pages: doc.numPages, hasImages };
+  } finally {
+    await task.destroy();
+  }
+}
+export async function inspectPdf(
+  data: Uint8Array,
+  password?: string,
+  onPage: (page: number, pages: number) => void = () => {},
+): Promise<PdfShape> {
+  const task = open(data, password);
+  try {
+    const doc = await load(task);
+    if (!doc.numPages) throw new Error("corrupt");
+    await rejectUnsupported(doc);
     const pages: PageShape[] = [];
     for (let number = 1; number <= doc.numPages; number++) {
+      onPage(number, doc.numPages);
       const page = await doc.getPage(number);
       if (await page.getStructTree()) throw new Error("unsupported");
       const text = await page.getTextContent();
@@ -53,7 +102,7 @@ export async function inspectPdf(data: Uint8Array): Promise<PdfShape> {
         width: viewport.width,
         height: viewport.height,
         operators: operators.fnArray.length,
-        imageCount: operators.fnArray.filter(operator=>[pdfjs.OPS.paintImageXObject,pdfjs.OPS.paintInlineImageXObject,pdfjs.OPS.paintImageMaskXObject].includes(operator)).length,
+        imageCount: operators.fnArray.filter((operator) => IMAGE_OPS.includes(operator)).length,
         annotations: annotations
           .map((annotation) =>
             JSON.stringify({
