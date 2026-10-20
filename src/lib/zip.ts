@@ -81,7 +81,10 @@ export function safeEntryName(name: string): string {
     .replace(/^[\s.]+/, "")
     .trim()
     .slice(0, 180);
-  return cleaned && !/^\.*$/.test(cleaned) ? cleaned : "document.pdf";
+  // Windows refuses trailing dots or spaces and device names such as CON or NUL.
+  const portable = cleaned.replace(/[\s.]+$/, "");
+  const reserved = /^(con|prn|aux|nul|com\d|lpt\d)(\.|$)/i.test(portable);
+  return portable ? (reserved ? `_${portable}` : portable) : "document.pdf";
 }
 /** Makes names unique inside one archive: a.pdf, a (2).pdf, ... */
 export function uniqueNames(names: string[]): string[] {

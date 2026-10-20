@@ -174,7 +174,7 @@ export default {
   faqFreeQ: "Est-ce gratuit ? Y a-t-il des limites ?",
   faqFreeA: "Gratuit, sans compte, sans filigrane et sans limite quotidienne. La seule limite est la mémoire de votre appareil pour les fichiers très volumineux.",
   faqOfflineQ: "Est-ce que ça marche hors ligne ?",
-  faqOfflineA: "Oui, une fois que vous avez utilisé un outil en ligne : le site garde ses fichiers dans le navigateur et fonctionne ensuite sans connexion.",
+  faqOfflineA: "Oui, pour les outils que vous avez utilisés une fois en ligne : le site garde leurs fichiers dans le navigateur, et ils fonctionnent ensuite sans connexion.",
   mergeOrderQ: "Puis-je changer l’ordre des fichiers ?",
   mergeOrderA: "Oui. Déplacez les fichiers avec les flèches, faites-les glisser à la souris ou triez-les par nom avant la fusion.",
   mergeKeptQ: "Que conserve le PDF fusionné ?",

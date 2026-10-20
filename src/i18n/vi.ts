@@ -173,7 +173,7 @@ export default {
   faqFreeQ: "Có miễn phí không? Có giới hạn gì không?",
   faqFreeA: "Miễn phí, không cần tài khoản, không watermark, không giới hạn số lần mỗi ngày. Giới hạn duy nhất là bộ nhớ thiết bị khi xử lý file rất lớn.",
   faqOfflineQ: "Có dùng offline được không?",
-  faqOfflineA: "Có, sau khi bạn đã dùng một công cụ lúc có mạng: trang lưu các file cần thiết trong trình duyệt và chạy được khi mất mạng.",
+  faqOfflineA: "Có, với các công cụ bạn đã dùng một lần lúc có mạng: trang giữ các file cần thiết của chúng trong trình duyệt nên sau đó chạy được khi mất mạng.",
   mergeOrderQ: "Có đổi thứ tự file được không?",
   mergeOrderA: "Có. Dùng nút mũi tên, kéo thả bằng chuột, hoặc xếp theo tên trước khi gộp.",
   mergeKeptQ: "File gộp giữ lại những gì?",

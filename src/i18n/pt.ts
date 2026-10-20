@@ -173,7 +173,7 @@ export default {
   faqFreeQ: "É grátis? Há limites?",
   faqFreeA: "Grátis, sem conta, marca d'água ou limite diário. O único limite é a memória do seu dispositivo para arquivos muito grandes.",
   faqOfflineQ: "Funciona offline?",
-  faqOfflineA: "Sim, depois de usar uma ferramenta online: o site guarda seus arquivos no navegador e passa a funcionar sem conexão.",
+  faqOfflineA: "Sim, para as ferramentas que você já usou uma vez online: o site guarda os arquivos delas no navegador e depois elas funcionam sem conexão.",
   mergeOrderQ: "Posso mudar a ordem dos arquivos?",
   mergeOrderA: "Sim. Mova os arquivos com as setas, arraste-os com o mouse ou ordene por nome antes de juntar.",
   mergeKeptQ: "O que é mantido no PDF final?",

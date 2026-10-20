@@ -170,7 +170,7 @@ export default {
   faqFreeQ: "Is it free? Are there limits?",
   faqFreeA: "Free, with no account, watermark or daily limit. The only limit is your device's memory for very large files.",
   faqOfflineQ: "Does it work offline?",
-  faqOfflineA: "Yes, once you have used a tool online: the site keeps its files in the browser and then runs without a connection.",
+  faqOfflineA: "Yes, for the tools you have used once online: the site keeps their files in the browser, so they then run without a connection.",
   mergeOrderQ: "Can I change the order of the files?",
   mergeOrderA: "Yes. Move files with the arrows, drag them with a mouse, or sort them by name before merging.",
   mergeKeptQ: "What is kept in the merged PDF?",

@@ -86,13 +86,13 @@ The **same `dist/` directory** is deployable on either host. Serve it at an orig
 3. Create DNS `CNAME pdf -> nguyenkha.github.io`, without a `/pdf` suffix. Wait for the certificate, then enable Enforce HTTPS.
 4. `.github/workflows/deploy.yml` installs from the lockfile, runs lint/typecheck/unit tests/build and Chromium/WebKit browser tests, then deploys Pages automatically on pushes to `main`.
 
-Every locale and privacy URL has a real HTML entry point, so no SPA rewrite is needed. GitHub Pages does not apply Cloudflare `_headers`; production HTML also includes an appropriate CSP meta policy.
+Every locale and privacy URL has a real HTML entry point, so no SPA rewrite is needed. GitHub Pages cannot set response headers, so the CSP is a meta tag in each page; it does not cover the workers, which get no CSP on this host.
 
 ### Cloudflare Pages
 
 Build command: `pnpm install --frozen-lockfile && pnpm build`. Output: `dist`. Node: 24. Add `pdf.kha.do` under Custom domains and configure its DNS as instructed by Pages. No Workers, Functions, API keys, or backend are needed for the application.
 
-`_headers` supplies security headers and WASM MIME/cache settings. Hashed/versioned assets are immutable; HTML and `sw.js` should be revalidated. Root redirects to the saved/browser locale with English fallback. Every localized route is a file; no catch-all rewrite is needed.
+Hashed/versioned assets never change; HTML and `sw.js` are revalidated by the service worker. Root redirects to the saved/browser locale with English fallback. Every localized route is a file; no catch-all rewrite is needed.
 
 ## Roadmap and contributing
 

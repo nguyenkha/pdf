@@ -24,6 +24,9 @@ describe("zip", () => {
     ["...", "document.pdf"],
     ["", "document.pdf"],
     ["normal name.pdf", "normal name.pdf"],
+    ["CON.pdf", "_CON.pdf"],
+    ["nul", "_nul"],
+    ["report. ", "report"],
   ])("makes %j a flat, safe entry name", (name, expected) =>
     expect(safeEntryName(name)).toBe(expected));
   it("bounds entry name length", () =>

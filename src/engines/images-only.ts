@@ -5,6 +5,8 @@ import { attemptsFor, type CompressOptions, type RunResult } from "./ghostscript
 // Smaller images are never enlarged, so the cap only ever spares them.
 const PAGE_INCHES = 11.69;
 const WORTHWHILE = 0.1;
+// Bigger than this is not a real page image but a decompression bomb.
+const MAX_PIXELS = 50_000_000;
 const name = (key: string) => PDFName.of(key);
 // Keys that describe the old encoding; everything else (SMask, Intent,
 // Interpolate, optional content) carries over to the new stream.
@@ -98,6 +100,7 @@ async function bitmapOf(object: PDFRawStream, kind: Source): Promise<ImageBitmap
     });
   const width = (object.dict.lookup(name("Width")) as PDFNumber).asNumber();
   const height = (object.dict.lookup(name("Height")) as PDFNumber).asNumber();
+  if (!(width > 0 && height > 0) || width * height > MAX_PIXELS) throw new Error("image too large");
   const inflated = new Uint8Array(
     await new Response(
       new Blob([object.contents as BlobPart]).stream().pipeThrough(new DecompressionStream("deflate")),

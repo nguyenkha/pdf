@@ -173,7 +173,7 @@ export default {
   faqFreeQ: "Ist es kostenlos? Gibt es Limits?",
   faqFreeA: "Kostenlos, ohne Konto, Wasserzeichen oder Tageslimit. Die einzige Grenze ist der Speicher deines Geräts bei sehr großen Dateien.",
   faqOfflineQ: "Funktioniert es offline?",
-  faqOfflineA: "Ja, sobald du ein Tool einmal online benutzt hast: Die Seite speichert ihre Dateien im Browser und läuft dann ohne Verbindung.",
+  faqOfflineA: "Ja, für die Tools, die du einmal online benutzt hast: Die Seite speichert ihre Dateien im Browser, danach laufen sie ohne Verbindung.",
   mergeOrderQ: "Kann ich die Reihenfolge der Dateien ändern?",
   mergeOrderA: "Ja. Verschiebe Dateien mit den Pfeilen, ziehe sie mit der Maus oder sortiere sie vor dem Zusammenfügen nach Namen.",
   mergeKeptQ: "Was bleibt im zusammengefügten PDF erhalten?",

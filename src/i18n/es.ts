@@ -173,7 +173,7 @@ export default {
   faqFreeQ: "¿Es gratis? ¿Hay límites?",
   faqFreeA: "Gratis, sin cuenta, marca de agua ni límite diario. El único límite es la memoria de tu dispositivo con archivos muy grandes.",
   faqOfflineQ: "¿Funciona sin conexión?",
-  faqOfflineA: "Sí, una vez que hayas usado una herramienta con conexión: el sitio guarda sus archivos en el navegador y después funciona sin conexión.",
+  faqOfflineA: "Sí, para las herramientas que hayas usado una vez con conexión: el sitio guarda sus archivos en el navegador y después funcionan sin conexión.",
   mergeOrderQ: "¿Puedo cambiar el orden de los archivos?",
   mergeOrderA: "Sí. Mueve los archivos con las flechas, arrástralos con el ratón u ordénalos por nombre antes de unirlos.",
   mergeKeptQ: "¿Qué se conserva en el PDF unido?",
