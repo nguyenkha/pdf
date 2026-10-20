@@ -1,4 +1,4 @@
-import type { Line, Paragraph, Worker as TesseractWorker } from "tesseract.js";
+import type { Line, Paragraph } from "tesseract.js";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import workerUrl from "pdfjs-dist/legacy/build/pdf.worker.min.mjs?url";
 import type { Locale } from "../../i18n/config";
@@ -172,7 +172,6 @@ export async function recognizePages(
   onProgress({ stage: "loading" });
   const { createWorker, PSM } = (await import("tesseract.js/dist/tesseract.esm.min.js")).default;
   const languages = ocrLanguages(locale);
-  let recognizer: TesseractWorker | undefined;
   let position = 0;
   const task = pdfjs.getDocument({
     data: new Uint8Array(await file.arrayBuffer()),
@@ -183,39 +182,49 @@ export async function recognizePages(
     cMapPacked: true,
     standardFontDataUrl: "/pdfjs/standard_fonts/",
   });
+  // The recognizer starts while the first page is drawn; it is awaited only
+  // to read that page.
+  const starting = createWorker(languages, 1, {
+    workerPath: "/ocr/worker.min.js",
+    corePath: "/ocr/core",
+    langPath: "/ocr/lang",
+    gzip: true,
+    workerBlobURL: false,
+    // The service worker caches /ocr/ like the other assets; no IndexedDB copy.
+    cacheMethod: "none",
+    logger: (message) => {
+      if (message.status === "recognizing text")
+        onProgress({
+          stage: "page",
+          page: position + 1,
+          total: indexes.length,
+          done: position + message.progress,
+        });
+    },
+  });
+  // tesseract.js defaults to one uniform block; a page needs layout analysis
+  // to keep columns apart and table rows in.
+  const ready = starting.then(async (recognizer) => {
+    await recognizer.setParameters({ tessedit_pageseg_mode: PSM.AUTO });
+    return recognizer;
+  });
+  // Handled where it is awaited; this only keeps an early failure from being
+  // reported as unhandled while a page is still being drawn.
+  ready.catch(() => {});
   const stop = () => {
-    void recognizer?.terminate();
+    void starting.then((recognizer) => recognizer.terminate(), () => {});
     void task.destroy();
   };
   signal.addEventListener("abort", stop, { once: true });
   try {
-    recognizer = await createWorker(languages, 1, {
-      workerPath: "/ocr/worker.min.js",
-      corePath: "/ocr/core",
-      langPath: "/ocr/lang",
-      gzip: true,
-      workerBlobURL: false,
-      // The service worker caches /ocr/ like the other assets; no IndexedDB copy.
-      cacheMethod: "none",
-      logger: (message) => {
-        if (message.status === "recognizing text")
-          onProgress({
-            stage: "page",
-            page: position + 1,
-            total: indexes.length,
-            done: position + message.progress,
-          });
-      },
-    });
-    // tesseract.js defaults to one uniform block; a page needs layout analysis
-    // to keep columns apart and table rows in.
-    await recognizer.setParameters({ tessedit_pageseg_mode: PSM.AUTO });
     const doc = await task.promise;
     const pages: OcrPage[] = [];
     for (const [at, index] of indexes.entries()) {
       position = at;
       if (signal.aborted) throw new Error("cancelled");
-      onProgress({ stage: "page", page: at + 1, total: indexes.length, done: at });
+      // Page 1 is announced once the recognizer is ready to read it.
+      const announce = () => onProgress({ stage: "page", page: at + 1, total: indexes.length, done: at });
+      if (at) announce();
       const page = await doc.getPage(index + 1);
       const base = page.getViewport({ scale: 1 });
       const limit = Math.min(
@@ -249,6 +258,9 @@ export async function recognizePages(
         await page.render({ canvasContext: context, viewport, background: "white" }).promise;
       }
       page.cleanup();
+      const recognizer = await ready;
+      if (signal.aborted) throw new Error("cancelled");
+      if (!at) announce();
       const { data } = await recognizer.recognize(canvas, {}, { blocks: true, text: false });
       const paragraphs = (data.blocks ?? []).flatMap((block) => block.paragraphs);
       const angle = skewAngle(paragraphs);
