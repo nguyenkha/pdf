@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { crc32, uniqueNames, zipBlobs } from "../src/lib/zip";
+import { crc32, safeEntryName, uniqueNames, zipBlobs } from "../src/lib/zip";
 
 const hasUnzip = (() => {
   try {
@@ -16,6 +16,18 @@ const hasUnzip = (() => {
 describe("zip", () => {
   it("computes the standard CRC-32", () =>
     expect(crc32(new TextEncoder().encode("hello"))).toBe(0x3610a686));
+  it.each([
+    ["../../etc/passwd.pdf", "_.._etc_passwd.pdf"],
+    ["..\\win\\evil.pdf", "_win_evil.pdf"],
+    ["/abs/path.pdf", "_abs_path.pdf"],
+    ["a\u0000b\u001f.pdf", "ab.pdf"],
+    ["...", "document.pdf"],
+    ["", "document.pdf"],
+    ["normal name.pdf", "normal name.pdf"],
+  ])("makes %j a flat, safe entry name", (name, expected) =>
+    expect(safeEntryName(name)).toBe(expected));
+  it("bounds entry name length", () =>
+    expect(safeEntryName("a".repeat(500) + ".pdf").length).toBeLessThanOrEqual(180));
   it("keeps names unique", () =>
     expect(uniqueNames(["a.pdf", "b.pdf", "a.pdf", "a.pdf"])).toEqual([
       "a.pdf",

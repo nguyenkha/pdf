@@ -143,5 +143,8 @@ test('share target opens the shared PDF and keeps no copy', async ({ page, brows
   }, { data: bytes, action: `${origin}/share-target` });
   await expect(page.getByText('shared scan.pdf', { exact: true })).toBeVisible({ timeout: 30000 });
   await expect(page).toHaveURL(/\/en\/$/);
-  await expect.poll(() => page.evaluate(() => caches.has('pdf-kha-do-shared'))).toBe(false);
+  // Nothing of the PDF is written to Cache Storage on the way.
+  const cached = await page.evaluate(async () => (await Promise.all((await caches.keys()).map(async key => (await (await caches.open(key)).keys()).map(request => request.url)))).flat());
+  expect(cached.some(url => url.includes('shared'))).toBe(false);
+  expect(await page.evaluate(() => caches.has('pdf-kha-do-shared'))).toBe(false);
 });

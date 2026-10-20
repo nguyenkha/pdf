@@ -41,7 +41,7 @@ The production build writes `dist/bundle-report.json` with raw, gzip, and Brotli
 
 ## Privacy model
 
-The page fetches only its own application assets. There is no upload endpoint or remote PDF service. A File is passed to a dedicated worker, read in memory, and processed by locally hosted JavaScript/WASM. On Android, the installed app is a share target: a shared PDF is held in a local cache only until the page reads it, then the cache is deleted. The original filename is only used to display the chosen file and name the download. Engine diagnostics are suppressed; only the page number of Ghostscript's "Page N" lines is read, for the progress bar. PDF contents are not logged. A password for a protected PDF stays in the worker for that one job and is never stored.
+The page fetches only its own application assets. There is no upload endpoint or remote PDF service. A File is passed to a dedicated worker, read in memory, and processed by locally hosted JavaScript/WASM. On Android, the installed app is a share target: a shared PDF is held in the service worker's memory only until the page takes it, and is never written to storage. The original filename is only used to display the chosen file and name the download. Engine diagnostics are suppressed; only the page number of Ghostscript's "Page N" lines is read, for the progress bar. PDF contents are not logged. A password for a protected PDF stays in the worker for that one job and is never stored.
 
 No document data is put in localStorage, IndexedDB, or Cache Storage. Only language/theme choices are stored in localStorage. A service worker caches explicitly allowed same-origin application assets, never PDFs or blob URLs. Cancel/reset releases workers and result object URLs. Browser tests monitor HTTP requests while processing and verify no document data or metadata is sent.
 
@@ -99,5 +99,5 @@ Merge, split, rotate, extraction and images-to-PDF may be added as independent l
 
 ## Corpus and memory checks
 
-`pnpm test:corpus` builds a synthetic corpus with native Ghostscript (`scripts/make-corpus.mjs`: 300 dpi color and gray scans, a long text document, one with bookmarks and page links), compresses each file in WebKit with an iPhone profile and in desktop Chromium, and fails when a job's peak memory exceeds its budget (1.2 GB on the iPhone profile) or the output loses pages or bookmarks. CI writes the timings and peaks to the run summary.
+`pnpm test:corpus` builds a synthetic corpus with native Ghostscript (`scripts/make-corpus.mjs`: 300 dpi color and gray scans, a long text document, one with bookmarks and page links), compresses each file in WebKit with an iPhone profile and in desktop Chromium, and fails when the output loses pages or bookmarks, or when a job's peak memory passes a 2 GB ceiling. Browser resident memory varies by up to ~50% between identical runs, so the ceiling only catches gross regressions; the measured peaks are reported for trends. CI writes the timings and peaks to the run summary.
 

@@ -184,3 +184,19 @@ test("compresses several PDFs and downloads them as one ZIP", async ({ page }) =
   expect(bytes.readUInt32LE(0)).toBe(0x04034b50);
   expect(bytes.includes(Buffer.from("scan-compressed.pdf"))).toBe(true);
 });
+test("closing the comparison early leaves no pdf.js worker behind", async ({ page }) => {
+  test.setTimeout(180000);
+  await page.goto("/en/");
+  await page.locator("input[type=file]").setInputFiles("tests/fixtures/long.pdf");
+  await page.getByRole("button", { name: "Compress PDF", exact: true }).click();
+  await expectSuccess(page);
+  await expect.poll(() => page.workers().length, { timeout: 15000 }).toBe(0);
+  const compare = page.getByRole("button", { name: "Compare before/after" });
+  await compare.click();
+  await compare.click();
+  await expect.poll(() => page.workers().length, { timeout: 15000 }).toBe(0);
+  await compare.click();
+  await expect(page.locator(".compare canvas")).toHaveCount(2);
+  await compare.click();
+  await expect.poll(() => page.workers().length, { timeout: 15000 }).toBe(0);
+});

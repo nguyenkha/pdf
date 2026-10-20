@@ -1,4 +1,4 @@
-const CACHE = "pdf-kha-do-assets-v2";
+const CACHE = "pdf-kha-do-assets-v3";
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
@@ -21,16 +21,22 @@ self.addEventListener("activate", (event) => {
       .keys()
       .then((keys) =>
         Promise.all(
-          keys.filter((k) => k !== CACHE && k !== SHARED).map((k) => caches.delete(k)),
+          // Also removes the old "pdf-kha-do-shared" hand-over cache.
+          keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)),
         ),
       ),
   );
   self.clients.claim();
 });
-// Android share sheet -> installed app. The shared PDFs are parked in a
-// local cache only until the page picks them up and deletes them; nothing
-// leaves the device.
-const SHARED = "pdf-kha-do-shared";
+// Android share sheet -> installed app. Shared PDFs stay in this worker's
+// memory only until the page takes them (or the worker stops); they are
+// never written to storage.
+let shared = [];
+self.addEventListener("message", (event) => {
+  if (event.data?.type !== "take-shared" || !event.ports[0]) return;
+  event.ports[0].postMessage(shared);
+  shared = [];
+});
 self.addEventListener("fetch", (event) => {
   const request = event.request;
   const target = new URL(request.url);
@@ -38,17 +44,7 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       (async () => {
         const form = await request.formData();
-        const cache = await caches.open(SHARED);
-        let index = 0;
-        for (const file of form.getAll("file")) {
-          if (!(file instanceof File)) continue;
-          await cache.put(
-            `/shared/${index++}`,
-            new Response(file, {
-              headers: { "Content-Type": "application/pdf", "X-Name": encodeURIComponent(file.name) },
-            }),
-          );
-        }
+        shared = form.getAll("file").filter((file) => file instanceof File);
         return Response.redirect("/?shared=1", 303);
       })(),
     );

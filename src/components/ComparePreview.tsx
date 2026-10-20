@@ -7,20 +7,37 @@ import { fill } from "../i18n/fill";
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 type Doc = Awaited<ReturnType<typeof pdfjs.getDocument>["promise"]>;
+type Task = ReturnType<typeof pdfjs.getDocument>;
 const ZOOM = 2.5;
-function open(blob: Blob, password?: string) {
-  return blob.arrayBuffer().then(
-    (data) =>
-      pdfjs.getDocument({
-        data: new Uint8Array(data),
-        password,
-        isEvalSupported: false,
-        verbosity: 0,
-        cMapUrl: "/pdfjs/cmaps/",
-        cMapPacked: true,
-        standardFontDataUrl: "/pdfjs/standard_fonts/",
-      }).promise,
-  );
+// Canvas ceilings: Safari kills tabs that hold large canvases, so cap the
+// pixel ratio and the pixels per canvas instead of matching the screen.
+const MAX_RATIO = 2;
+const MAX_PIXELS = 6_000_000;
+// pdf.js asks for byte ranges as it needs them, so a large original is never
+// read into memory whole just to show one page.
+class BlobRange extends pdfjs.PDFDataRangeTransport {
+  constructor(private blob: Blob) {
+    super(blob.size, new Uint8Array(0));
+  }
+  requestDataRange(begin: number, end: number) {
+    this.blob
+      .slice(begin, end)
+      .arrayBuffer()
+      .then((chunk) => this.onDataRange(begin, new Uint8Array(chunk)));
+  }
+}
+function open(blob: Blob, password?: string): Task {
+  return pdfjs.getDocument({
+    range: new BlobRange(blob),
+    disableAutoFetch: true,
+    disableStream: true,
+    password,
+    isEvalSupported: false,
+    verbosity: 0,
+    cMapUrl: "/pdfjs/cmaps/",
+    cMapPacked: true,
+    standardFontDataUrl: "/pdfjs/standard_fonts/",
+  });
 }
 /** Side-by-side render of one page of the original and the compressed copy. */
 export default function ComparePreview({
@@ -43,42 +60,63 @@ export default function ComparePreview({
   const canvases = [useRef<HTMLCanvasElement>(null), useRef<HTMLCanvasElement>(null)];
   const boxes = [useRef<HTMLDivElement>(null), useRef<HTMLDivElement>(null)];
   useEffect(() => {
-    let loaded: Doc[] = [];
-    Promise.all([open(original, password), open(result)])
-      .then((pair) => {
-        loaded = pair;
-        setDocs(pair as [Doc, Doc]);
-      })
-      .catch(() => setFailed(true));
-    return () => loaded.forEach((doc) => doc.destroy());
+    // Destroying the loading tasks (not only loaded documents) also stops
+    // pdf.js workers when the preview closes before loading finished.
+    const tasks = [open(original, password), open(result)];
+    let active = true;
+    Promise.all(tasks.map((task) => task.promise))
+      .then((pair) => active && setDocs(pair as [Doc, Doc]))
+      .catch(() => active && setFailed(true));
+    return () => {
+      active = false;
+      setDocs(undefined);
+      tasks.forEach((task) => task.destroy());
+    };
   }, [original, result, password]);
   useEffect(() => {
     if (!docs) return;
-    const tasks: { cancel: () => void }[] = [];
-    docs.forEach(async (doc, index) => {
-      const canvas = canvases[index].current;
-      const box = boxes[index].current;
-      if (!canvas || !box) return;
-      const view = await doc.getPage(page);
-      const base = view.getViewport({ scale: 1 });
-      const width = box.clientWidth * (zoom ? ZOOM : 1);
-      const scale = (width * devicePixelRatio) / base.width;
-      const viewport = view.getViewport({ scale });
-      canvas.width = Math.ceil(viewport.width);
-      canvas.height = Math.ceil(viewport.height);
-      canvas.style.width = `${width}px`;
-      const task = view.render({
-        canvasContext: canvas.getContext("2d")!,
-        viewport,
-        background: "white",
-      });
-      tasks.push(task);
-      await task.promise.catch(() => {});
-      view.cleanup();
-    });
-    return () => tasks.forEach((task) => task.cancel());
+    let render: { cancel: () => void } | undefined;
+    let active = true;
+    (async () => {
+      // One pane after the other keeps a single decoded page in memory.
+      for (const [index, doc] of docs.entries()) {
+        const canvas = canvases[index].current;
+        const box = boxes[index].current;
+        if (!active || !canvas || !box) return;
+        const view = await doc.getPage(page);
+        const base = view.getViewport({ scale: 1 });
+        const width = box.clientWidth * (zoom ? ZOOM : 1);
+        let scale = (width * Math.min(devicePixelRatio, MAX_RATIO)) / base.width;
+        const pixels = base.width * base.height * scale * scale;
+        if (pixels > MAX_PIXELS) scale *= Math.sqrt(MAX_PIXELS / pixels);
+        const viewport = view.getViewport({ scale });
+        canvas.width = Math.ceil(viewport.width);
+        canvas.height = Math.ceil(viewport.height);
+        canvas.style.width = `${width}px`;
+        const task = view.render({
+          canvasContext: canvas.getContext("2d")!,
+          viewport,
+          background: "white",
+        });
+        render = task;
+        await task.promise.catch(() => {});
+        view.cleanup();
+      }
+    })();
+    return () => {
+      active = false;
+      render?.cancel();
+    };
     // The canvas and box refs are stable.
   }, [docs, page, zoom]);
+  // Release canvas memory when the preview closes.
+  useEffect(
+    () => () =>
+      canvases.forEach((ref) => {
+        if (ref.current) ref.current.width = ref.current.height = 0;
+      }),
+    [],
+  );
   // Scroll both panes together while zoomed in.
   function sync(from: number) {
     const source = boxes[from].current;

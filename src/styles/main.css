@@ -955,6 +955,7 @@ input[type="number"],
 .compare canvas {
   display: block;
   max-width: none;
+  height: auto;
 }
 .compare-box:not(.zoomed) canvas {
   width: 100% !important;

@@ -4,7 +4,7 @@ import type { Messages } from "../../i18n";
 import { fill } from "../../i18n/fill";
 import { formatSize, outputName, savings } from "../../lib/pdf";
 import { planOptions, type PlanChoice } from "../../lib/plan";
-import { uniqueNames, zipBlobs } from "../../lib/zip";
+import { safeEntryName, uniqueNames, zipBlobs } from "../../lib/zip";
 import { CompressionPlan } from "../../components/CompressionPlan";
 import { useObjectUrl } from "../../hooks/useObjectUrl";
 import { probeFile, runCompression } from "./run";
@@ -113,7 +113,9 @@ export function BatchTool({
   useEffect(() => {
     if (!complete || !finished.length) return;
     let active = true;
-    const names = uniqueNames(finished.map((item) => outputName(item.file.name)));
+    const names = uniqueNames(
+      finished.map((item) => safeEntryName(outputName(item.file.name))),
+    );
     zipBlobs(finished.map((item, i) => ({ name: names[i], blob: item.blob! }))).then(
       (archive) => active && setZip(archive),
     );

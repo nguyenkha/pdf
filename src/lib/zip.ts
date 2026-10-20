@@ -21,7 +21,8 @@ export async function zipBlobs(entries: { name: string; blob: Blob }[]): Promise
   const parts: BlobPart[] = [];
   const central: BlobPart[] = [];
   let offset = 0;
-  for (const { name, blob } of entries) {
+  for (const { name: requested, blob } of entries) {
+    const name = safeEntryName(requested);
     // One file in memory at a time while its checksum is computed.
     const crc = crc32(new Uint8Array(await blob.arrayBuffer()));
     const path = encoder.encode(name) as Uint8Array<ArrayBuffer>;
@@ -60,6 +61,21 @@ export async function zipBlobs(entries: { name: string; blob: Blob }[]): Promise
     v.setUint32(16, offset, true);
   });
   return new Blob([...parts, ...central, end], { type: "application/zip" });
+}
+/**
+ * A flat, harmless entry name: no directories, no "..", no control
+ * characters, bounded length, so extracting can never write outside the
+ * chosen folder.
+ */
+export function safeEntryName(name: string): string {
+  const cleaned = Array.from(name)
+    .filter((char) => char.charCodeAt(0) > 31 && char.charCodeAt(0) !== 127)
+    .join("")
+    .replace(/[\\/:*?"<>|]/g, "_")
+    .replace(/^[\s.]+/, "")
+    .trim()
+    .slice(0, 180);
+  return cleaned && !/^\.*$/.test(cleaned) ? cleaned : "document.pdf";
 }
 /** Makes names unique inside one archive: a.pdf, a (2).pdf, ... */
 export function uniqueNames(names: string[]): string[] {

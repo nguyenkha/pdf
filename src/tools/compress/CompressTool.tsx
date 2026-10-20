@@ -32,21 +32,20 @@ type Props = {
   /** Opened from the share target with files waiting in the cache. */
   shared?: boolean;
 };
-const SHARED = "pdf-kha-do-shared";
+// Asks the service worker for files handed over by the share target; it
+// holds them in memory and forgets them once given.
 async function takeSharedFiles(): Promise<File[]> {
   try {
-    const cache = await caches.open(SHARED);
-    const files: File[] = [];
-    for (const request of await cache.keys()) {
-      const response = await cache.match(request);
-      if (response) {
-        const name = decodeURIComponent(response.headers.get("X-Name") ?? "shared.pdf");
-        files.push(new File([await response.blob()], name, { type: "application/pdf" }));
-      }
-    }
-    // The cache was only a hand-over; nothing is kept.
-    await caches.delete(SHARED);
-    return files;
+    const registration = await navigator.serviceWorker.ready;
+    const worker = navigator.serviceWorker.controller ?? registration.active;
+    if (!worker) return [];
+    const channel = new MessageChannel();
+    const reply = new Promise<File[]>((resolve) => {
+      channel.port1.onmessage = (event) => resolve(event.data ?? []);
+      setTimeout(() => resolve([]), 5000);
+    });
+    worker.postMessage({ type: "take-shared" }, [channel.port2]);
+    return await reply;
   } catch {
     return [];
   }
@@ -111,6 +110,7 @@ export default function CompressTool({ t, locale, preset, shared }: Props) {
   }, [t.crashed]);
   const card = useRef<HTMLElement>(null);
   const [estimate, setEstimate] = useState<{ size?: number; loading: boolean }>();
+  const sampleJob = useRef<{ cancel: () => void } | undefined>(undefined);
   // On phones the next action can sit below the fold after a step changes.
   useEffect(() => {
     const element = card.current;
@@ -219,6 +219,7 @@ export default function CompressTool({ t, locale, preset, shared }: Props) {
     const timer = setTimeout(() => {
       setEstimate({ loading: true });
       sample = estimateFile(file, chosen, summary.pages);
+      sampleJob.current = sample;
       sample.promise
         .then((size) => active && setEstimate({ size, loading: false }))
         .catch(() => active && setEstimate(undefined));
@@ -237,6 +238,10 @@ export default function CompressTool({ t, locale, preset, shared }: Props) {
       setError(t.targetInvalid);
       return;
     }
+    // Stop the size estimate first: its engine runs would otherwise overlap
+    // the real job and add to the peak memory on phones.
+    sampleJob.current?.cancel();
+    sampleJob.current = undefined;
     const id = ++generation.current;
     setError("");
     setBusy(true);
