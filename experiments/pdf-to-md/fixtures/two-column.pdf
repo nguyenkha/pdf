@@ -1,0 +1,44 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Count 1 /Kids [6 0 R] >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+5 0 obj
+<< /Length 514 >>
+stream
+BT /F2 24 Tf 50 740 Td (Synthetic two-column reading order) Tj ET
+BT /F1 12 Tf 50 670 Td (Left column sentence 1.) Tj ET
+BT /F1 12 Tf 340 670 Td (Right column sentence 1.) Tj ET
+BT /F1 12 Tf 50 652 Td (Left column sentence 2.) Tj ET
+BT /F1 12 Tf 340 652 Td (Right column sentence 2.) Tj ET
+BT /F1 12 Tf 50 634 Td (Left column sentence 3.) Tj ET
+BT /F1 12 Tf 340 634 Td (Right column sentence 3.) Tj ET
+BT /F1 12 Tf 50 616 Td (Left column sentence 4.) Tj ET
+BT /F1 12 Tf 340 616 Td (Right column sentence 4.) Tj ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 600 800] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 5 0 R  >>
+endobj
+xref
+0 7
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000185 00000 n 
+0000000260 00000 n 
+0000000824 00000 n 
+trailer
+<< /Size 7 /Root 1 0 R >>
+startxref
+961
+%%EOF

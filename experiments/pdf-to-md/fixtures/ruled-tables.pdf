@@ -1,0 +1,63 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Count 1 /Kids [6 0 R] >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+5 0 obj
+<< /Length 804 >>
+stream
+BT /F2 24 Tf 50 750 Td (Ruled tables) Tj ET
+0.5 w
+50 700 m 500 700 l S
+50 660 m 500 660 l S
+50 610 m 500 610 l S
+50 570 m 500 570 l S
+50 570 m 50 700 l S
+500 570 m 500 700 l S
+200 570 m 200 660 l S
+350 570 m 350 700 l S
+BT /F1 12 Tf 60 678 Td (Merged heading) Tj ET
+BT /F1 12 Tf 360 678 Td (Value) Tj ET
+BT /F1 12 Tf 60 640 Td (First line) Tj ET
+BT /F1 12 Tf 60 624 Td (Second line) Tj ET
+BT /F1 12 Tf 360 638 Td (42) Tj ET
+BT /F1 12 Tf 60 584 Td (Last row) Tj ET
+BT /F1 12 Tf 210 584 Td (8) Tj ET
+BT /F1 12 Tf 360 584 Td (16) Tj ET
+50 480 m 350 480 l S
+50 440 m 350 440 l S
+50 400 m 350 400 l S
+50 400 m 50 480 l S
+200 400 m 200 480 l S
+350 400 m 350 480 l S
+BT /F1 12 Tf 60 455 Td (Name) Tj ET
+BT /F1 12 Tf 210 455 Td (Count) Tj ET
+BT /F1 12 Tf 60 415 Td (Pear) Tj ET
+BT /F1 12 Tf 210 415 Td (2) Tj ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 600 800] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 5 0 R  >>
+endobj
+xref
+0 7
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000185 00000 n 
+0000000260 00000 n 
+0000001114 00000 n 
+trailer
+<< /Size 7 /Root 1 0 R >>
+startxref
+1251
+%%EOF

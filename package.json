@@ -15,7 +15,10 @@
     "test:pdf:native": "python3 scripts/native-smoke.py",
     "predev": "node scripts/vendor-engine.mjs",
     "prebuild": "node scripts/vendor-engine.mjs",
-    "test:corpus": "node scripts/make-corpus.mjs && playwright test -c playwright.corpus.config.ts"
+    "test:corpus": "node scripts/make-corpus.mjs && playwright test -c playwright.corpus.config.ts",
+    "dev:pdf-to-md": "node scripts/vendor-engine.mjs && vite --config experiments/pdf-to-md/vite.config.ts --host 127.0.0.1 --port 4182 --strictPort",
+    "test:pdf-to-md": "vitest run tests/markdown.test.ts tests/markdown-preview.test.ts tests/markdown-layout.test.ts tests/markdown-tables.test.ts tests/markdown-columns.test.ts tests/markdown-structure.test.ts tests/markdown-grid.test.ts && playwright test --config experiments/pdf-to-md/playwright.config.ts",
+    "test:pdf-to-md:corpus": "playwright test --config experiments/pdf-to-md/corpus.config.ts"
   },
   "dependencies": {
     "@wasm-zoo/ghostscript": "0.7.2",
