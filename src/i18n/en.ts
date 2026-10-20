@@ -75,7 +75,6 @@ export default {
     "Digital signatures and interactive forms may not survive PDF rewriting. Check the result before sharing.",
   license: "License",
   coming: "More tools coming later",
-  hostedOn: "Hosted on {host} with <3",
   contact: "Contact",
   open: "Open source on GitHub",
   targetInvalid: "Enter a target size greater than zero.",

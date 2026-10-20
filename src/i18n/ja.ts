@@ -82,7 +82,6 @@ export default {
   lossyNotice: "画像を再圧縮しました。共有前に結果を確認してください。",
   replace: "ファイルを変更",
   oneFile: "PDF は一度に 1 つ選んでください。",
-  hostedOn: "{host} でホスト、<3 を込めて",
   stepFile: "PDF を選択",
   stepLevel: "圧縮レベルを選択",
   stepDownload: "ダウンロード",

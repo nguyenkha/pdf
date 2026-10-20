@@ -84,7 +84,6 @@ export default {
     "Bilder wurden neu komprimiert. Prüfen Sie das Ergebnis vor der Weitergabe.",
   replace: "Datei ersetzen",
   oneFile: "Wählen Sie jeweils ein PDF.",
-  hostedOn: "Gehostet auf {host} mit <3",
   stepFile: "PDF wählen",
   stepLevel: "Stufe wählen",
   stepDownload: "Herunterladen",

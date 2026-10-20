@@ -7,8 +7,9 @@ import {
   Sun,
   Moon,
   Monitor,
+  Heart,
+  Github,
 } from "lucide-react";
-import { fillNodes } from "./i18n/fill";
 import { initialLocale, locales, names, type Locale } from "./i18n/config";
 import { messages, type Messages } from "./i18n";
 import en from "./i18n/en";
@@ -166,12 +167,12 @@ function App({
           </Suspense>
         </div>
         <div className="content" id="about">
-          <div className="info-card">
+          <div className="info-card how">
             <span>01</span>
             <h2>{t.how}</h2>
             <p>{t.howText}</p>
           </div>
-          <div className="info-card">
+          <div className="info-card why">
             <span>02</span>
             <h2>{t.why}</h2>
             <p>{t.whyText}</p>
@@ -202,24 +203,23 @@ function App({
         </section>
       </main>
       <footer>
-        <div>
-          © {new Date().getFullYear()} kha.do ·{" "}
-          {fillNodes(t.hostedOn, {
-            host: (
-              <a href="https://pages.github.com/" target="_blank" rel="noreferrer">
-                GitHub Pages
-              </a>
-            ),
-          })}
-        </div>
-        <div>
-          {config.githubUrl && <a href={config.githubUrl}>{t.open}</a>}
-          <a href={`mailto:${config.contact}`}>
-            {t.contact}: {config.contact}
-          </a>
+        <span className="copyright">© {new Date().getFullYear()} Kha Do</span>
+        <span className="hosted">
+          Hosted on GitHub Pages with
+          <Heart size={12} fill="currentColor" aria-label="love" />
+        </span>
+        <nav aria-label={t.about}>
           <a href={`/${locale}/privacy/`}>{t.privacyTitle}</a>
           <a href="/LICENSE">{t.license}</a>
-        </div>
+          <a href={`mailto:${config.contact}`} title={config.contact}>
+            {t.contact}
+          </a>
+          {config.githubUrl && (
+            <a href={config.githubUrl} aria-label={t.open} title={t.open}>
+              <Github size={16} aria-hidden="true" />
+            </a>
+          )}
+        </nav>
       </footer>
     </>
   );

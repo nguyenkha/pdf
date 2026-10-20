@@ -84,7 +84,6 @@ export default {
     "As imagens foram recomprimidas. Confira o resultado antes de compartilhar.",
   replace: "Trocar arquivo",
   oneFile: "Escolha um PDF por vez.",
-  hostedOn: "Hospedado no {host} com <3",
   stepFile: "Escolher PDF",
   stepLevel: "Escolher nível",
   stepDownload: "Baixar",

@@ -76,7 +76,6 @@ export default {
   lossyNotice: "图像已重新压缩。分享前请检查结果。",
   replace: "更换文件",
   oneFile: "每次请选择一个 PDF。",
-  hostedOn: "托管于 {host}，用 <3 打造",
   stepFile: "选择 PDF",
   stepLevel: "选择压缩级别",
   stepDownload: "下载",

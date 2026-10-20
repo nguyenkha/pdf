@@ -84,7 +84,6 @@ export default {
   lossyNotice: "Ảnh đã được nén lại. Hãy kiểm tra kết quả trước khi chia sẻ.",
   replace: "Đổi tệp",
   oneFile: "Mỗi lần chỉ chọn một PDF.",
-  hostedOn: "Lưu trữ trên {host} với <3",
   stepFile: "Chọn PDF",
   stepLevel: "Chọn mức nén",
   stepDownload: "Tải xuống",

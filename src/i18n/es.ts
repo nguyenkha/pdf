@@ -84,7 +84,6 @@ export default {
     "Las imágenes se han vuelto a comprimir. Revisa el resultado antes de compartirlo.",
   replace: "Cambiar archivo",
   oneFile: "Selecciona un PDF a la vez.",
-  hostedOn: "Alojado en {host} con <3",
   stepFile: "Elegir PDF",
   stepLevel: "Elegir nivel",
   stepDownload: "Descargar",
