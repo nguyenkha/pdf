@@ -198,23 +198,37 @@ self.onmessage = async (event: MessageEvent<Request>) => {
         : [];
     if (cancelled) return;
     let released: Blob | undefined;
+    const check = async (bytes: Uint8Array, onPage: (page: number) => void) => {
+      // Park the output in a Blob and check that copy in its own workers,
+      // so no extra in-memory copy is held here. The output is written
+      // without encryption, so it opens without a password.
+      released = new Blob([bytes as BlobPart], { type: "application/pdf" });
+      const after = await inspect(released, undefined, (page) => onPage(page));
+      verifyShape(before, after);
+    };
     const result = await compressWithGhostscript(
       input.size,
       request.options,
       ({ stage, value, page }) =>
         progress(stage, ANALYZE + (1 - ANALYZE) * value, page, pages),
       runPass,
-      async (bytes, onPage) => {
-        // Park the output in a Blob and check that copy in its own workers,
-        // so no extra in-memory copy is held here. The output is written
-        // without encryption, so it opens without a password.
-        released = new Blob([bytes as BlobPart], { type: "application/pdf" });
-        const after = await inspect(released, undefined, (page) => onPage(page));
-        verifyShape(before, after);
-      },
+      check,
       before.pages.some((page) => (page.imageCount ?? 0) > 0),
       pages,
-    );
+    ).catch(async (error) => {
+      // A full rewrite changed what the document says (a font lost its text
+      // mapping): try re-encoding only its JPEG images, keeping fonts and
+      // text as they are. pdf-lib loads only for this.
+      if (!(error instanceof Error) || error.message !== "preservation" || password || cancelled) throw error;
+      progress("optimizing", ANALYZE, undefined, pages);
+      const { compressImagesOnly } = await import("../engines/images-only");
+      const fallback = await compressImagesOnly(new Uint8Array(await input!.arrayBuffer()), request.options, (bytes) =>
+        check(bytes, (page) => progress("finalizing", ANALYZE + ((1 - ANALYZE) * page) / pages, page, pages)),
+      );
+      // Nothing worth releasing: the original rewrite's verdict stands.
+      if (!fallback.bytes) throw error;
+      return fallback;
+    });
     if (!cancelled) {
       const { bytes, ...statistics } = result;
       self.postMessage({

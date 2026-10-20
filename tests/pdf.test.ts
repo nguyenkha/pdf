@@ -387,3 +387,15 @@ describe("page ranges", () => {
     expect(merge).toContain("-dPassThroughJPEGImages=true");
   });
 });
+describe("image-only fallback", () => {
+  it("undoes PNG row filters", async () => {
+    const { unpredictPng } = await import("../src/engines/images-only");
+    // Two rows of two gray pixels: Sub on the first, Up then Paeth on the second.
+    const rows = [
+      [1, 10, 5],
+      [2, 1, 1],
+    ];
+    expect([...unpredictPng(new Uint8Array(rows.flat()), 2, 1)]).toEqual([10, 15, 11, 16]);
+    expect([...unpredictPng(new Uint8Array([0, 7, 8, 4, 1, 1]), 2, 1)]).toEqual([7, 8, 8, 9]);
+  });
+});
