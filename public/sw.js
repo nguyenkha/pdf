@@ -70,12 +70,15 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     caches.open(CACHE).then(async (cache) => {
       if (html) {
+        // Pages are cached by path: a query such as ?shared=1 must not
+        // become a separate, lingering cache entry.
+        const key = url.origin + url.pathname;
         try {
           const response = await fetch(request);
-          if (response.ok) cache.put(request, response.clone());
+          if (response.ok) cache.put(key, response.clone());
           return response;
         } catch {
-          const cached = await cache.match(request);
+          const cached = await cache.match(key);
           if (cached) return cached;
           throw new Error("offline");
         }
