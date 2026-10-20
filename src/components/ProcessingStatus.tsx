@@ -40,7 +40,11 @@ export function ProcessingStatus({
     progress.value > 0.1 && elapsed > 4
       ? (elapsed / progress.value) * (1 - progress.value)
       : undefined;
-  const stage = t[progress.stage as Stage] ?? t.optimizing;
+  // Ghostscript makes several passes and checks each one. Showing every
+  // pass's page counter looked like a loop, so after the one-time stages
+  // the label stays on "compressing" and only the percentage moves.
+  const once = ["reading", "analyzing", "loading"].includes(progress.stage);
+  const stage = once ? t[progress.stage as Stage] : t.optimizing;
   return (
     <div className="processing">
       <div className="progress-head">
@@ -58,7 +62,7 @@ export function ProcessingStatus({
         <span style={{ width: `${percent}%` }} />
       </div>
       <p className="progress-detail" role="status" aria-live="polite">
-        {progress.page && progress.pages
+        {progress.stage === "analyzing" && progress.page && progress.pages
           ? `${stage} · ${fill(t.pageOf, { page: progress.page, pages: progress.pages })}`
           : stage}
         {left !== undefined && (

@@ -851,10 +851,6 @@ footer > div:last-child {
   gap: 17px;
   flex-wrap: wrap;
 }
-.heart {
-  color: #e0245e;
-  vertical-align: -2px;
-}
 .privacy-page {
   max-width: 760px;
   margin: 75px auto 110px;

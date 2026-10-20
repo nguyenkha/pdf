@@ -7,7 +7,6 @@ import {
   Sun,
   Moon,
   Monitor,
-  Heart,
 } from "lucide-react";
 import { fillNodes } from "./i18n/fill";
 import { initialLocale, locales, names, type Locale } from "./i18n/config";
@@ -205,17 +204,6 @@ function App({
       <footer>
         <div>
           © {new Date().getFullYear()} kha.do ·{" "}
-          {fillNodes(t.madeWith, {
-            heart: (
-              <Heart
-                className="heart"
-                size={13}
-                fill="currentColor"
-                aria-label={t.love}
-              />
-            ),
-          })}{" "}
-          ·{" "}
           {fillNodes(t.hostedOn, {
             host: (
               <a href="https://pages.github.com/" target="_blank" rel="noreferrer">
