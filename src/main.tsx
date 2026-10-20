@@ -135,7 +135,8 @@ function App({
           pdf.kha.do
         </a>
         <div className="header-actions">
-          <ToolsMenu t={t} locale={locale} active={privacyPage ? undefined : activeTool} />
+          {/* Tool pages have the switcher; a second menu there would repeat it. */}
+          {privacyPage && <ToolsMenu t={t} locale={locale} />}
           <label className="language">
             <Globe size={16} />
             <select

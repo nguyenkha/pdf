@@ -441,11 +441,6 @@ function MarkdownResult({
             <Copy size={18} aria-hidden="true" />
             {t.copyMarkdown}
           </button>
-          {withImages ? (
-            <DownloadLink blob={markdown} name={`${base}.md`} label={t.downloadMdOnly} />
-          ) : (
-            zip && <DownloadLink blob={zip} name={`${base}.zip`} label={t.downloadZip} />
-          )}
           <button
             type="button"
             className="secondary"
@@ -462,7 +457,17 @@ function MarkdownResult({
           {copy === "done" ? t.mdCopied : t.mdCopyFailed}
         </p>
       )}
-      {bundled && <p className="result-note">{t.mdZipNote}</p>}
+      {/* The other format is a quiet link here, not one more button row. */}
+      {bundled && (
+        <p className="result-note">
+          {t.mdZipNote}{" "}
+          {withImages ? (
+            <DownloadLink blob={markdown} name={`${base}.md`} label={t.downloadMdOnly} />
+          ) : (
+            zip && <DownloadLink blob={zip} name={`${base}.zip`} label={t.downloadZip} />
+          )}
+        </p>
+      )}
       {notes.map((note) => (
         <p className="result-note" key={String(note)}>
           {note}
@@ -584,8 +589,8 @@ function MarkdownResult({
 function DownloadLink({ blob, name, label }: { blob: Blob; name: string; label: string }) {
   const url = useObjectUrl(blob);
   return url ? (
-    <a className="secondary" href={url} download={name}>
-      <FileDown size={18} aria-hidden="true" />
+    <a className="note-link" href={url} download={name}>
+      <FileDown size={13} aria-hidden="true" />
       {label}
     </a>
   ) : null;

@@ -274,3 +274,11 @@ a.chip-button:focus-visible {
 .md-result .ocr {
   margin-top: 0;
 }
+.note-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent-text);
+  font-weight: 600;
+  white-space: nowrap;
+}
