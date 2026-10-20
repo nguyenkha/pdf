@@ -182,24 +182,6 @@ function App({
             <CompressTool t={t} locale={locale} preset={preset} />
           </Suspense>
         </div>
-        <nav className="sizes" aria-label={t.sizesTitle}>
-          <h2>{t.sizesTitle}</h2>
-          <ul>
-            {SIZE_PAGES.map((slug) => {
-              const size = sizeFromSlug(slug)!;
-              return (
-                <li key={slug}>
-                  <a
-                    href={`/${locale}/${sizePath(slug)}`}
-                    aria-current={preset?.slug === slug ? "page" : undefined}
-                  >
-                    {fill(t.sizeLink, { size: size.label })}
-                  </a>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
         <div className="content" id="about">
           <div className="info-card how">
             <span>01</span>
@@ -237,6 +219,23 @@ function App({
           <p>{t.privacyBody}</p>
           <p>{t.limitations}</p>
         </section>
+        {/* Plain links for the size pages: useful to crawlers, quiet for people. */}
+        <nav className="sizes" aria-label={t.sizesTitle}>
+          <span>{t.sizesTitle}:</span>
+          {SIZE_PAGES.map((slug) => {
+            const size = sizeFromSlug(slug)!;
+            return (
+              <a
+                key={slug}
+                href={`/${locale}/${sizePath(slug)}`}
+                title={fill(t.sizeLink, { size: size.label })}
+                aria-current={preset?.slug === slug ? "page" : undefined}
+              >
+                {size.label}
+              </a>
+            );
+          })}
+        </nav>
       </main>
       <footer>
         <span className="copyright">© {new Date().getFullYear()} Kha Do</span>

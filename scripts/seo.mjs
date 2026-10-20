@@ -104,7 +104,7 @@ function socialTags(locale, t, title, description, url) {
 const FAQ = [1, 2, 3, 4, 5, 6];
 for (const locale of locales) {
   const t = (await import(`../src/i18n/${locale}.ts`)).default;
-  const sizeLinks = `<nav class="sizes"><h2>${escape(t.sizesTitle)}</h2><ul>${SIZE_PAGES.map((slug) => `<li><a href="/${locale}/${sizePath(slug)}">${escape(fill(t.sizeLink, { size: sizeLabel(slug) }))}</a></li>`).join("")}</ul></nav>`;
+  const sizeLinks = `<nav class="sizes"><span>${escape(t.sizesTitle)}:</span>${SIZE_PAGES.map((slug) => `<a href="/${locale}/${sizePath(slug)}" title="${escape(fill(t.sizeLink, { size: sizeLabel(slug) }))}">${sizeLabel(slug)}</a>`).join("")}</nav>`;
   for (const suffix of families.slice(0, -1)) {
     const slug = suffix && suffix.slice("compress-pdf-to-".length, -1);
     const size = slug && sizeLabel(slug);
@@ -139,7 +139,7 @@ for (const locale of locales) {
         })),
       },
     ];
-    const content = `<main><div class="hero"><h1>${escape(h1)}</h1><p>${escape(intro)}</p><p>${escape(t.support)}</p></div>${sizeLinks}<section class="content"><h2>${escape(t.how)}</h2><p>${escape(t.howText)}</p><h2>${escape(t.why)}</h2><p>${escape(t.whyText)}</p></section><section class="faq"><h2>${escape(t.faq)}</h2>${FAQ.map((i) => `<h3>${escape(t["q" + i])}</h3><p>${escape(t["a" + i])}</p>`).join("")}</section><section class="privacy-section"><h2>${escape(t.privacyTitle)}</h2><p>${escape(t.siteLoads)}</p><p>${escape(t.privacyBody)}</p></section></main>`;
+    const content = `<main><div class="hero"><h1>${escape(h1)}</h1><p>${escape(intro)}</p><p>${escape(t.support)}</p></div><section class="content"><h2>${escape(t.how)}</h2><p>${escape(t.howText)}</p><h2>${escape(t.why)}</h2><p>${escape(t.whyText)}</p></section><section class="faq"><h2>${escape(t.faq)}</h2>${FAQ.map((i) => `<h3>${escape(t["q" + i])}</h3><p>${escape(t["a" + i])}</p>`).join("")}</section><section class="privacy-section"><h2>${escape(t.privacyTitle)}</h2><p>${escape(t.siteLoads)}</p><p>${escape(t.privacyBody)}</p></section>${sizeLinks}</main>`;
     const html = base(
       locale,
       title,
