@@ -14,6 +14,10 @@ test("extracts selectable text and downloads Markdown without transmitting PDF d
     .locator("input[type=file]")
     .setInputFiles("tests/fixtures/text-vector.pdf");
   await page.getByRole("button", { name: "Chuyển sang Markdown" }).click();
+  await expect(
+    page.getByRole("article", { name: "Xem trước Markdown" }),
+  ).toContainText("Selectable page 1");
+  await page.getByRole("button", { name: "Markdown", exact: true }).click();
   await expect(page.getByLabel("Nội dung Markdown")).toHaveValue(
     /Selectable page 1/,
   );
@@ -45,6 +49,10 @@ test("keeps all pages of a mixed PDF", async ({ page }) => {
     .locator("input[type=file]")
     .setInputFiles("tests/fixtures/multipage.pdf");
   await page.getByRole("button", { name: "Chuyển sang Markdown" }).click();
+  await expect(
+    page.getByRole("article", { name: "Xem trước Markdown" }),
+  ).toContainText("Selectable page 3");
+  await page.getByRole("button", { name: "Markdown", exact: true }).click();
   await expect(page.getByLabel("Nội dung Markdown")).toHaveValue(
     /## Trang 3[\s\S]*Selectable page 3/,
   );
@@ -70,12 +78,10 @@ for (const [file, message] of [
 }
 test("rejects a non-PDF", async ({ page }) => {
   await page.goto(path);
-  await page
-    .locator("input[type=file]")
-    .setInputFiles({
-      name: "text.txt",
-      mimeType: "text/plain",
-      buffer: Buffer.from("hello"),
-    });
+  await page.locator("input[type=file]").setInputFiles({
+    name: "text.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("hello"),
+  });
   await expect(page.getByRole("alert")).toHaveText("Chọn một file PDF hợp lệ.");
 });

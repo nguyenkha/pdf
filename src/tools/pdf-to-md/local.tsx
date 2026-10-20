@@ -4,12 +4,14 @@ import { FileDropZone } from "../../components/FileDropZone";
 import { useObjectUrl } from "../../hooks/useObjectUrl";
 import { validateFile, formatSize } from "../../lib/pdf";
 import vi from "../../i18n/vi";
+import { MarkdownPreview } from "./MarkdownPreview";
 import "../../styles/main.css";
 import "./local.css";
 
 function App() {
   const [file, setFile] = useState<File>();
   const [markdown, setMarkdown] = useState("");
+  const [view, setView] = useState<"preview" | "source">("preview");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<{ page: number; total: number }>();
@@ -28,6 +30,7 @@ function App() {
     stop();
     setBusy(false);
     setMarkdown("");
+    setView("preview");
     setDownloadBlob(undefined);
     setError("");
     setProgress(undefined);
@@ -169,13 +172,37 @@ function App() {
               >
                 Tải Markdown
               </a>
-              <label htmlFor="md-output">Nội dung Markdown</label>
-              <textarea
-                id="md-output"
-                value={markdown}
-                readOnly
-                spellCheck={false}
-              />
+              <div className="md-views" aria-label="Chế độ xem">
+                <button
+                  type="button"
+                  className="secondary"
+                  aria-pressed={view === "preview"}
+                  onClick={() => setView("preview")}
+                >
+                  Xem trước
+                </button>
+                <button
+                  type="button"
+                  className="secondary"
+                  aria-pressed={view === "source"}
+                  onClick={() => setView("source")}
+                >
+                  Markdown
+                </button>
+              </div>
+              {view === "preview" ? (
+                <MarkdownPreview markdown={markdown} />
+              ) : (
+                <>
+                  <label htmlFor="md-output">Nội dung Markdown</label>
+                  <textarea
+                    id="md-output"
+                    value={markdown}
+                    readOnly
+                    spellCheck={false}
+                  />
+                </>
+              )}
             </div>
           )}
         </section>

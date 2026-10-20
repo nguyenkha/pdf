@@ -37,3 +37,37 @@
     14px/1.65 ui-monospace,
     monospace;
 }
+.md-views {
+  display: flex;
+  gap: 8px;
+}
+.md-views button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+.md-preview {
+  min-height: 260px;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow-wrap: anywhere;
+  background: var(--surface);
+}
+.md-preview h2 {
+  font-size: 26px;
+  margin: 0 0 24px;
+}
+.md-preview h3 {
+  font-size: 19px;
+  margin: 24px 0 12px;
+}
+.md-preview p {
+  white-space: pre-wrap;
+  line-height: 1.8;
+}
+.md-preview hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 28px 0;
+}
