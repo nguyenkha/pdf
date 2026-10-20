@@ -91,3 +91,33 @@ for (const sample of corpus)
       await browser.close();
     }
   });
+
+test("merging the whole corpus stays in memory budget", async ({ playwright, browserName }, info) => {
+  const browser = await playwright[browserName].launch();
+  const context = await browser.newContext({ ...info.project.use, baseURL: "http://127.0.0.1:4173" });
+  const page = await context.newPage();
+  try {
+    await page.goto("/en/merge/");
+    const idle = browserMemory();
+    let peak = idle;
+    const sampler = setInterval(() => (peak = Math.max(peak, browserMemory())), 200);
+    const started = Date.now();
+    try {
+      await page.locator("input[type=file]").setInputFiles(corpus.map((sample) => `tests/corpus/${sample.file}.pdf`));
+      const pages = corpus.reduce((sum, sample) => sum + sample.pages, 0);
+      await expect(page.getByText(`PDFs: ${corpus.length} · Pages: ${pages}`)).toBeVisible({ timeout: 120000 });
+      await page.getByRole("button", { name: `Merge ${corpus.length} PDFs` }).click();
+      await expect(page.getByRole("heading", { name: `Merged ${corpus.length} PDFs` })).toBeVisible({ timeout: 240000 });
+      await expect(page.locator(".outcome p")).toContainText(`${pages} pages`);
+    } finally {
+      clearInterval(sampler);
+    }
+    const used = peak - idle;
+    const line = `| ${info.project.name} | merge all ${corpus.length} files | ${((Date.now() - started) / 1000).toFixed(1)} s | ${used} MB |`;
+    console.log(line);
+    if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, line + "\n");
+    expect(used, "peak memory while merging").toBeLessThan(BUDGET_MB[info.project.name]);
+  } finally {
+    await browser.close();
+  }
+});

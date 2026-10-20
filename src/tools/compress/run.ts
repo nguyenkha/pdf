@@ -92,3 +92,7 @@ export function probeFile(file: File, password?: string) {
 export function estimateFile(file: File, options: CompressOptions, pages: number) {
   return startJob<number>({ type: "estimate", file, options, pages }, 60_000);
 }
+/** A copy of a password-protected PDF without its password. */
+export function unlockFile(file: File, password: string) {
+  return startJob<Blob>({ type: "unlock", file, password }, 5 * 60_000);
+}

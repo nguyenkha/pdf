@@ -113,6 +113,7 @@ type Request =
   | { type: "cancel" }
   | { type: "probe"; file: File; password?: string }
   | { type: "estimate"; file: File; options: CompressOptions; pages: number }
+  | { type: "unlock"; file: File; password: string }
   | { type?: "compress"; file: File; options: CompressOptions };
 self.onmessage = async (event: MessageEvent<Request>) => {
   const request = event.data;
@@ -129,6 +130,21 @@ self.onmessage = async (event: MessageEvent<Request>) => {
       self.postMessage({
         type: "result",
         result: await probePdf(input, request.password),
+      });
+      return;
+    }
+    if (request.type === "unlock") {
+      // Check the password with pdf.js (a clear "incorrect" error), then
+      // rewrite losslessly without encryption, as compressing does.
+      await probePdf(new Uint8Array(await request.file.arrayBuffer()), request.password);
+      const output = await runGhostscript(
+        [{ path: "/input.pdf", blob: request.file }],
+        ghostscriptArgs({ quality: 101, dpi: 0 }, request.password),
+        () => {},
+      );
+      self.postMessage({
+        type: "result",
+        result: new Blob([output.bytes as BlobPart], { type: "application/pdf" }),
       });
       return;
     }

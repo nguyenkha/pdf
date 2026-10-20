@@ -1487,6 +1487,7 @@ footer a:hover {
 }
 .merge-list li {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   padding: 8px 6px 8px 8px;
@@ -1650,4 +1651,14 @@ footer a:hover {
     mask-image: linear-gradient(to right, #000 85%, transparent);
     padding-inline-end: 24px;
   }
+}
+.row-unlock {
+  flex-basis: 100%;
+}
+.row-unlock .password {
+  margin-top: 4px;
+}
+.password-error {
+  color: var(--danger) !important;
+  font-weight: 600;
 }

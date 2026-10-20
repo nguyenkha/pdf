@@ -316,6 +316,7 @@ export default function CompressTool({ t, locale, preset, shared }: Props) {
           t={t}
           busy={checking}
           onSubmit={(secret) => probe(file, secret)}
+          error={error || undefined}
         />
       )}
       {file && summary && !result && !busy && (
@@ -353,7 +354,7 @@ export default function CompressTool({ t, locale, preset, shared }: Props) {
           onReset={reset}
         />
       )}
-      {error && (
+      {error && !locked && (
         <p className="error" role="alert">
           {error}
         </p>

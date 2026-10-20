@@ -5,10 +5,18 @@ export function PasswordPrompt({
   t,
   busy,
   onSubmit,
+  error,
+  label,
+  autoFocus = true,
 }: {
   t: Messages;
   busy: boolean;
   onSubmit: (password: string) => void;
+  /** Shown inside the prompt, next to the field it is about. */
+  error?: string;
+  /** Overrides the explanation, e.g. to name the file in a list. */
+  label?: string;
+  autoFocus?: boolean;
 }) {
   const [value, setValue] = useState("");
   return (
@@ -21,7 +29,7 @@ export function PasswordPrompt({
     >
       <p>
         <LockKeyhole size={16} aria-hidden="true" />
-        {t.password}
+        {label ?? t.password}
       </p>
       <div className="password-row">
         <input
@@ -30,13 +38,18 @@ export function PasswordPrompt({
           aria-label={t.passwordLabel}
           placeholder={t.passwordLabel}
           value={value}
-          autoFocus
+          autoFocus={autoFocus}
           onChange={(event) => setValue(event.target.value)}
         />
         <button type="submit" className="primary" disabled={!value || busy}>
           {t.unlock}
         </button>
       </div>
+      {error && (
+        <small className="password-error" role="alert">
+          {error}
+        </small>
+      )}
       <small>{t.passwordLocal}</small>
     </form>
   );

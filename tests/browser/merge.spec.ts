@@ -12,7 +12,7 @@ test("merges PDFs in the arranged order", async ({ page }) => {
   // Add a third file from the toolbar, then a locked one that blocks merging.
   await page.locator(".merge-toolbar input[type=file]").setInputFiles(["tests/fixtures/text-vector.pdf", "tests/fixtures/password.pdf"]);
   await expect(rows).toHaveCount(4);
-  await expect(page.getByText(/password-protected: remove it to continue/)).toBeVisible({ timeout: 30000 });
+  await expect(page.getByText("password.pdf is password-protected. Enter its password to merge it.")).toBeVisible({ timeout: 30000 });
   await expect(page.getByRole("button", { name: "Merge 4 PDFs" })).toBeDisabled();
   await page.getByRole("button", { name: "Remove password.pdf" }).click();
   // Arrange: scan first, then text-vector, then multipage.
@@ -61,4 +61,36 @@ test("loads merge code only on demand", async ({ page }) => {
   await page.getByRole("button", { name: "Merge 2 PDFs" }).click();
   await expect(page.locator(".result")).toBeVisible({ timeout: 60000 });
   expect(scripts.some((path) => path.includes("merge.worker"))).toBe(true);
+});
+
+test("unlocks a password-protected file in the list, as compress does", async ({ page }) => {
+  test.setTimeout(180000);
+  await page.goto("/en/merge/");
+  await page.locator("input[type=file]").setInputFiles(["tests/fixtures/scan.pdf", "tests/fixtures/password.pdf"]);
+  const field = page.getByLabel("PDF password");
+  await expect(field).toBeVisible({ timeout: 30000 });
+  await field.fill("wrong");
+  await page.getByRole("button", { name: "Unlock" }).click();
+  await expect(page.getByRole("alert")).toHaveText("Incorrect password. Try again.", { timeout: 60000 });
+  await field.fill("secret");
+  await page.getByRole("button", { name: "Unlock" }).click();
+  await expect(field).toHaveCount(0, { timeout: 120000 });
+  await expect(page.getByText("PDFs: 2 · Pages: 4")).toBeVisible({ timeout: 30000 });
+  await page.getByRole("button", { name: "Merge 2 PDFs" }).click();
+  await expect(page.getByRole("heading", { name: "Merged 2 PDFs" })).toBeVisible({ timeout: 60000 });
+  await expect(page.locator(".result .result-note")).toHaveText(/merged PDF has no password/);
+});
+test("hands the merged PDF to compress without storing it", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", "covered once; the hand-over uses the service worker");
+  test.setTimeout(180000);
+  await page.goto("/en/merge/");
+  await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+  await page.reload();
+  await page.locator("input[type=file]").setInputFiles(["tests/fixtures/scan.pdf", "tests/fixtures/text-vector.pdf"]);
+  await page.getByRole("button", { name: "Merge 2 PDFs" }).click();
+  await page.getByRole("button", { name: "Compress this PDF" }).click();
+  await expect(page).toHaveURL(/\/en\/compress\/$/);
+  await expect(page.getByText("scan-merged.pdf", { exact: true })).toBeVisible({ timeout: 30000 });
+  const cached = await page.evaluate(async () => (await Promise.all((await caches.keys()).map(async (key) => (await (await caches.open(key)).keys()).map((request) => request.url)))).flat());
+  expect(cached.some((url) => url.includes("shared") || url.includes("merged"))).toBe(false);
 });

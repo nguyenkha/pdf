@@ -3,6 +3,7 @@ import {
   ArrowDown,
   ArrowDownAZ,
   ArrowUp,
+  FileArchive,
   FileText,
   GripVertical,
   Lock,
@@ -19,6 +20,9 @@ import { Steps } from "../../components/Steps";
 import { ResultActions } from "../../components/ResultActions";
 import { Outcome } from "../../components/Outcome";
 import { mergeFiles, summarizeFile, type FileSummary } from "./run";
+import { unlockFile } from "../compress/run";
+import { PasswordPrompt } from "../../components/PasswordPrompt";
+import { canHandOver, handOver } from "../../lib/handOver";
 
 type Item = {
   id: number;
@@ -26,6 +30,10 @@ type Item = {
   summary?: FileSummary;
   thumbnail?: string;
   failed?: boolean;
+  /** Unlocked here with its password; the merged copy has none. */
+  unlocked?: boolean;
+  unlocking?: boolean;
+  unlockError?: string;
 };
 const MAX_FILES = 50;
 // Above this the merged copy and its sources may not fit a phone's memory.
@@ -100,6 +108,32 @@ export default function MergeTool({ t, locale }: ToolProps) {
       return current.filter((item) => item.id !== id);
     });
   }
+  // Same check and rewrite as the compress tool's password step.
+  async function unlock(id: number, password: string) {
+    const target = live.current.find((item) => item.id === id);
+    if (!target) return;
+    const patch = (change: Partial<Item>) =>
+      setItems((current) => current.map((item) => (item.id === id ? { ...item, ...change } : item)));
+    patch({ unlocking: true, unlockError: undefined });
+    try {
+      const blob = await unlockFile(target.file, password).promise;
+      if (target.thumbnail) URL.revokeObjectURL(target.thumbnail);
+      // A fresh summary (preview, page count) runs for the unlocked copy.
+      patch({
+        file: new File([blob], target.file.name, { type: "application/pdf" }),
+        summary: undefined,
+        thumbnail: undefined,
+        unlocked: true,
+        unlocking: false,
+      });
+    } catch (failure) {
+      const message = failure instanceof Error ? failure.message : "";
+      patch({
+        unlocking: false,
+        unlockError: message === "password-incorrect" ? t.passwordWrong : t.mergeFailed,
+      });
+    }
+  }
   function move(from: number, to: number) {
     setItems((current) => {
       if (to < 0 || to >= current.length || from === to) return current;
@@ -170,6 +204,7 @@ export default function MergeTool({ t, locale }: ToolProps) {
           name={mergedName(items[0].file)}
           count={items.length}
           pages={pages}
+          unlocked={items.some((item) => item.unlocked)}
           onReset={reset}
         />
       ) : !items.length ? (
@@ -281,6 +316,18 @@ export default function MergeTool({ t, locale }: ToolProps) {
                     <X size={16} />
                   </button>
                 </span>
+                {item.summary?.locked && (
+                  <div className="row-unlock">
+                    <PasswordPrompt
+                      t={t}
+                      busy={Boolean(item.unlocking)}
+                      label={fill(t.mergeUnlockLabel, { name: item.file.name })}
+                      error={item.unlockError}
+                      autoFocus={false}
+                      onSubmit={(password) => unlock(item.id, password)}
+                    />
+                  </div>
+                )}
               </li>
             ))}
           </ol>
@@ -332,6 +379,7 @@ function MergeResult({
   name,
   count,
   pages,
+  unlocked,
   onReset,
 }: {
   t: Messages;
@@ -340,15 +388,34 @@ function MergeResult({
   name: string;
   count: number;
   pages: number;
+  unlocked: boolean;
   onReset: () => void;
 }) {
+  const [handing, setHanding] = useState(false);
   return (
     <div className="result" aria-live="polite">
       <Outcome
         title={fill(t.mergeDoneTitle, { count })}
         detail={fill(t.mergeDoneDetail, { pages, size: formatSize(blob.size, locale) })}
       />
-      <ResultActions t={t} blob={blob} name={name} />
+      <ResultActions t={t} blob={blob} name={name}>
+        {canHandOver() && (
+          <button
+            type="button"
+            className="secondary"
+            disabled={handing}
+            onClick={async () => {
+              setHanding(true);
+              const file = new File([blob], name, { type: "application/pdf" });
+              if (!(await handOver([file], `/${locale}/compress/`))) setHanding(false);
+            }}
+          >
+            <FileArchive size={18} aria-hidden="true" />
+            {t.compressThis}
+          </button>
+        )}
+      </ResultActions>
+      {unlocked && <p className="result-note">{t.mergeUnlockedNote}</p>}
       <button type="button" className="link-button" onClick={onReset}>
         <RotateCcw size={15} aria-hidden="true" />
         {t.mergeAnother}

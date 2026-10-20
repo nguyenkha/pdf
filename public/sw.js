@@ -1,4 +1,4 @@
-const CACHE = "pdf-kha-do-assets-v4";
+const CACHE = "pdf-kha-do-assets-v5";
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
@@ -33,9 +33,17 @@ self.addEventListener("activate", (event) => {
 // never written to storage.
 let shared = [];
 self.addEventListener("message", (event) => {
-  if (event.data?.type !== "take-shared" || !event.ports[0]) return;
-  event.ports[0].postMessage(shared);
-  shared = [];
+  const port = event.ports[0];
+  if (!port) return;
+  // One tool hands its result to another, the same way as the share sheet.
+  if (event.data?.type === "hand-over") {
+    shared = event.data.files.filter((file) => file instanceof File);
+    port.postMessage(true);
+  }
+  if (event.data?.type === "take-shared") {
+    port.postMessage(shared);
+    shared = [];
+  }
 });
 self.addEventListener("fetch", (event) => {
   const request = event.request;
