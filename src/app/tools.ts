@@ -9,7 +9,12 @@ export type Tool = {
   descriptionKey: keyof Messages;
   icon: string;
   load: () => Promise<{
-    default: ComponentType<{ t: Messages; locale: Locale; preset?: SizePreset }>;
+    default: ComponentType<{
+      t: Messages;
+      locale: Locale;
+      preset?: SizePreset;
+      shared?: boolean;
+    }>;
   }>;
   engineDependencies: string[];
 };

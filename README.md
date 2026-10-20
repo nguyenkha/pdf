@@ -41,7 +41,7 @@ The production build writes `dist/bundle-report.json` with raw, gzip, and Brotli
 
 ## Privacy model
 
-The page fetches only its own application assets. There is no upload endpoint or remote PDF service. A File is passed to a dedicated worker, read in memory, and processed by locally hosted JavaScript/WASM. The original filename is only used to display the chosen file and name the download. Engine diagnostics are suppressed; only the page number of Ghostscript's "Page N" lines is read, for the progress bar. PDF contents are not logged. A password for a protected PDF stays in the worker for that one job and is never stored.
+The page fetches only its own application assets. There is no upload endpoint or remote PDF service. A File is passed to a dedicated worker, read in memory, and processed by locally hosted JavaScript/WASM. On Android, the installed app is a share target: a shared PDF is held in a local cache only until the page reads it, then the cache is deleted. The original filename is only used to display the chosen file and name the download. Engine diagnostics are suppressed; only the page number of Ghostscript's "Page N" lines is read, for the progress bar. PDF contents are not logged. A password for a protected PDF stays in the worker for that one job and is never stored.
 
 No document data is put in localStorage, IndexedDB, or Cache Storage. Only language/theme choices are stored in localStorage. A service worker caches explicitly allowed same-origin application assets, never PDFs or blob URLs. Cancel/reset releases workers and result object URLs. Browser tests monitor HTTP requests while processing and verify no document data or metadata is sent.
 

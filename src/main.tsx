@@ -42,6 +42,8 @@ function Credits({ text }: { text: string }) {
   );
 }
 const preset = sizeFromPath(location.pathname);
+// Read before the URL is normalised below; the tool loads lazily.
+const shared = new URLSearchParams(location.search).has("shared");
 // Keeps /privacy/ or a size page when the locale changes.
 const suffix = location.pathname.endsWith("/privacy/")
   ? "privacy/"
@@ -200,7 +202,7 @@ function App({
           </div>
           <div id="tool">
             <Suspense fallback={<div className="tool-card">{t.loading}</div>}>
-              <CompressTool t={t} locale={locale} preset={preset} />
+              <CompressTool t={t} locale={locale} preset={preset} shared={shared} />
             </Suspense>
           </div>
           <div className="content" id="about">

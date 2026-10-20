@@ -116,3 +116,32 @@ test('drag and drop works with a standard file',async({page})=>{
   await expect(page.getByText('dropped.pdf',{exact:true})).toBeVisible();
   await expect(page.getByRole('button',{name:'Compress PDF',exact:true})).toBeEnabled();
 });
+test('share target opens the shared PDF and keeps no copy', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'Web Share Target is a Chromium (Android) feature');
+  await page.goto('/en/');
+  await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+  await page.reload();
+  const bytes = Array.from(await readFile('tests/fixtures/scan.pdf'));
+  // What Android does when a PDF is shared to the installed app. The
+  // site's CSP forbids its own forms, so post from a blank page instead.
+  const origin = new URL(page.url()).origin;
+  await page.goto('about:blank');
+  await page.evaluate(({ data, action }) => {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = action;
+    form.enctype = 'multipart/form-data';
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.name = 'file';
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([new Uint8Array(data)], 'shared scan.pdf', { type: 'application/pdf' }));
+    input.files = transfer.files;
+    form.append(input);
+    document.body.append(form);
+    form.submit();
+  }, { data: bytes, action: `${origin}/share-target` });
+  await expect(page.getByText('shared scan.pdf', { exact: true })).toBeVisible({ timeout: 30000 });
+  await expect(page).toHaveURL(/\/en\/$/);
+  await expect.poll(() => page.evaluate(() => caches.has('pdf-kha-do-shared'))).toBe(false);
+});

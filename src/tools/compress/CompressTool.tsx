@@ -25,7 +25,32 @@ import { errorMessage } from "./errors";
 import { BatchTool } from "./BatchTool";
 import type { SizePreset } from "../../app/sizes";
 
-type Props = { t: Messages; locale: Locale; preset?: SizePreset };
+type Props = {
+  t: Messages;
+  locale: Locale;
+  preset?: SizePreset;
+  /** Opened from the share target with files waiting in the cache. */
+  shared?: boolean;
+};
+const SHARED = "pdf-kha-do-shared";
+async function takeSharedFiles(): Promise<File[]> {
+  try {
+    const cache = await caches.open(SHARED);
+    const files: File[] = [];
+    for (const request of await cache.keys()) {
+      const response = await cache.match(request);
+      if (response) {
+        const name = decodeURIComponent(response.headers.get("X-Name") ?? "shared.pdf");
+        files.push(new File([await response.blob()], name, { type: "application/pdf" }));
+      }
+    }
+    // The cache was only a hand-over; nothing is kept.
+    await caches.delete(SHARED);
+    return files;
+  } catch {
+    return [];
+  }
+}
 const RUNNING = "compress-running";
 const MAX_BATCH = 20;
 function mark(running: boolean) {
@@ -45,7 +70,7 @@ function warmEngine() {
   engineWarmed = true;
   fetch(`${ENGINE_BASE}core.wasm`).catch(() => (engineWarmed = false));
 }
-export default function CompressTool({ t, locale, preset }: Props) {
+export default function CompressTool({ t, locale, preset, shared }: Props) {
   const [file, setFile] = useState<File>();
   const [batch, setBatch] = useState<File[]>();
   const [batchDone, setBatchDone] = useState(false);
@@ -66,6 +91,12 @@ export default function CompressTool({ t, locale, preset }: Props) {
   const [result, setResult] = useState<CompressionResult>();
   const [busy, setBusy] = useState(false);
   const job = useRef<{ cancel: () => void } | undefined>(undefined);
+  // Files handed over by the installed app's share target (see sw.js).
+  useEffect(() => {
+    if (!shared) return;
+    takeSharedFiles().then((files) => files.length && select(files));
+    // A one-time hand-over on mount.
+  }, [shared]);
   // Phones kill and reload a tab that runs out of memory mid-job. A marker
   // that survives the reload lets us explain it instead of starting blank.
   useEffect(() => {

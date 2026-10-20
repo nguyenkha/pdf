@@ -31,7 +31,8 @@ try {
       });
   }
   match = match || "en";
-  location.replace("/" + match + "/");
+  // Keep ?shared=1 from the share target.
+  location.replace("/" + match + "/" + location.search);
 } catch {
   location.replace("/en/");
 }
