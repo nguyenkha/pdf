@@ -26,9 +26,10 @@ class BlobRange extends pdfjs.PDFDataRangeTransport {
       .then((chunk) => this.onDataRange(begin, new Uint8Array(chunk)));
   }
 }
-function open(blob: Blob, password?: string): Task {
+function open(blob: Blob, worker: pdfjs.PDFWorker, password?: string): Task {
   return pdfjs.getDocument({
     range: new BlobRange(blob),
+    worker,
     disableAutoFetch: true,
     disableStream: true,
     password,
@@ -62,7 +63,10 @@ export default function ComparePreview({
   useEffect(() => {
     // Destroying the loading tasks (not only loaded documents) also stops
     // pdf.js workers when the preview closes before loading finished.
-    const tasks = [open(original, password), open(result)];
+    // One pdf.js worker for both documents, owned here so closing the view
+    // terminates it at once instead of waiting for a busy worker to reply.
+    const worker = new pdfjs.PDFWorker();
+    const tasks = [open(original, worker, password), open(result, worker)];
     let active = true;
     Promise.all(tasks.map((task) => task.promise))
       .then((pair) => active && setDocs(pair as [Doc, Doc]))
@@ -71,6 +75,7 @@ export default function ComparePreview({
       active = false;
       setDocs(undefined);
       tasks.forEach((task) => task.destroy());
+      worker.destroy();
     };
   }, [original, result, password]);
   useEffect(() => {
