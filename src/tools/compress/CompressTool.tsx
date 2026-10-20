@@ -6,6 +6,7 @@ import { validateFile, LARGE_FILE_BYTES } from "../../lib/pdf";
 import { planOptions, suggestedLimit } from "../../lib/plan";
 import { estimateFile, probeFile, runCompression, type JobProgress } from "./run";
 import { removeSignatures } from "../merge/run";
+import { takeSharedFiles } from "../../lib/handOver";
 import type { CompressOptions } from "../../engines/ghostscript";
 import type { PdfSummary } from "../../engines/validate";
 import { ENGINE_BASE } from "../../engines/core";
@@ -33,24 +34,6 @@ type Props = {
   /** Opened from the share target with files waiting in the cache. */
   shared?: boolean;
 };
-// Asks the service worker for files handed over by the share target; it
-// holds them in memory and forgets them once given.
-async function takeSharedFiles(): Promise<File[]> {
-  try {
-    const registration = await navigator.serviceWorker.ready;
-    const worker = navigator.serviceWorker.controller ?? registration.active;
-    if (!worker) return [];
-    const channel = new MessageChannel();
-    const reply = new Promise<File[]>((resolve) => {
-      channel.port1.onmessage = (event) => resolve(event.data ?? []);
-      setTimeout(() => resolve([]), 5000);
-    });
-    worker.postMessage({ type: "take-shared" }, [channel.port2]);
-    return await reply;
-  } catch {
-    return [];
-  }
-}
 const RUNNING = "compress-running";
 const MAX_BATCH = 20;
 function mark(running: boolean) {

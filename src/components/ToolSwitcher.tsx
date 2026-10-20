@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Plus } from "lucide-react";
+import { fill } from "../i18n/fill";
 import type { Messages } from "../i18n";
 import { availableTools, morePlanned, type Tool } from "../app/tools";
 /**
@@ -67,13 +68,13 @@ export function ToolSwitcher({
         type="button"
         ref={button}
         className="tool-more-button"
-        aria-label={t.tools}
-        title={t.tools}
         aria-expanded={open}
         aria-controls="tool-more-list"
         onClick={() => setOpen(!open)}
       >
-        <Plus size={18} aria-hidden="true" />
+        <Plus size={16} aria-hidden="true" />
+        {/* Says there is more, and how much, in the space of one chip. */}
+        {fill(t.moreTools, { count: others.length })}
       </button>
       <ul id="tool-more-list" className="tool-more-list" hidden={!open}>
         {others.map((tool) => {

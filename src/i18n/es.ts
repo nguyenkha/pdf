@@ -272,4 +272,7 @@ export default {
   ocrDoneNote: "El texto de {count} páginas se reconoció con OCR y puede tener errores; compáralo con el PDF.",
   ocrFailed: "No se pudo reconocer el texto de este archivo. Revisa el idioma del documento o prueba con un escaneo más nítido.",
   shareLimit: "Una excepción: cuando compartes un PDF con la app instalada desde otra app (menú de compartir de Android), el navegador lo entrega como una subida a este sitio. Normalmente el componente sin conexión de la app lo recibe en tu dispositivo; si no está activo (por ejemplo justo después de borrar los datos del sitio), el archivo llega al servidor web, que lo rechaza sin guardarlo. Para ir sobre seguro, abre el archivo desde dentro de la app.",
+  nextSteps: "Siguiente:",
+  mergeWithOthers: "Combinar con otros PDF",
+  moreTools: "{count} herramientas más",
 } satisfies Messages;

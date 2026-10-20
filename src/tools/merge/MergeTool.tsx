@@ -3,7 +3,6 @@ import {
   ArrowDown,
   ArrowDownAZ,
   ArrowUp,
-  FileArchive,
   FileText,
   GripVertical,
   Lock,
@@ -21,7 +20,8 @@ import { Outcome } from "../../components/Outcome";
 import { mergeFiles, summarizeFile, type FileSummary } from "./run";
 import { unlockFile } from "../compress/run";
 import { PasswordPrompt } from "../../components/PasswordPrompt";
-import { canHandOver, handOver } from "../../lib/handOver";
+import { takeSharedFiles } from "../../lib/handOver";
+import { NextSteps } from "../../components/NextSteps";
 
 type Item = {
   id: number;
@@ -40,7 +40,7 @@ const LARGE_TOTAL = 150 * 1024 * 1024;
 let nextId = 0;
 const mergedName = (first: File) => first.name.replace(/\.pdf$/i, "") + "-merged.pdf";
 /** Several PDFs into one, in an order the user arranges. */
-export default function MergeTool({ t, locale }: ToolProps) {
+export default function MergeTool({ t, locale, shared }: ToolProps) {
   const [items, setItems] = useState<Item[]>([]);
   const [error, setError] = useState("");
   const [progress, setProgress] = useState<number>();
@@ -52,6 +52,12 @@ export default function MergeTool({ t, locale }: ToolProps) {
   // Thumbnails are object URLs; release them with their row or the tool.
   const live = useRef(items);
   live.current = items;
+  // A file handed over from another tool's result starts the list.
+  useEffect(() => {
+    if (!shared) return;
+    takeSharedFiles().then((files) => files.length && add(files));
+    // A one-time hand-over on mount.
+  }, [shared]);
   useEffect(
     () => () => {
       job.current?.cancel();
@@ -383,34 +389,23 @@ function MergeResult({
   signed: string[];
   onReset: () => void;
 }) {
-  const [handing, setHanding] = useState(false);
   return (
     <div className="result" aria-live="polite">
       <Outcome
         title={fill(t.mergeDoneTitle, { count })}
         detail={fill(t.mergeDoneDetail, { pages, size: formatSize(blob.size, locale) })}
       />
-      <ResultActions t={t} blob={blob} name={name}>
-        {canHandOver() && (
-          <button
-            type="button"
-            className="secondary"
-            disabled={handing}
-            onClick={async () => {
-              setHanding(true);
-              const file = new File([blob], name, { type: "application/pdf" });
-              if (!(await handOver([file], `/${locale}/compress/`))) setHanding(false);
-            }}
-          >
-            <FileArchive size={18} aria-hidden="true" />
-            {t.compressThis}
-          </button>
-        )}
-      </ResultActions>
+      <ResultActions t={t} blob={blob} name={name} />
       {unlocked && <p className="result-note">{t.mergeUnlockedNote}</p>}
       {signed.length > 0 && (
         <p className="result-note">{fill(t.mergeSignedNote, { names: signed.join(", ") })}</p>
       )}
+      <NextSteps
+        t={t}
+        locale={locale}
+        file={new File([blob], name, { type: "application/pdf" })}
+        steps={[{ tool: "compress", label: t.compressThis }]}
+      />
       <button type="button" className="link-button" onClick={onReset}>
         <RotateCcw size={15} aria-hidden="true" />
         {t.mergeAnother}

@@ -17,3 +17,22 @@ export async function handOver(files: File[], path: string): Promise<boolean> {
   return true;
 }
 export const canHandOver = () => Boolean(navigator.serviceWorker?.controller);
+
+// Asks the service worker for files handed over by the share target; it
+// holds them in memory and forgets them once given.
+export async function takeSharedFiles(): Promise<File[]> {
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    const worker = navigator.serviceWorker.controller ?? registration.active;
+    if (!worker) return [];
+    const channel = new MessageChannel();
+    const reply = new Promise<File[]>((resolve) => {
+      channel.port1.onmessage = (event) => resolve(event.data ?? []);
+      setTimeout(() => resolve([]), 5000);
+    });
+    worker.postMessage({ type: "take-shared" }, [channel.port2]);
+    return await reply;
+  } catch {
+    return [];
+  }
+}

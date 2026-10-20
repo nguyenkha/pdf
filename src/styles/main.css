@@ -386,9 +386,8 @@ main {
 }
 .tool-more-button,
 .tool-more summary {
-  justify-content: center;
-  width: 36px;
-  padding: 0;
+  color: var(--muted);
+  border-style: dashed;
   cursor: pointer;
 }
 .tool-more-button:hover,
@@ -1731,4 +1730,30 @@ footer a:hover {
 .drop.compact strong {
   font-size: 14px;
   font-weight: 600;
+}
+.next-steps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 12px;
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.next-steps button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent-text);
+  font: inherit;
+  font-weight: 600;
+}
+.next-steps button:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
