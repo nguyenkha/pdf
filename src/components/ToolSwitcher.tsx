@@ -120,25 +120,29 @@ export function ToolSwitcher({
         {/* Says there is more, and how much, in the space of one chip. */}
         {fill(t.moreTools, { count: others.length })}
       </button>
-      <ul
-        id="tool-more-list"
-        ref={list}
-        className="tool-more-list"
-        hidden={!shown}
-        data-state={open ? "open" : "closing"}
-      >
-        {others.map((tool, index) => {
-          const ToolIcon = tool.icon;
-          return (
-            <li key={tool.id} style={{ "--i": index } as CSSProperties}>
-              <a href={href(tool)}>
-                <ToolIcon size={16} aria-hidden="true" />
-                {t[tool.nameKey]}
-              </a>
-            </li>
-          );
-        })}
-      </ul>
+      {/* On phones this is a sheet from the bottom over a dimmed page; with a
+          mouse the tools simply continue the row. */}
+      <div className="tool-more-panel" hidden={!shown} data-state={open ? "open" : "closing"}>
+        <div className="tool-more-backdrop" aria-hidden="true" onClick={() => setOpen(false)} />
+        <div className="tool-more-sheet">
+          <p className="tool-more-title" aria-hidden="true">
+            {t.tools}
+          </p>
+          <ul id="tool-more-list" ref={list} className="tool-more-list">
+            {others.map((tool, index) => {
+              const ToolIcon = tool.icon;
+              return (
+                <li key={tool.id} style={{ "--i": index } as CSSProperties}>
+                  <a href={href(tool)}>
+                    <ToolIcon size={18} aria-hidden="true" />
+                    {t[tool.nameKey]}
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </div>
     </nav>
   );
 }

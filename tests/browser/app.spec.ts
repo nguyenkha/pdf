@@ -238,7 +238,10 @@ test("tool switcher shows the tool in use and the rest behind +", async ({ page 
   // Tap or click unfolds the rest, which take the place of +.
   await more.click();
   await expect(switcher.getByRole("link", { name: "Merge PDF" })).toBeVisible();
-  await expect(more).toBeHidden();
+  // With a mouse the others take the place of +; on phones a sheet opens and + stays.
+  const phone = await page.evaluate(() => matchMedia("(max-width: 680px)").matches);
+  if (phone) await expect(more).toBeVisible();
+  else await expect(more).toBeHidden();
   await expect(switcher.locator(".tool-more-list a")).toHaveText(["Merge PDF", "PDF to Markdown", "Organize PDF pages"]);
   await page.keyboard.press("Escape");
   await expect(switcher.getByRole("link", { name: "Merge PDF" })).toBeHidden();

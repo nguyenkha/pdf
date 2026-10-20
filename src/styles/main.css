@@ -403,19 +403,12 @@ main {
 .tool-more-button[aria-expanded="true"] svg {
   transform: rotate(135deg);
 }
-.tool-more-list {
-  display: contents;
-  list-style: none;
-}
-.tool-more-list[hidden] {
-  display: none;
-}
 /* The other tools slide out from the + one after another, and fold back. */
 .tool-more-list li {
   animation: tool-in 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   animation-delay: calc(var(--i, 0) * 45ms);
 }
-.tool-more-list[data-state="closing"] li {
+.tool-more-panel[data-state="closing"] .tool-more-list li {
   animation: tool-out 0.16s ease-in both;
 }
 @keyframes tool-in {
@@ -1760,70 +1753,129 @@ footer a:hover {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
-/* Phones: the other tools open as a panel over the page instead of a new
-   row, so the card below never jumps. */
-@media (max-width: 680px) {
-  .tool-switcher {
-    position: relative;
-  }
-  .tool-more-list {
-    position: absolute;
-    top: calc(100% + 6px);
-    inset-inline: 0;
-    z-index: 20;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    margin: 0;
-    padding: 6px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    box-shadow: var(--shadow);
-    transform-origin: top;
-    animation: panel-in 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  }
-  .tool-more-list[data-state="closing"] {
-    animation: panel-out 0.16s ease-in both;
-  }
-  .tool-more-list li,
-  .tool-more-list[data-state="closing"] li {
-    animation: none;
-  }
-  .tool-more-list a {
-    width: 100%;
-    height: 44px;
-    border: 0;
-    border-radius: 10px;
-    background: transparent;
-    font-size: 14px;
-  }
-  .tool-more-list a:hover,
-  .tool-more-list a:focus-visible {
-    background: var(--surface-2);
-  }
-}
-@keyframes panel-in {
-  from {
-    opacity: 0;
-    transform: translateY(-6px) scale(0.98);
-  }
-}
-@keyframes panel-out {
-  to {
-    opacity: 0;
-    transform: translateY(-4px) scale(0.98);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .tool-more-list {
-    animation: none !important;
-  }
-}
 .tool-more-button[hidden] {
   display: none;
 }
 /* Arrows point the way of reading. */
 [dir="rtl"] .next-steps svg {
   transform: scaleX(-1);
+}
+/* Desktop: the panel is invisible structure; its tools continue the row. */
+.tool-more-panel,
+.tool-more-sheet,
+.tool-more-list {
+  display: contents;
+}
+.tool-more-list {
+  list-style: none;
+}
+.tool-more-panel[hidden],
+.tool-more-backdrop,
+.tool-more-title {
+  display: none;
+}
+/* Phones: a sheet slides up over a dimmed page, so nothing below jumps or
+   hides behind it, and a tap outside closes it. */
+@media (max-width: 680px) {
+  .tool-more-panel:not([hidden]) {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: block;
+  }
+  .tool-more-backdrop {
+    position: absolute;
+    inset: 0;
+    display: block;
+    background: rgba(5, 8, 16, 0.5);
+    animation: backdrop-in 0.22s ease both;
+  }
+  .tool-more-sheet {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    display: block;
+    padding: 10px 16px calc(18px + env(safe-area-inset-bottom));
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.25);
+    animation: sheet-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+  .tool-more-sheet::before {
+    content: "";
+    display: block;
+    width: 40px;
+    height: 4px;
+    margin: 0 auto 12px;
+    border-radius: 4px;
+    background: var(--border-strong);
+  }
+  .tool-more-title {
+    display: block;
+    margin: 0 4px 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .tool-more-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+  }
+  .tool-more-list li {
+    animation: none;
+  }
+  .tool-more-list a {
+    width: 100%;
+    height: 52px;
+    gap: 12px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 12px;
+    background: var(--surface-2);
+    font-size: 15px;
+  }
+  .tool-more-list a:active {
+    background: var(--accent-soft);
+    color: var(--accent-text);
+  }
+  .tool-more-panel[data-state="closing"] .tool-more-backdrop {
+    animation: backdrop-out 0.16s ease-in both;
+  }
+  .tool-more-panel[data-state="closing"] .tool-more-sheet {
+    animation: sheet-out 0.16s ease-in both;
+  }
+  /* On phones + stays: the sheet covers the page, not the row. */
+  .tool-more-button[hidden] {
+    display: inline-flex;
+  }
+}
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes backdrop-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes sheet-out {
+  to {
+    transform: translateY(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tool-more-backdrop,
+  .tool-more-sheet {
+    animation: none !important;
+  }
 }
