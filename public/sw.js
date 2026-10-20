@@ -5,6 +5,8 @@ self.addEventListener("install", (event) => {
       .open(CACHE)
       .then((cache) =>
         cache.addAll([
+          // The installed app starts at "/", which then picks a language.
+          "/",
           "/en/compress/",
           "/icons/icon.svg",
           "/theme.js",
@@ -62,9 +64,9 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin || url.pathname.endsWith(".pdf"))
     return;
-  const html = /^\/(en|zh-CN|es|ar|fr|pt|ru|hi|ja|ko|de|vi)\/(?:[a-z0-9-]+\/)?$/.test(
-    url.pathname,
-  );
+  const html =
+    url.pathname === "/" ||
+    /^\/(en|zh-CN|es|ar|fr|pt|ru|hi|ja|ko|de|vi)\/(?:[a-z0-9-]+\/)?$/.test(url.pathname);
   const asset =
     html ||
     url.pathname.startsWith("/pdfjs/") ||

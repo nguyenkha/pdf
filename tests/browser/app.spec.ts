@@ -233,7 +233,8 @@ test("tool switcher shows the tool in use and the rest behind +", async ({ page 
   await expect(switcher.locator("> a")).toHaveText("Compress PDF");
   await expect(switcher.locator("> a")).toHaveAttribute("aria-current", "page");
   await expect(switcher.getByRole("link", { name: "Merge PDF" })).toBeHidden();
-  const more = switcher.getByRole("button", { name: "Tools" });
+  // The "+" says how many other tools there are.
+  const more = switcher.getByRole("button", { name: "3 more tools" });
   // Tap or click unfolds the rest in the same row; Escape folds it again.
   await more.click();
   await expect(more).toHaveAttribute("aria-expanded", "true");

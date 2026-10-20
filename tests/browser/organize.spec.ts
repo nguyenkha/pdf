@@ -23,7 +23,8 @@ test("reorders, rotates and deletes pages, and compress accepts the result", asy
   await expect(page.getByText("Pages kept: 2 of 3")).toBeVisible();
   await expect(cards.locator(".page-number")).toHaveText(["Page 3", "Page 1", "Page 2"]);
   await page.getByRole("button", { name: "Save PDF" }).click();
-  await expect(page.getByRole("heading", { name: "Saved 2 pages" })).toBeVisible({ timeout: 60000 });
+  await expect(page.getByRole("heading", { name: "PDF saved" })).toBeVisible({ timeout: 60000 });
+  await expect(page.locator(".outcome p")).toContainText("2 pages");
   const download = page.waitForEvent("download");
   await page.getByRole("link", { name: "Download PDF" }).click();
   const saved = await download;
@@ -89,4 +90,51 @@ test("asks for one PDF at a time", async ({ page }) => {
   await page.goto("/en/organize/");
   await page.locator("input[type=file]").setInputFiles(["tests/fixtures/scan.pdf", "tests/fixtures/mixed.pdf"]);
   await expect(page.getByRole("alert")).toHaveText("Choose one PDF at a time.");
+});
+test("hands files over between organize and compress", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", "covered once; the hand-over uses the service worker");
+  test.setTimeout(180000);
+  await page.goto("/en/organize/");
+  await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+  await page.reload();
+  await page.locator("input[type=file]").setInputFiles("tests/fixtures/multipage.pdf");
+  await page.getByRole("button", { name: "Delete page 3" }).click();
+  await page.getByRole("button", { name: "Save PDF" }).click();
+  await expect(page.locator(".next-steps")).toContainText("Next:", { timeout: 60000 });
+  await page.getByRole("button", { name: "Compress this PDF" }).click();
+  await expect(page).toHaveURL(/\/en\/compress\/$/);
+  await expect(page.locator(".file-row strong")).toHaveText("multipage-organized.pdf", { timeout: 30000 });
+  await page.getByRole("button", { name: "Compress PDF", exact: true }).click();
+  await expect(page.locator(".result")).toBeVisible({ timeout: 120000 });
+  await page.getByRole("button", { name: "Organize pages" }).click();
+  await expect(page).toHaveURL(/\/en\/organize\/$/);
+  await expect(page.locator(".page-grid li")).toHaveCount(2, { timeout: 30000 });
+});
+test("saves a PDF that is encrypted only to restrict printing", async ({ page }) => {
+  test.setTimeout(120000);
+  await page.goto("/en/organize/");
+  await page.locator("input[type=file]").setInputFiles("tests/fixtures/restricted.pdf");
+  await expect(page.locator(".page-grid li")).toHaveCount(3, { timeout: 30000 });
+  await page.getByRole("button", { name: "Delete page 1" }).click();
+  await page.getByRole("button", { name: "Save PDF" }).click();
+  await expect(page.getByRole("heading", { name: "PDF saved" })).toBeVisible({ timeout: 90000 });
+});
+test("sends nothing off the device and loads pdf-lib only to save", async ({ page }) => {
+  test.setTimeout(120000);
+  const requests: { url: string; method: string }[] = [];
+  page.on("request", (request) => requests.push({ url: request.url(), method: request.method() }));
+  await page.goto("/en/organize/");
+  await page.locator("input[type=file]").setInputFiles("tests/fixtures/multipage.pdf");
+  await expect(page.locator(".page-grid img")).toHaveCount(3, { timeout: 30000 });
+  const beforeSave = requests.length;
+  await page.getByRole("button", { name: "Save PDF" }).click();
+  await expect(page.locator(".result")).toBeVisible({ timeout: 60000 });
+  const origin = new URL(page.url()).origin;
+  const away = requests.filter(({ url }) => !url.startsWith(origin) && !url.startsWith("blob:") && !url.startsWith("data:"));
+  expect(away).toEqual([]);
+  expect(requests.filter(({ method }) => method !== "GET")).toEqual([]);
+  expect(requests.some(({ url }) => /multipage/.test(url))).toBe(false);
+  // The merge worker (pdf-lib) is fetched only after "Save PDF".
+  expect(requests.slice(0, beforeSave).some(({ url }) => /merge\.worker/.test(url))).toBe(false);
+  expect(requests.slice(beforeSave).some(({ url }) => /merge\.worker/.test(url))).toBe(true);
 });

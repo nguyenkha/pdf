@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, FileArchive, RotateCcw, RotateCw, Trash2, Undo2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, RotateCcw, RotateCw, Trash2, Undo2 } from "lucide-react";
 import type { ToolProps } from "../../app/tools";
 import type { Messages } from "../../i18n";
 import { fill } from "../../i18n/fill";
@@ -10,7 +10,8 @@ import { Steps } from "../../components/Steps";
 import { Outcome } from "../../components/Outcome";
 import { ResultActions } from "../../components/ResultActions";
 import { PasswordPrompt } from "../../components/PasswordPrompt";
-import { canHandOver, handOver } from "../../lib/handOver";
+import { takeSharedFiles } from "../../lib/handOver";
+import { NextSteps } from "../../components/NextSteps";
 import { unlockFile } from "../compress/run";
 import { organizeFile, readPages } from "./run";
 import "./organize.css";
@@ -25,7 +26,7 @@ const organizedName = (file: File) => file.name.replace(/\.pdf$/i, "") + "-organ
 const fresh = (count: number): Card[] =>
   Array.from({ length: count }, (_, page) => ({ page, rotate: 0, deleted: false }));
 /** One PDF's pages, reordered, turned or removed, then saved as a new PDF. */
-export default function OrganizeTool({ t, locale }: ToolProps) {
+export default function OrganizeTool({ t, locale, shared }: ToolProps) {
   const [file, setFile] = useState<File>();
   const [count, setCount] = useState<number>();
   const [cards, setCards] = useState<Card[]>([]);
@@ -47,6 +48,12 @@ export default function OrganizeTool({ t, locale }: ToolProps) {
     urls.current.forEach((url) => url && URL.revokeObjectURL(url));
     setThumbnails([]);
   };
+  // A file handed over from another tool's result (see handOver).
+  useEffect(() => {
+    if (!shared) return;
+    takeSharedFiles().then((files) => files.length && select(files.slice(0, 1)));
+    // A one-time hand-over on mount.
+  }, [shared]);
   useEffect(
     () => () => {
       reading.current?.cancel();
@@ -145,13 +152,23 @@ export default function OrganizeTool({ t, locale }: ToolProps) {
     if (!file) return;
     setError("");
     setBusy(true);
-    try {
-      const active = organizeFile(
-        file,
-        cards.filter((card) => !card.deleted).map(({ page, rotate }) => ({ page, rotate })),
-      );
+    const plan = cards.filter((card) => !card.deleted).map(({ page, rotate }) => ({ page, rotate }));
+    const run = async (source: File) => {
+      const active = organizeFile(source, plan);
       job.current = active;
-      setResult(await active.promise);
+      return active.promise;
+    };
+    try {
+      setResult(
+        await run(file).catch(async (failure) => {
+          // Encrypted only to restrict printing or copying: it opens without a
+          // password, so rewrite it without encryption (as compressing does).
+          if (!(failure instanceof Error) || failure.message !== "password") throw failure;
+          const active = unlockFile(file, "");
+          job.current = active;
+          return run(new File([await active.promise], file.name, { type: "application/pdf" }));
+        }),
+      );
     } catch (failure) {
       if (!(failure instanceof Error && failure.message === "cancelled")) setError(t.organizeFailed);
     } finally {
@@ -351,32 +368,21 @@ function OrganizeResult({
   signed: boolean;
   onReset: () => void;
 }) {
-  const [handing, setHanding] = useState(false);
   return (
     <div className="result" aria-live="polite">
       <Outcome
-        title={fill(t.organizeDoneTitle, { pages })}
+        title={t.organizeDoneTitle}
         detail={fill(t.mergeDoneDetail, { pages, size: formatSize(blob.size, locale) })}
       />
-      <ResultActions t={t} blob={blob} name={name}>
-        {canHandOver() && (
-          <button
-            type="button"
-            className="secondary"
-            disabled={handing}
-            onClick={async () => {
-              setHanding(true);
-              const file = new File([blob], name, { type: "application/pdf" });
-              if (!(await handOver([file], `/${locale}/compress/`))) setHanding(false);
-            }}
-          >
-            <FileArchive size={18} aria-hidden="true" />
-            {t.compressThis}
-          </button>
-        )}
-      </ResultActions>
+      <ResultActions t={t} blob={blob} name={name} />
       {unlocked && <p className="result-note">{t.organizeUnlockedNote}</p>}
       {signed && <p className="result-note">{t.organizeSignedNote}</p>}
+      <NextSteps
+        t={t}
+        locale={locale}
+        file={new File([blob], name, { type: "application/pdf" })}
+        steps={[{ tool: "compress", label: t.compressThis }]}
+      />
       <button type="button" className="link-button" onClick={onReset}>
         <RotateCcw size={15} aria-hidden="true" />
         {t.organizeAnother}

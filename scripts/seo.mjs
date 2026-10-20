@@ -141,7 +141,7 @@ const switcher = (t, locale, tool = TOOLS[0]) => {
   const others = TOOLS.filter((item) => item.id !== tool.id);
   return !others.length && !MORE_PLANNED
     ? ""
-    : `<nav class="tool-switcher"><a href="${href(tool)}" aria-current="page">${escape(t[tool.nameKey])}</a><details class="tool-more"><summary aria-label="${escape(t.tools)}" title="${escape(t.tools)}">+</summary><ul>${others
+    : `<nav class="tool-switcher"><a href="${href(tool)}" aria-current="page">${escape(t[tool.nameKey])}</a><details class="tool-more"><summary>+ ${escape(t.moreTools.replace("{count}", String(others.length)))}</summary><ul>${others
         .map((item) => `<li><a href="${href(item)}">${escape(t[item.nameKey])}</a></li>`)
         .join("")}${MORE_PLANNED ? `<li class="soon">${escape(t.coming)}</li>` : ""}</ul></details></nav>`;
 };
@@ -210,7 +210,7 @@ for (const locale of locales) {
     writePage(locale, suffix, html);
   }
   const privacyUrl = `https://pdf.kha.do/${locale}/privacy/`;
-  const privacyContent = `${header}<main class="privacy-page"><a href="/${locale}/compress/">pdf.kha.do</a><h1>${escape(t.privacyTitle)}</h1><p class="philosophy">${escape(t.philosophy)}</p><p>${escape(t.siteLoads)}</p><p>${escape(t.privacyBody)}</p>${credits(t)}<p>${escape(t.limitations)}</p><h2>${escape(t.how)}</h2><p>${escape(t.howText)}</p><p>${escape(t.support)}</p></main>`;
+  const privacyContent = `${header}<main class="privacy-page"><a href="/${locale}/compress/">pdf.kha.do</a><h1>${escape(t.privacyTitle)}</h1><p class="philosophy">${escape(t.philosophy)}</p><p>${escape(t.siteLoads)}</p><p>${escape(t.privacyBody)}</p>${credits(t)}<p>${escape(t.limitations)}</p><p>${escape(t.shareLimit)}</p><h2>${escape(t.how)}</h2><p>${escape(t.howText)}</p><p>${escape(t.support)}</p></main>`;
   const privacyHtml = base(
     locale,
     `${t.privacyTitle} | pdf.kha.do`,

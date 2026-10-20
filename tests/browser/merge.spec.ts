@@ -94,6 +94,20 @@ test("hands the merged PDF to compress without storing it", async ({ page, brows
   const cached = await page.evaluate(async () => (await Promise.all((await caches.keys()).map(async (key) => (await (await caches.open(key)).keys()).map((request) => request.url)))).flat());
   expect(cached.some((url) => url.includes("shared") || url.includes("merged"))).toBe(false);
 });
+test("a compressed PDF goes on to merge with one click", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", "covered once; the hand-over uses the service worker");
+  test.setTimeout(180000);
+  await page.goto("/en/compress/");
+  await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+  await page.reload();
+  await page.locator("input[type=file]").setInputFiles("tests/fixtures/scan.pdf");
+  await page.getByRole("button", { name: "Compress PDF", exact: true }).click();
+  await expect(page.locator(".result")).toBeVisible({ timeout: 120000 });
+  await expect(page.locator(".next-steps")).toContainText("Next:");
+  await page.getByRole("button", { name: "Merge with other PDFs" }).click();
+  await expect(page).toHaveURL(/\/en\/merge\/$/);
+  await expect(page.locator(".merge-list li strong")).toHaveText(["scan-compressed.pdf"], { timeout: 30000 });
+});
 test("keeps signature stamps visible when merging a signed PDF", async ({ page }) => {
   test.setTimeout(120000);
   await page.goto("/en/merge/");

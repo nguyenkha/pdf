@@ -136,3 +136,17 @@
     transition: none;
   }
 }
+/* Count and the two chips share one row down to small phones. */
+.organize .merge-toolbar > span:first-child {
+  min-width: 0;
+}
+.organize-tools {
+  flex-wrap: nowrap;
+}
+.organize-tools .chip-button {
+  white-space: nowrap;
+}
+.organize .merge-toolbar > .organize-tools {
+  flex: 0 0 auto;
+  min-width: 0;
+}

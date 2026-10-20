@@ -1,5 +1,5 @@
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
-import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.min.mjs?url";
 import type { PdfShape, PageShape } from "../lib/shape";
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 const IMAGE_OPS: number[] = [pdfjs.OPS.paintImageXObject, pdfjs.OPS.paintInlineImageXObject, pdfjs.OPS.paintImageMaskXObject];

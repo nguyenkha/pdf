@@ -2,6 +2,7 @@ import { lazy, Suspense, useState } from "react";
 import { Columns2, RotateCcw } from "lucide-react";
 import { formatSize, savings, outputName } from "../lib/pdf";
 import { ResultActions } from "./ResultActions";
+import { NextSteps } from "./NextSteps";
 import { Outcome } from "./Outcome";
 import type { Messages } from "../i18n";
 import { fill } from "../i18n/fill";
@@ -89,6 +90,17 @@ export function ResultDownload({
         <p className="result-note">{t.unlockedNotice}</p>
       )}
       {reduced && result.unsigned && <p className="result-note">{t.signedNote}</p>}
+      {reduced && (
+        <NextSteps
+          t={t}
+          locale={locale}
+          file={new File([result.blob], outputName(file.name), { type: "application/pdf" })}
+          steps={[
+            { tool: "merge", label: t.mergeWithOthers },
+            { tool: "organize", label: t.organizeThis },
+          ]}
+        />
+      )}
       <button type="button" className="link-button" onClick={onReset}>
         <RotateCcw size={15} aria-hidden="true" />
         {t.another}

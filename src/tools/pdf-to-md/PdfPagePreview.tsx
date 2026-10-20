@@ -1,7 +1,7 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import { fillLabel, PreviewLabelsContext } from "./labels";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
-import workerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+import workerUrl from "pdfjs-dist/legacy/build/pdf.worker.min.mjs?url";
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 type Doc = Awaited<ReturnType<typeof pdfjs.getDocument>["promise"]>;
 export default function PdfPagePreview({
