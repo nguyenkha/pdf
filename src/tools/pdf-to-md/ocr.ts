@@ -38,10 +38,11 @@ const median = (values: number[]) => {
  */
 // Letters without ascenders, descenders or marks: their height is the x-height.
 const X_LETTERS = /^[acemnorsuvwxz]$/;
-const CAPITALS = /^[A-HIK-PR-Z]$/;
+// Capitals and digits stand about 0.7 em tall.
+const CAPITALS = /^[A-HIK-PR-Z0-9]$/;
 /**
  * A line's font size in image pixels from its letters: about twice the
- * x-height, or capitals at 0.7 of it. Tesseract's row height is a poor
+ * x-height, or capitals and digits at 0.7 of it. Tesseract's row height is a poor
  * guide here: Vietnamese marks or one tall letter stretch it by a third.
  */
 export function lineSize(line: Line): number {
@@ -50,10 +51,13 @@ export function lineSize(line: Line): number {
       .flatMap((word) => word.symbols ?? [])
       .filter((symbol) => pattern.test(symbol.text))
       .map((symbol) => symbol.bbox.y1 - symbol.bbox.y0);
+  // The lower quartile: a symbol Tesseract could not separate takes its
+  // word's whole box, so errors only ever make a letter look taller.
+  const low = (values: number[]) => [...values].sort((a, b) => a - b)[Math.floor((values.length - 1) / 4)];
   const x = heights(X_LETTERS);
-  if (x.length) return median(x) * 2;
+  if (x.length) return low(x) * 2;
   const capitals = heights(CAPITALS);
-  if (capitals.length) return median(capitals) / 0.7;
+  if (capitals.length) return low(capitals) / 0.7;
   return line.rowAttributes?.rowHeight || line.bbox.y1 - line.bbox.y0;
 }
 /** How far the scan is turned, from the slope of its long text lines. */
@@ -93,7 +97,14 @@ export function partsFromParagraphs(
   const parts: TextPart[] = [];
   // Measured sizes wobble by a fifth: within that of the page's body size a
   // line is body text, so noise never turns it into a heading.
-  const body = median(paragraphs.flatMap((paragraph) => paragraph.lines.map(lineSize)));
+  // Weighted by text, as for a text layer: many short table cells do not set it.
+  const measured = paragraphs.flatMap((paragraph) =>
+    paragraph.lines.map((line) => ({ size: lineSize(line), weight: line.words.reduce((sum, word) => sum + (word.text?.trim().length ?? 0), 0) })),
+  );
+  const total = measured.reduce((sum, item) => sum + item.weight, 0);
+  let seen = 0;
+  const body =
+    [...measured].sort((a, b) => a.size - b.size).find((item) => (seen += item.weight) >= total / 2)?.size ?? 0;
   const snap = (size: number) => (Math.abs(size - body) <= body * 0.22 ? body : size);
   for (const paragraph of paragraphs) {
     const sizes = paragraph.lines.map((line) => snap(lineSize(line)));

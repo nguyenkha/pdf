@@ -277,12 +277,15 @@ it("sizes OCR lines by their letters, not by marks that stretch the row", () => 
   expect(lineSize(line([symbol("n", 19), symbol("ệ", 30), symbol("o", 19)], 45))).toBe(38);
   // A capitals-only line of the same font reads as the same size.
   expect(lineSize(line([symbol("C", 27), symbol("Ộ", 36), symbol("N", 27)], 38))).toBeCloseTo(38.6, 0);
+  // A symbol that took its word's whole box does not pull the size up.
+  expect(lineSize(line([symbol("n", 19), symbol("a", 19), symbol("o", 19), symbol("e", 40), symbol("s", 40)], 45))).toBe(38);
   // No usable letters: the row height.
   expect(lineSize(line([symbol("漢", 40)], 42))).toBe(42);
 });
 it("keeps OCR body lines at one size so wobble never makes a heading", () => {
   const symbol = (height: number) => ({ text: "n", bbox: { x0: 0, y0: 0, x1: 10, y1: height } });
   const line = (y: number, xHeight: number) => ({
+    text: "word",
     words: [{ text: "word", confidence: 90, symbols: [symbol(xHeight)], bbox: { x0: 0, y0: y - 30, x1: 300, y1: y } }],
     confidence: 90,
     rowAttributes: { rowHeight: 40 },
@@ -299,7 +302,7 @@ it("keeps OCR body lines at one size so wobble never makes a heading", () => {
     { scale: 1, angle: 0 },
   );
   // The large first line stays a heading; 18-22 px x-heights are all body text.
-  expect(parts.map((part) => part.height)).toEqual([60, 42, 42, 42, 42, 42]);
+  expect(parts.map((part) => part.height)).toEqual([60, 38, 38, 38, 38, 38]);
 });
 it("asks more of a heading on a scanned page", () => {
   const page = (scanned: boolean) => ({
@@ -317,4 +320,28 @@ it("asks more of a heading on a scanned page", () => {
   expect(convertDocument("", [page(false)], defaultOptions).markdown).toContain("## Overview of costs");
   const scanned = convertDocument("", [page(true)], defaultOptions).markdown;
   expect(scanned).not.toMatch(/^#/m);
+});
+it("does not ask for OCR on a page OCR found blank", () => {
+  const blank = { parts: [], width: 600, height: 800 };
+  expect(convertDocument("", [blank], defaultOptions).markdown).toContain("OCR");
+  expect(convertDocument("", [{ ...blank, scanned: true }], defaultOptions).markdown).not.toContain("OCR");
+});
+it("measures digits like capitals and weighs the body size by text", () => {
+  const symbol = (text: string, height: number) => ({ text, bbox: { x0: 0, y0: 0, x1: 10, y1: height } });
+  const line = (y: number, text: string, symbols: ReturnType<typeof symbol>[]) => ({
+    text,
+    words: [{ text, confidence: 90, symbols, bbox: { x0: 0, y0: y - 30, x1: 300, y1: y } }],
+    confidence: 90,
+    rowAttributes: { rowHeight: 20 },
+    baseline: { x0: 0, y0: y, x1: 300, y1: y },
+    bbox: { x0: 0, y0: y - 30, x1: 300, y1: y },
+  });
+  // One long body line and many short number cells of the same font.
+  const cells = Array.from({ length: 6 }, (_, i) => line(200 + i * 30, "85.000", [symbol("8", 27), symbol("5", 27)]));
+  const body = line(100, "Địa chỉ: 12 đường Lê Lợi, phường Bến Nghé, Quận 1", [symbol("a", 19), symbol("n", 19)]);
+  const parts = partsFromParagraphs([{ lines: [body] }, ...cells.map((cell) => ({ lines: [cell] }))] as unknown as Paragraph[], {
+    scale: 1,
+    angle: 0,
+  });
+  expect(new Set(parts.map((part) => part.height))).toEqual(new Set([38]));
 });

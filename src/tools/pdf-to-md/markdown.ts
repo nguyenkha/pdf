@@ -466,7 +466,8 @@ export function convertDocument(
     }
     blocks.push(...notes.definitions);
     // A page with images but no text is likely a scan: say so after them.
-    if (!kept.length)
+    // A page OCR has read already needs no "scans need OCR" note, even if blank.
+    if (!kept.length && !pages[index].scanned)
       blocks.push(`*${escapeMarkdown(original.length ? labels.marginsOnly : labels.noText)}*`);
     const content = blocks.join("\n\n");
     return content;
