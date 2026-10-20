@@ -1,5 +1,6 @@
 import { parseTableHtml } from "./table-html";
-import { createElement } from "react";
+import { createElement, useContext } from "react";
+import { PreviewLabelsContext } from "./labels";
 import { splitTableRow } from "./tables";
 
 import { readableMarkdown as readable } from "./text";
@@ -7,8 +8,9 @@ import { InlineMarkdown } from "./InlineMarkdown";
 
 /** Renders the headings, page breaks and text emitted by makeMarkdown. */
 export function MarkdownPreview({ markdown }: { markdown: string }) {
+  const labels = useContext(PreviewLabelsContext);
   return (
-    <article className="md-preview" aria-label="Xem trước Markdown">
+    <article className="md-preview" aria-label={labels.preview}>
       {markdown
         .trim()
         .split(/\n\s*\n/)
@@ -18,7 +20,7 @@ export function MarkdownPreview({ markdown }: { markdown: string }) {
           if (grid)
             return (
               <div className="md-table-scroll" key={index}>
-                <table aria-label="Bảng dữ liệu nhận diện">
+                <table aria-label={labels.table}>
                   <tbody>
                     {grid.map((row, r) => (
                       <tr key={r}>
@@ -47,7 +49,7 @@ export function MarkdownPreview({ markdown }: { markdown: string }) {
             const head = splitTableRow(rows[0]);
             return (
               <div className="md-table-scroll" key={index}>
-                <table aria-label="Bảng dữ liệu nhận diện">
+                <table aria-label={labels.table}>
                   <thead>
                     <tr>
                       {head.map((cell, col) => (

@@ -37,7 +37,26 @@ export type TextPage = {
   links?: PdfLink[];
   rulings?: Ruling[];
 };
+/**
+ * Words written into the Markdown itself; the site passes its UI language.
+ * Placeholders: {page}, {column}.
+ */
+export type MarkdownLabels = {
+  page: string;
+  noText: string;
+  marginsOnly: string;
+  column: string;
+};
+export const defaultLabels: MarkdownLabels = {
+  page: "Trang {page}",
+  noText: "Không tìm thấy lớp chữ trên trang này. Bản thử nghiệm chưa có OCR.",
+  marginsOnly: "Các dòng ở mép trang đã được bỏ. Tắt tùy chọn bỏ header/footer để giữ lại.",
+  column: "Cột {column}",
+};
+const label = (template: string, values: Record<string, number>) =>
+  template.replace(/\{(\w+)\}/g, (match, key: string) => String(values[key] ?? match));
 export type ConversionOptions = {
+  labels?: Partial<MarkdownLabels>;
   keepLineBreaks: boolean;
   detectHeadings: boolean;
   removeMargins: boolean;
@@ -177,6 +196,7 @@ export function convertDocument(
   pages: TextPage[],
   options: ConversionOptions,
 ) {
+  const labels = { ...defaultLabels, ...options.labels };
   let columnPages = 0;
   const lines = pages.map((page) => {
     const ordered = options.restoreColumns
@@ -312,7 +332,7 @@ export function convertDocument(
         flush();
         previous = undefined;
         if (!emitted.has(region)) {
-          blocks.push(tableMarkup(region));
+          blocks.push(tableMarkup(region, labels.column));
           tables.push({
             page: index + 1,
             cells: region.rows,
@@ -389,13 +409,11 @@ export function convertDocument(
     blocks.push(...notes.definitions);
     const content =
       blocks.join("\n\n") ||
-      (original.length
-        ? "*Các dòng ở mép trang đã được bỏ. Tắt tùy chọn bỏ header/footer để giữ lại.*"
-        : "*Không tìm thấy lớp chữ trên trang này. Bản thử nghiệm chưa có OCR.*");
-    return `## Trang ${index + 1}\n\n${content}`;
+      `*${escapeMarkdown(original.length ? labels.marginsOnly : labels.noText)}*`;
+    return `## ${escapeMarkdown(label(labels.page, { page: index + 1 }))}\n\n${content}`;
   });
   return {
-    markdown: `# ${escapeMarkdown(name.replace(/\.pdf$/i, ""))}\n\n${options.joinPages ? pageMarkdowns.map((page) => page.replace(/^## Trang \d+\n\n/, "")).join("\n\n") : pageMarkdowns.join("\n\n---\n\n")}\n`,
+    markdown: `# ${escapeMarkdown(name.replace(/\.pdf$/i, ""))}\n\n${options.joinPages ? pageMarkdowns.map((page) => page.replace(/^## [^\n]*\n\n/, "")).join("\n\n") : pageMarkdowns.join("\n\n---\n\n")}\n`,
     pageMarkdowns,
     emptyPages,
     removedLines,

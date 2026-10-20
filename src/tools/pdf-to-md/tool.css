@@ -1,0 +1,193 @@
+/* PDF to Markdown: loaded with the tool, not on every page. */
+.md-result {
+  display: grid;
+  gap: 14px;
+}
+.md-result > * {
+  margin: 0;
+}
+.md-tables {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  font-size: 13px;
+}
+.md-tables strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.md-tables div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.md-tables small {
+  color: var(--muted);
+}
+a.chip-button {
+  text-decoration: none;
+}
+a.chip-button:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.md-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.md-preview,
+.md-source {
+  width: 100%;
+  max-height: 70vh;
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.md-preview {
+  min-height: 200px;
+  font-size: 15px;
+}
+.md-source {
+  min-height: 360px;
+  resize: vertical;
+  font:
+    13px/1.6 ui-monospace,
+    monospace;
+}
+.md-preview h2 {
+  font-size: 22px;
+  margin: 0 0 18px;
+}
+.md-preview h3 {
+  font-size: 18px;
+  margin: 22px 0 10px;
+}
+.md-preview h4 {
+  font-size: 16px;
+  margin: 20px 0 10px;
+}
+.md-preview h5,
+.md-preview h6 {
+  font-size: 15px;
+  margin: 18px 0 8px;
+}
+.md-preview p {
+  white-space: pre-wrap;
+  line-height: 1.75;
+}
+.md-preview hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 24px 0;
+}
+.md-preview ul {
+  list-style: disc;
+  padding-inline-start: 24px;
+}
+.md-preview ol {
+  list-style: decimal;
+  padding-inline-start: 24px;
+}
+.md-preview li {
+  margin: 6px 0;
+  line-height: 1.75;
+}
+.md-preview sup {
+  font-size: 0.75em;
+}
+.md-table-scroll {
+  margin-block: 14px;
+  overflow-x: auto;
+}
+.md-preview table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.md-preview th,
+.md-preview td {
+  border: 1px solid var(--border);
+  padding: 8px;
+  text-align: start;
+  vertical-align: top;
+}
+.md-preview th {
+  background: var(--surface-2);
+  font-weight: 650;
+}
+.md-footnote {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  font-size: 13px;
+}
+.md-inline-link {
+  display: inline;
+  width: auto;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--accent-text);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.md-comparison {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+.md-comparison > * {
+  min-width: 0;
+}
+.md-pane-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  margin: 0 0 6px;
+}
+.md-pdf-page {
+  min-height: 200px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+.md-pdf-page canvas:not([hidden]) {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #fff;
+}
+.md-option-grid {
+  display: grid;
+  gap: 2px 16px;
+}
+.md-option-grid label.check {
+  max-width: none;
+  font-size: 13px;
+  color: var(--text);
+}
+@media (min-width: 600px) {
+  .md-option-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 700px) {
+  .md-comparison {
+    grid-template-columns: 1fr;
+  }
+}

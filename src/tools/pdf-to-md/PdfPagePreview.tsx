@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
+import { fillLabel, PreviewLabelsContext } from "./labels";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import workerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
@@ -10,6 +11,7 @@ export default function PdfPagePreview({
   file: File;
   page: number;
 }) {
+  const labels = useContext(PreviewLabelsContext);
   const [doc, setDoc] = useState<Doc>();
   const [error, setError] = useState(false);
   const [renderedPage, setRenderedPage] = useState(0);
@@ -96,18 +98,18 @@ export default function PdfPagePreview({
     <div className="md-pdf-page" ref={box}>
       {error ? (
         <p role="status">
-          Không mở được bản xem PDF. File gốc không bị thay đổi.
+          {labels.pdfFailed}
         </p>
       ) : (
         <>
-          {!doc && <p role="status">Đang mở trang PDF…</p>}
+          {!doc && <p role="status">{labels.pdfOpening}</p>}
           {doc && renderedPage !== page && (
-            <p role="status">Đang vẽ trang PDF…</p>
+            <p role="status">{labels.pdfRendering}</p>
           )}
           <canvas
             ref={canvas}
             hidden={renderedPage !== page}
-            aria-label={`PDF gốc, trang ${page}`}
+            aria-label={fillLabel(labels.pdfPage, { page })}
           />
         </>
       )}

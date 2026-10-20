@@ -1,7 +1,9 @@
-import { type ReactNode } from "react";
+import { useContext, type ReactNode } from "react";
+import { fillLabel, PreviewLabelsContext } from "./labels";
 import { readableMarkdown } from "./text";
 import { safeUrl } from "./structure";
 export function InlineMarkdown({ text }: { text: string }) {
+  const labels = useContext(PreviewLabelsContext);
   const nodes: ReactNode[] = [];
   let plain = "";
   let i = 0;
@@ -24,7 +26,7 @@ export function InlineMarkdown({ text }: { text: string }) {
         <sup key={i}>
           <a
             href={`#fn-${reference[1]}`}
-            aria-label={`Chú thích ${reference[2]}`}
+            aria-label={fillLabel(labels.footnote, { note: reference[2] })}
           >
             {reference[2]}
           </a>

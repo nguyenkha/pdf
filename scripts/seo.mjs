@@ -8,6 +8,7 @@ import { faqFor } from "../src/app/faq.ts";
 const TOOLS = [
   { id: "compress", slug: "compress", nameKey: "compress" },
   { id: "merge", slug: "merge", nameKey: "toolMerge" },
+  { id: "markdown", slug: "markdown", nameKey: "toolMarkdown" },
 ];
 const MORE_PLANNED = true;
 import fs from "node:fs";

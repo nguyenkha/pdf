@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { FileArchive, Merge, type LucideIcon } from "lucide-react";
+import { FileArchive, FileCode, Merge, type LucideIcon } from "lucide-react";
 import type { Messages } from "../i18n";
 import type { Locale } from "../i18n/config";
 import type { SizePreset } from "./sizes";
@@ -38,8 +38,14 @@ export const tools: Tool[] = [
     icon: Merge,
     load: () => import("../tools/merge/MergeTool"),
   },
+  {
+    id: "markdown",
+    slug: "markdown",
+    nameKey: "toolMarkdown",
+    icon: FileCode,
+    load: () => import("../tools/pdf-to-md/MarkdownTool"),
+  },
   // Planned, in this order; names stay out of the interface until built.
-  { id: "pdf-to-markdown", slug: "pdf-to-markdown", nameKey: "compress", icon: FileArchive },
   { id: "images-to-pdf", slug: "jpg-to-pdf", nameKey: "compress", icon: FileArchive },
   { id: "pdf-to-images", slug: "pdf-to-jpg", nameKey: "compress", icon: FileArchive },
 ];

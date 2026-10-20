@@ -168,10 +168,10 @@ export function detectTables(
   );
 }
 
-export function tableMarkdown(rows: string[][]): string {
+export function tableMarkdown(rows: string[][], column = "Cột {column}"): string {
   const numericHeader = rows[0].some(numberLike);
   const headers = numericHeader
-    ? rows[0].map((_, i) => `Cột ${i + 1}`)
+    ? rows[0].map((_, i) => column.replace("{column}", String(i + 1)))
     : rows[0];
   const data = numericHeader ? rows : rows.slice(1);
   const row = (cells: string[]) =>
@@ -211,9 +211,9 @@ export function splitTableRow(row: string): string[] {
   return cells;
 }
 
-export function tableMarkup(table: TableRegion): string {
+export function tableMarkup(table: TableRegion, column?: string): string {
   return table.spans?.some((c) => c.rowSpan > 1 || c.colSpan > 1) ||
     table.rows.some((row) => row.some((cell) => cell.includes("\n")))
     ? tableHtml(table.rows, table.spans)
-    : tableMarkdown(table.rows);
+    : tableMarkdown(table.rows, column);
 }

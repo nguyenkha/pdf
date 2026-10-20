@@ -20,6 +20,11 @@ export const FAQ_BY_TOOL: Record<string, readonly (readonly [string, string])[]>
     ["mergeLockedQ", "mergeLockedA"],
     ["mergeLimitQ", "mergeLimitA"],
   ],
+  markdown: [
+    ["mdScanQ", "mdScanA"],
+    ["mdTablesQ", "mdTablesA"],
+    ["mdLayoutQ", "mdLayoutA"],
+  ],
 };
 export function faqFor(toolId: string) {
   return [...(FAQ_BY_TOOL[toolId] ?? []), ...FAQ_GENERAL];
