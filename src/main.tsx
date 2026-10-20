@@ -46,6 +46,11 @@ function Credits({ text }: { text: string }) {
 }
 const preset = sizeFromPath(location.pathname);
 const activeTool = toolFromPath(location.pathname);
+const home = activeTool.id === "compress";
+// Tool pages beyond compress read <nameKey>Title, Description, Hero, Intro
+// and HowText (the same strings scripts/seo.mjs prerenders).
+const toolText = (m: Messages, part: "Title" | "Description" | "Hero" | "Intro" | "HowText") =>
+  m[`${activeTool.nameKey}${part}` as keyof Messages];
 // Compress is the home tool and renders eagerly; others load on their page.
 const ToolComponent: ComponentType<ToolProps> =
   activeTool.id === "compress" ? CompressTool : lazy(activeTool.load!);
@@ -82,12 +87,14 @@ function App({
       .then((m) => {
         if (!active) return;
         setT(m);
-        const [title, description] = preset
-          ? [
-              fill(m.sizePageTitle, { size: preset.label }),
-              fill(m.sizePageDescription, { size: preset.label }),
-            ]
-          : metadata[locale];
+        const [title, description] = !home
+          ? [toolText(m, "Title"), toolText(m, "Description")]
+          : preset
+            ? [
+                fill(m.sizePageTitle, { size: preset.label }),
+                fill(m.sizePageDescription, { size: preset.label }),
+              ]
+            : metadata[locale];
         const url = `${config.domain}/${locale}/${suffix}`;
         document.title = title;
         const set = (selector: string, attribute: string, value: string) =>
@@ -196,8 +203,12 @@ function App({
               <ShieldCheck size={15} />
               {t.privacy}
             </div>
-            <h1>{preset ? fill(t.sizeHero, { size: preset.label }) : t.hero}</h1>
-            <p>{preset ? fill(t.sizeIntro, { size: preset.label }) : t.sub}</p>
+            <h1>
+              {!home ? toolText(t, "Hero") : preset ? fill(t.sizeHero, { size: preset.label }) : t.hero}
+            </h1>
+            <p>
+              {!home ? toolText(t, "Intro") : preset ? fill(t.sizeIntro, { size: preset.label }) : t.sub}
+            </p>
           </div>
           <div id="tool">
             <ToolSwitcher t={t} locale={locale} active={activeTool} />
@@ -209,7 +220,7 @@ function App({
             <div className="info-card how">
               <span>01</span>
               <h2>{t.how}</h2>
-              <p>{t.howText}</p>
+              <p>{home ? t.howText : toolText(t, "HowText")}</p>
             </div>
             <div className="info-card why">
               <span>02</span>
@@ -217,7 +228,7 @@ function App({
               <p>{t.whyText}</p>
             </div>
           </div>
-          <section className="faq">
+          {home && <section className="faq">
             <h2>{t.faq}</h2>
             {(
               [
@@ -234,7 +245,7 @@ function App({
                 <p>{a}</p>
               </details>
             ))}
-          </section>
+          </section>}
           <section className="privacy-section" id="privacy">
             <h2>{t.privacyTitle}</h2>
             <p className="philosophy">{t.philosophy}</p>
@@ -244,7 +255,8 @@ function App({
             <p>{t.limitations}</p>
           </section>
           {/* Plain links for the size pages: useful to crawlers, quiet for people. */}
-          <nav className="sizes" aria-label={t.sizesTitle}>
+          {home && (
+        <nav className="sizes" aria-label={t.sizesTitle}>
             <span>{t.sizesTitle}:</span>
             {SIZE_PAGES.map((slug) => {
               const size = sizeFromSlug(slug)!;
@@ -260,6 +272,7 @@ function App({
               );
             })}
           </nav>
+        )}
         </main>
       )}
       <footer>

@@ -10,15 +10,22 @@ export type JobProgress = {
   page?: number;
   pages?: number;
 };
-function startJob<T>(
+const compressWorker = () =>
+  new Worker(new URL("../../workers/compress.worker.ts", import.meta.url), {
+    type: "module",
+  });
+/**
+ * Runs one request in a fresh worker. The factory keeps `new Worker(new
+ * URL(...))` literal for the bundler; messages without a known type (such as
+ * pdf.js announcing its in-worker fallback) are ignored.
+ */
+export function startJob<T>(
   message: object,
   timeoutMs: number,
   onProgress: (progress: JobProgress) => void = () => {},
+  createWorker: () => Worker = compressWorker,
 ) {
-  const worker = new Worker(
-    new URL("../../workers/compress.worker.ts", import.meta.url),
-    { type: "module" },
-  );
+  const worker = createWorker();
   let rejectJob: (error: Error) => void = () => {};
   let settled = false;
   let killTimer: ReturnType<typeof setTimeout> | undefined;

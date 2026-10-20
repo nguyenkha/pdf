@@ -1,7 +1,7 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { Columns2, Download, Eye, RotateCcw, Share2 } from "lucide-react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { Columns2, RotateCcw } from "lucide-react";
 import { formatSize, savings, outputName } from "../lib/pdf";
-import { useObjectUrl } from "../hooks/useObjectUrl";
+import { ResultActions } from "./ResultActions";
 import type { Messages } from "../i18n";
 import { fill } from "../i18n/fill";
 export type CompressionResult = {
@@ -30,20 +30,11 @@ export function ResultDownload({
   password?: string;
   onReset: () => void;
 }) {
-  const url = useObjectUrl(result.blob);
   const reduced = result.blob.size < file.size;
   const [comparing, setComparing] = useState(false);
   // Move focus to the outcome, so keyboard and screen reader users land on it.
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => heading.current?.focus(), []);
-  // The system share sheet reaches Drive, Dropbox, OneDrive, Files, Mail...
-  const shareFile = useMemo(
-    () => new File([result.blob], outputName(file.name), { type: "application/pdf" }),
-    [result.blob, file.name],
-  );
-  const canShare =
-    typeof navigator.canShare === "function" &&
-    navigator.canShare({ files: [shareFile] });
   return (
     <div className="result" aria-live="polite">
       <h3 className="result-heading" ref={heading} tabIndex={-1}>
@@ -74,29 +65,8 @@ export function ResultDownload({
       {result.target !== undefined && (
         <p>{result.achieved ? t.targetMet : t.targetMiss}</p>
       )}
-      {reduced && url && (
-        <div className="result-actions">
-          <a className="primary" href={url} download={outputName(file.name)}>
-            <Download size={18} aria-hidden="true" />
-            {t.download}
-          </a>
-          {/* Opens the browser's own PDF viewer; CSP forbids blob: frames. */}
-          <a className="secondary" href={url} target="_blank" rel="noopener">
-            <Eye size={18} aria-hidden="true" />
-            {t.preview}
-          </a>
-          {canShare && (
-            <button
-              type="button"
-              className="secondary"
-              onClick={() =>
-                navigator.share({ files: [shareFile], title: shareFile.name }).catch(() => {})
-              }
-            >
-              <Share2 size={18} aria-hidden="true" />
-              {t.share}
-            </button>
-          )}
+      {reduced && (
+        <ResultActions t={t} blob={result.blob} name={outputName(file.name)}>
           <button
             type="button"
             className="secondary"
@@ -106,7 +76,7 @@ export function ResultDownload({
             <Columns2 size={18} aria-hidden="true" />
             {t.compare}
           </button>
-        </div>
+        </ResultActions>
       )}
       {comparing && (
         <Suspense fallback={<p className="hint">{t.loading}</p>}>

@@ -8,7 +8,8 @@ describe("tool registry", () => {
     expect(toolFromPath("/en/privacy/").id).toBe("compress");
   });
   it("never routes to a planned tool", () => {
-    expect(toolFromPath("/en/merge-pdf/").id).toBe("compress");
+    expect(toolFromPath("/en/pdf-to-jpg/").id).toBe("compress");
+    expect(toolFromPath("/en/merge/").id).toBe("merge");
     expect(availableTools.every((tool) => tool.load)).toBe(true);
   });
   it("has unique ids and slugs", () => {

@@ -212,3 +212,38 @@ export async function inspectPdf(
     await task.destroy();
   }
 }
+
+/** Page count and a small first-page preview, for lists of files. */
+export async function firstPage(
+  data: Uint8Array,
+): Promise<{ pages: number; thumbnail?: Blob; locked?: boolean }> {
+  const task = open(data, undefined, true);
+  try {
+    const doc = await load(task).catch((error: Error) => {
+      if (error.message.startsWith("password")) return undefined;
+      throw error;
+    });
+    if (!doc) return { pages: 0, locked: true };
+    const page = await doc.getPage(1);
+    let thumbnail: Blob | undefined;
+    if (typeof OffscreenCanvas !== "undefined") {
+      const base = page.getViewport({ scale: 1 });
+      // 2x a 48 px wide list preview, for sharp phone screens.
+      const viewport = page.getViewport({ scale: 96 / base.width });
+      const canvas = new OffscreenCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
+      const context = canvas.getContext("2d");
+      if (context) {
+        await page.render({
+          canvasContext: context as unknown as CanvasRenderingContext2D,
+          viewport,
+          background: "white",
+        }).promise;
+        thumbnail = await canvas.convertToBlob({ type: "image/png" });
+      }
+    }
+    page.cleanup();
+    return { pages: doc.numPages, thumbnail };
+  } finally {
+    await task.destroy();
+  }
+}

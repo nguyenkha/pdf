@@ -1,9 +1,17 @@
 import { Check } from "lucide-react";
 import type { Messages } from "../i18n";
-export function Steps({ t, current }: { t: Messages; current: number }) {
+export function Steps({
+  t,
+  current,
+  labels = [t.stepFile, t.stepLevel, t.stepDownload],
+}: {
+  t: Messages;
+  current: number;
+  labels?: string[];
+}) {
   return (
     <ol className="steps">
-      {[t.stepFile, t.stepLevel, t.stepDownload].map((label, index) => {
+      {labels.map((label, index) => {
         const number = index + 1;
         const state =
           number < current ? "done" : number === current ? "current" : "next";

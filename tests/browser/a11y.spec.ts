@@ -34,6 +34,13 @@ for (const scheme of ["light", "dark"] as const)
       await expect(page.locator(".compare canvas")).toHaveCount(2);
       await audit(page, "result");
     });
+    test("merge tool", async ({ page }) => {
+      await page.goto("/en/merge/");
+      await audit(page, "merge empty");
+      await page.locator("input[type=file]").setInputFiles(["tests/fixtures/scan.pdf", "tests/fixtures/password.pdf"]);
+      await expect(page.getByText(/password-protected/)).toBeVisible({ timeout: 30000 });
+      await audit(page, "merge list");
+    });
     test("password prompt, batch and privacy page", async ({ page }) => {
       test.setTimeout(180000);
       await page.goto("/en/compress/");
