@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useState, type ComponentType } from "react";
 import { createRoot } from "react-dom/client";
 import {
-  ArrowUpRight,
   Globe,
   ShieldCheck,
   Sun,
@@ -126,15 +125,6 @@ function App({
           <img className="brand-logo dark-only" src="/icons/icon-dark.svg" alt="" />
           pdf.kha.do
         </a>
-        <nav aria-label={t.about}>
-          <a href={privacyPage ? `/${locale}/compress/#about` : "#about"}>{t.about}</a>
-          {config.githubUrl && (
-            <a href={config.githubUrl} target="_blank" rel="noreferrer">
-              {t.github}
-              <ArrowUpRight size={13} />
-            </a>
-          )}
-        </nav>
         <div className="header-actions">
           <ToolsMenu t={t} locale={locale} active={privacyPage ? undefined : activeTool} />
           <label className="language">
