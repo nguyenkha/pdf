@@ -166,6 +166,9 @@ export default {
   mergeFailed: "Falha ao juntar. Seus arquivos estão seguros.",
   mergeTooMany: "Junte até {count} PDFs por vez.",
   mergeNote: "Marcadores e campos de formulário não são mantidos no arquivo final.",
-  mergeDone: "{count} PDFs juntados em um: {pages} páginas, {size}.",
+  mergeDoneTitle: "{count} PDFs juntados",
+  mergeDoneDetail: "{pages} páginas · {size}",
   mergeAnother: "Juntar outros PDFs",
+  privacyMore: "Detalhes de privacidade",
+  creditsMerge: "Para juntar arquivos usamos o {pdflib}, uma biblioteca PDF de código aberto, também no seu dispositivo.",
 } satisfies Messages;

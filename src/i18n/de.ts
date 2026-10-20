@@ -166,6 +166,9 @@ export default {
   mergeFailed: "Zusammenfügen fehlgeschlagen. Deine Dateien sind sicher.",
   mergeTooMany: "Füge bis zu {count} PDFs auf einmal zusammen.",
   mergeNote: "Lesezeichen und Formularfelder bleiben in der zusammengefügten Datei nicht erhalten.",
-  mergeDone: "{count} PDFs zu einem zusammengefügt: {pages} Seiten, {size}.",
+  mergeDoneTitle: "{count} PDFs zusammengefügt",
+  mergeDoneDetail: "{pages} Seiten · {size}",
   mergeAnother: "Andere PDFs zusammenfügen",
+  privacyMore: "Datenschutz im Detail",
+  creditsMerge: "Zum Zusammenfügen dient {pdflib}, eine Open-Source-PDF-Bibliothek, ebenfalls auf Ihrem Gerät.",
 } satisfies Messages;

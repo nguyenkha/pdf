@@ -35,7 +35,7 @@ for (const [fixture, pages, selectable] of [['mixed', 1, true], ['multipage', 3,
           expect((await p.getAnnotations()).some(annotation => annotation.url === 'https://example.org/')).toBe(true);
         }
       }
-      await expect(page.getByText(new Intl.NumberFormat('en', { maximumFractionDigits: 1 }).format(outputSize / 1024) + ' KB', { exact: true })).toBeVisible();
+      await expect(page.locator('.outcome p')).toContainText('→ ' + new Intl.NumberFormat('en', { maximumFractionDigits: 1 }).format(outputSize / 1024) + ' KB');
     } finally { await task.destroy(); }
   });
 }

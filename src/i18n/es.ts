@@ -166,6 +166,9 @@ export default {
   mergeFailed: "No se pudo unir. Tus archivos están a salvo.",
   mergeTooMany: "Une hasta {count} PDF a la vez.",
   mergeNote: "Los marcadores y los campos de formulario no se conservan en el archivo unido.",
-  mergeDone: "{count} PDF unidos en uno: {pages} páginas, {size}.",
+  mergeDoneTitle: "{count} PDF unidos",
+  mergeDoneDetail: "{pages} páginas · {size}",
   mergeAnother: "Unir otros PDF",
+  privacyMore: "Detalles de privacidad",
+  creditsMerge: "Para unir archivos se usa {pdflib}, una biblioteca PDF de código abierto, también en tu dispositivo.",
 } satisfies Messages;

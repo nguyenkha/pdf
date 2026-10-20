@@ -136,7 +136,7 @@ const header = '<header class="site-header"></header>';
 const credits = (t) =>
   `<p class="credits">${escape(t.credits)
     .replace("{gs}", '<a href="https://www.ghostscript.com/">Ghostscript</a>')
-    .replace("{pdfjs}", '<a href="https://mozilla.github.io/pdf.js/">pdf.js</a>')}</p>`;
+    .replace("{pdfjs}", '<a href="https://mozilla.github.io/pdf.js/">pdf.js</a>')}</p><p class="credits">${escape(t.creditsMerge).replace("{pdflib}", '<a href="https://pdf-lib.js.org/">pdf-lib</a>')}</p>`;
 for (const locale of locales) {
   const t = (await import(`../src/i18n/${locale}.ts`)).default;
   const sizeLinks = `<nav class="sizes"><span>${escape(t.sizesTitle)}:</span>${SIZE_PAGES.map((slug) => `<a href="/${locale}/${sizePath(slug)}" title="${escape(fill(t.sizeLink, { size: sizeLabel(slug) }))}">${sizeLabel(slug)}</a>`).join("")}</nav>`;
@@ -186,7 +186,7 @@ for (const locale of locales) {
             },
           ]),
     ];
-    const content = `${header}<main><div class="hero"><div class="eyebrow">${escape(t.privacy)}</div><h1>${escape(h1)}</h1><p>${escape(intro)}</p></div><div id="tool">${switcher(t, locale)}<section class="tool-card placeholder" aria-label="${escape(tool ? t[tool.nameKey] : t.compress)}"></section></div><section class="content"><h2>${escape(t.how)}</h2><p>${escape(tool ? text(`${tool.nameKey}HowText`) : t.howText)}</p><h2>${escape(t.why)}</h2><p>${escape(t.whyText)}</p></section>${tool ? "" : `<section class="faq"><h2>${escape(t.faq)}</h2>${FAQ.map((i) => `<h3>${escape(t["q" + i])}</h3><p>${escape(t["a" + i])}</p>`).join("")}</section>`}<section class="privacy-section"><h2>${escape(t.privacyTitle)}</h2><p>${escape(t.siteLoads)}</p><p>${escape(t.privacyBody)}</p>${credits(t)}</section>${tool ? "" : sizeLinks}</main>`;
+    const content = `${header}<main><div class="hero"><div class="eyebrow">${escape(t.privacy)}</div><h1>${escape(h1)}</h1><p>${escape(intro)}</p></div><div id="tool">${switcher(t, locale)}<section class="tool-card placeholder" aria-label="${escape(tool ? t[tool.nameKey] : t.compress)}"></section></div><section class="content"><h2>${escape(t.how)}</h2><p>${escape(tool ? text(`${tool.nameKey}HowText`) : t.howText)}</p><h2>${escape(t.why)}</h2><p>${escape(t.whyText)}</p></section>${tool ? "" : `<section class="faq"><h2>${escape(t.faq)}</h2>${FAQ.map((i) => `<h3>${escape(t["q" + i])}</h3><p>${escape(t["a" + i])}</p>`).join("")}</section>`}<section class="privacy-section"><h2>${escape(t.privacyTitle)}</h2><p class="philosophy">${escape(t.philosophy)}</p><p>${escape(t.privacyBody)}</p><a class="more-link" href="/${locale}/privacy/">${escape(t.privacyMore)} →</a></section>${tool ? "" : sizeLinks}</main>`;
     const html = base(
       locale,
       title,

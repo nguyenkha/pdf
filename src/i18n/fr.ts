@@ -167,6 +167,9 @@ export default {
   mergeFailed: "La fusion a échoué. Vos fichiers sont en sécurité.",
   mergeTooMany: "Fusionnez jusqu'à {count} PDF à la fois.",
   mergeNote: "Les signets et les champs de formulaire ne sont pas conservés dans le fichier fusionné.",
-  mergeDone: "{count} PDF fusionnés en un seul : {pages} pages, {size}.",
+  mergeDoneTitle: "{count} PDF fusionnés",
+  mergeDoneDetail: "{pages} pages · {size}",
   mergeAnother: "Fusionner d'autres PDF",
+  privacyMore: "Détails de confidentialité",
+  creditsMerge: "La fusion utilise {pdflib}, une bibliothèque PDF open source, elle aussi sur votre appareil.",
 } satisfies Messages;

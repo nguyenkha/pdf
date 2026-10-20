@@ -977,36 +977,11 @@ input[type="number"],
     transform: rotate(360deg);
   }
 }
-.result-heading {
-  font-size: 15px;
-  margin: 22px 0 12px;
-  color: var(--text-strong);
-}
-.result-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-.result-grid span {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 15px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  font-size: 12px;
-  color: var(--muted);
-}
-.result-grid strong {
-  font-size: 20px;
-  color: var(--text-strong);
-}
 .result p {
   font-size: 13px;
   color: var(--muted);
 }
-.result .success {
+.result p.success {
   display: inline-block;
   color: var(--teal);
   background: var(--teal-soft);
@@ -1014,10 +989,6 @@ input[type="number"],
   padding: 6px 14px;
   font-weight: 700;
   font-size: 15px;
-}
-.result-grid span:last-child {
-  border-color: color-mix(in srgb, var(--teal) 35%, transparent);
-  background: var(--teal-soft);
 }
 .result-actions {
   display: flex;
@@ -1601,5 +1572,82 @@ footer a:hover {
 @media (max-width: 380px) {
   .merge-list .order {
     display: none;
+  }
+}
+.outcome {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 20px 0 4px;
+}
+.outcome > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.outcome.tone-success > svg {
+  color: var(--teal);
+}
+.outcome.tone-neutral > svg {
+  color: var(--muted);
+}
+.outcome h3 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+  color: var(--text-strong);
+}
+.outcome.tone-neutral h3 {
+  font-size: 16px;
+  line-height: 1.4;
+}
+.outcome h3:focus {
+  outline: none;
+}
+.outcome p {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.outcome-note {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+}
+.link-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 10px auto 0;
+  padding: 8px 12px;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--accent-text);
+  font-weight: 600;
+  font-size: 14px;
+}
+.link-button:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.more-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent-text);
+}
+.more-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+/* Phones scroll the tool row sideways; fade the edge so it reads as more. */
+@media (max-width: 680px) {
+  .tool-switcher ul {
+    mask-image: linear-gradient(to right, #000 85%, transparent);
+    padding-inline-end: 24px;
   }
 }

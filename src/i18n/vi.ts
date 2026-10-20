@@ -166,6 +166,9 @@ export default {
   mergeFailed: "Gộp thất bại. Các file của bạn vẫn an toàn.",
   mergeTooMany: "Mỗi lần gộp tối đa {count} PDF.",
   mergeNote: "Bookmark và trường biểu mẫu không được giữ trong file gộp.",
-  mergeDone: "Đã gộp {count} PDF thành một: {pages} trang, {size}.",
+  mergeDoneTitle: "Đã gộp {count} PDF",
+  mergeDoneDetail: "{pages} trang · {size}",
   mergeAnother: "Gộp PDF khác",
+  privacyMore: "Chi tiết về quyền riêng tư",
+  creditsMerge: "Việc gộp file dùng {pdflib}, một thư viện PDF mã nguồn mở, cũng chạy trên thiết bị của bạn.",
 } satisfies Messages;

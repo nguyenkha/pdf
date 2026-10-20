@@ -28,6 +28,7 @@ function Credits({ text }: { text: string }) {
   const links: Record<string, [string, string]> = {
     gs: ["Ghostscript", "https://www.ghostscript.com/"],
     pdfjs: ["pdf.js", "https://mozilla.github.io/pdf.js/"],
+    pdflib: ["pdf-lib", "https://pdf-lib.js.org/"],
   };
   return (
     <p className="credits">
@@ -191,6 +192,7 @@ function App({
           <p>{t.siteLoads}</p>
           <p>{t.privacyBody}</p>
           <Credits text={t.credits} />
+          <Credits text={t.creditsMerge} />
           <p>{t.limitations}</p>
           <h2>{t.how}</h2>
           <p>{t.howText}</p>
@@ -246,13 +248,14 @@ function App({
               </details>
             ))}
           </section>}
+          {/* The short version on every tool page; details on /privacy/. */}
           <section className="privacy-section" id="privacy">
             <h2>{t.privacyTitle}</h2>
             <p className="philosophy">{t.philosophy}</p>
-            <p>{t.siteLoads}</p>
             <p>{t.privacyBody}</p>
-            <Credits text={t.credits} />
-            <p>{t.limitations}</p>
+            <a className="more-link" href={`/${locale}/privacy/`}>
+              {t.privacyMore} →
+            </a>
           </section>
           {/* Plain links for the size pages: useful to crawlers, quiet for people. */}
           {home && (

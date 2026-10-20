@@ -164,6 +164,9 @@ export default {
   mergeFailed: "Не удалось объединить. Ваши файлы в безопасности.",
   mergeTooMany: "Объединяйте не более {count} PDF за раз.",
   mergeNote: "Закладки и поля форм в объединённом файле не сохраняются.",
-  mergeDone: "Объединено PDF: {count}, страниц: {pages}, размер: {size}.",
+  mergeDoneTitle: "Объединено PDF: {count}",
+  mergeDoneDetail: "Страниц: {pages} · {size}",
   mergeAnother: "Объединить другие PDF",
+  privacyMore: "Подробнее о конфиденциальности",
+  creditsMerge: "Для объединения используется {pdflib} — открытая PDF-библиотека, тоже на вашем устройстве.",
 } satisfies Messages;

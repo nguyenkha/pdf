@@ -158,6 +158,9 @@ export default {
   mergeFailed: "合并失败。你的文件是安全的。",
   mergeTooMany: "一次最多合并 {count} 个 PDF。",
   mergeNote: "合并后的文件不保留书签和表单域。",
-  mergeDone: "已将 {count} 个 PDF 合并为一个：{pages} 页，{size}。",
+  mergeDoneTitle: "已合并 {count} 个 PDF",
+  mergeDoneDetail: "{pages} 页 · {size}",
   mergeAnother: "合并其他 PDF",
+  privacyMore: "隐私详情",
+  creditsMerge: "合并功能使用开源 PDF 库 {pdflib}，同样在你的设备上运行。",
 } satisfies Messages;

@@ -164,6 +164,9 @@ export default {
   mergeFailed: "합치기에 실패했어요. 파일은 안전해요.",
   mergeTooMany: "한 번에 최대 {count}개의 PDF를 합칠 수 있어요.",
   mergeNote: "책갈피와 양식 필드는 합친 파일에 유지되지 않아요.",
-  mergeDone: "PDF {count}개를 하나로 합쳤어요: {pages}페이지, {size}.",
+  mergeDoneTitle: "PDF {count}개를 합쳤어요",
+  mergeDoneDetail: "{pages}페이지 · {size}",
   mergeAnother: "다른 PDF 합치기",
+  privacyMore: "개인정보 자세히 보기",
+  creditsMerge: "합치기에는 오픈소스 PDF 라이브러리 {pdflib}를 사용하며, 이것도 기기에서 실행돼요.",
 } satisfies Messages;

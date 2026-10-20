@@ -164,6 +164,9 @@ export default {
   mergeFailed: "結合に失敗しました。ファイルは安全です。",
   mergeTooMany: "一度に結合できる PDF は {count} 個までです。",
   mergeNote: "しおりとフォームフィールドは、結合後のファイルには引き継がれません。",
-  mergeDone: "{count} 個の PDF を 1 つに結合しました：{pages} ページ、{size}。",
+  mergeDoneTitle: "{count} 個の PDF を結合しました",
+  mergeDoneDetail: "{pages} ページ · {size}",
   mergeAnother: "別の PDF を結合",
+  privacyMore: "プライバシーの詳細",
+  creditsMerge: "結合にはオープンソースの PDF ライブラリ {pdflib} を使い、これも端末上で動作します。",
 } satisfies Messages;

@@ -163,6 +163,9 @@ export default {
   mergeFailed: "Merging failed. Your files are safe.",
   mergeTooMany: "Merge up to {count} PDFs at a time.",
   mergeNote: "Bookmarks and form fields are not kept in the merged file.",
-  mergeDone: "{count} PDFs merged into one: {pages} pages, {size}.",
+  mergeDoneTitle: "Merged {count} PDFs",
+  mergeDoneDetail: "{pages} pages · {size}",
   mergeAnother: "Merge other PDFs",
+  privacyMore: "Privacy details",
+  creditsMerge: "Merging uses {pdflib}, an open-source PDF library, also on your device.",
 };

@@ -72,5 +72,5 @@ test("a level can be chosen and the PDF compressed with the keyboard only", asyn
     await page.keyboard.press("Tab");
   await expect(compress).toBeFocused();
   await page.keyboard.press("Enter");
-  await expect(page.locator(".result-heading")).toBeFocused({ timeout: 90000 });
+  await expect(page.locator(".outcome h3")).toBeFocused({ timeout: 90000 });
 });

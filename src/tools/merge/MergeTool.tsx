@@ -17,6 +17,7 @@ import { formatSize, validateFile } from "../../lib/pdf";
 import { FileDropZone } from "../../components/FileDropZone";
 import { Steps } from "../../components/Steps";
 import { ResultActions } from "../../components/ResultActions";
+import { Outcome } from "../../components/Outcome";
 import { mergeFiles, summarizeFile, type FileSummary } from "./run";
 
 type Item = {
@@ -341,19 +342,15 @@ function MergeResult({
   pages: number;
   onReset: () => void;
 }) {
-  const heading = useRef<HTMLHeadingElement>(null);
-  useEffect(() => heading.current?.focus(), []);
   return (
     <div className="result" aria-live="polite">
-      <h3 className="result-heading" ref={heading} tabIndex={-1}>
-        {t.complete}
-      </h3>
-      <p className="success">
-        {fill(t.mergeDone, { count, pages, size: formatSize(blob.size, locale) })}
-      </p>
+      <Outcome
+        title={fill(t.mergeDoneTitle, { count })}
+        detail={fill(t.mergeDoneDetail, { pages, size: formatSize(blob.size, locale) })}
+      />
       <ResultActions t={t} blob={blob} name={name} />
-      <button type="button" className="secondary" onClick={onReset}>
-        <RotateCcw size={16} aria-hidden="true" />
+      <button type="button" className="link-button" onClick={onReset}>
+        <RotateCcw size={15} aria-hidden="true" />
         {t.mergeAnother}
       </button>
     </div>

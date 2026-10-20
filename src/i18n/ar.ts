@@ -163,6 +163,9 @@ export default {
   mergeFailed: "فشل الدمج. ملفاتك بأمان.",
   mergeTooMany: "ادمج حتى {count} من ملفات PDF في المرة الواحدة.",
   mergeNote: "لا تُحفظ الإشارات المرجعية وحقول النماذج في الملف المدمج.",
-  mergeDone: "تم دمج {count} من ملفات PDF في ملف واحد: {pages} صفحة، {size}.",
+  mergeDoneTitle: "تم دمج {count} من ملفات PDF",
+  mergeDoneDetail: "الصفحات: {pages} · {size}",
   mergeAnother: "دمج ملفات PDF أخرى",
+  privacyMore: "تفاصيل الخصوصية",
+  creditsMerge: "يستخدم الدمج {pdflib}، وهي مكتبة PDF مفتوحة المصدر تعمل أيضًا على جهازك.",
 } satisfies Messages;

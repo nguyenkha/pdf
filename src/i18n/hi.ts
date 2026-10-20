@@ -165,6 +165,9 @@ export default {
   mergeFailed: "मर्ज नहीं हो सका। आपकी फ़ाइलें सुरक्षित हैं।",
   mergeTooMany: "एक बार में ज़्यादा से ज़्यादा {count} PDF मर्ज करें।",
   mergeNote: "मर्ज की गई फ़ाइल में बुकमार्क और फ़ॉर्म फ़ील्ड नहीं रखे जाते।",
-  mergeDone: "{count} PDF एक में मर्ज हुए: {pages} पृष्ठ, {size}।",
+  mergeDoneTitle: "{count} PDF मर्ज हो गए",
+  mergeDoneDetail: "पृष्ठ: {pages} · {size}",
   mergeAnother: "दूसरे PDF मर्ज करें",
+  privacyMore: "गोपनीयता का विवरण",
+  creditsMerge: "मर्ज करने के लिए {pdflib} इस्तेमाल होता है, एक ओपन-सोर्स PDF लाइब्रेरी, जो आपके डिवाइस पर ही चलती है।",
 } satisfies Messages;

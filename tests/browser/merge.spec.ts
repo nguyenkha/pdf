@@ -21,7 +21,8 @@ test("merges PDFs in the arranged order", async ({ page }) => {
   await expect(rows.locator("strong")).toHaveText(["scan.pdf", "text-vector.pdf", "multipage.pdf"]);
   await expect(page.getByText("PDFs: 3 · Pages: 5")).toBeVisible({ timeout: 30000 });
   await page.getByRole("button", { name: "Merge 3 PDFs" }).click();
-  await expect(page.getByText("3 PDFs merged into one: 5 pages")).toBeVisible({ timeout: 60000 });
+  await expect(page.getByRole("heading", { name: "Merged 3 PDFs" })).toBeVisible({ timeout: 60000 });
+  await expect(page.locator(".outcome p")).toContainText("5 pages");
   const download = page.waitForEvent("download");
   await page.getByRole("link", { name: "Download PDF" }).click();
   const saved = await download;
