@@ -213,3 +213,48 @@ describe("compression plan", () => {
     expect(suggestedLimit(0.3 * MB, 1)).toBeUndefined();
   });
 });
+
+describe("attempt ladder", () => {
+  it("smallest without a target tries lossless and the two strongest", () => {
+    const attempts = attemptsFor({ preference: "smallest", imageQuality: "auto" });
+    expect(attempts.map((profile) => profile.dpi)).toEqual([0, 150, 96]);
+  });
+  it("a target keeps the full quality-first ladder", () => {
+    expect(
+      attemptsFor({ preference: "smallest", imageQuality: "auto", target: 10 })
+        .length,
+    ).toBe(8);
+  });
+});
+
+describe("lazy preservation check", () => {
+  it("validates only the released result, once", async () => {
+    const sizes = [90, 70, 60];
+    let index = 0;
+    const checked: number[] = [];
+    const result = await compressWithGhostscript(
+      new Uint8Array(100),
+      { preference: "smallest", imageQuality: "auto" },
+      () => {},
+      async () => ({ bytes: new Uint8Array(sizes[index++] ?? 99), heapBytes: 64 }),
+      async (bytes) => {
+        checked.push(bytes.length);
+      },
+    );
+    expect(result.bytes.length).toBe(60);
+    expect(checked).toEqual([60]);
+  });
+  it("skips the check when the original is kept", async () => {
+    let checks = 0;
+    await compressWithGhostscript(
+      new Uint8Array(100),
+      { preference: "balanced", imageQuality: "auto" },
+      () => {},
+      async () => ({ bytes: new Uint8Array(120), heapBytes: 64 }),
+      async () => {
+        checks++;
+      },
+    );
+    expect(checks).toBe(0);
+  });
+});

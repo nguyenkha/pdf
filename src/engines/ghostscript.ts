@@ -51,6 +51,10 @@ export function attemptsFor(options: CompressOptions): Profile[] {
       { quality: 25, dpi: 96, qfactor: 1.4 },
     ];
   }
+  // "Smallest" keeps only the smallest output, which in practice comes from
+  // the most aggressive profiles; the middle of the ladder only costs time.
+  if (options.preference === "smallest" && !options.target)
+    rows = rows.slice(-2);
   return [{ quality: 101, dpi: 0 }, ...rows];
 }
 
@@ -116,8 +120,9 @@ export type Progress = {
   value: number;
   page?: number;
 };
-// Share of a pass spent in Ghostscript; the rest is the preservation check.
-const RENDER_SHARE = 0.7;
+// Share of the progress bar for the passes; the rest is the one
+// preservation check of the chosen result.
+const PASS_SHARE = 0.85;
 export async function compressWithGhostscript(
   input: Uint8Array,
   options: CompressOptions,
@@ -138,23 +143,15 @@ export async function compressWithGhostscript(
     onProgress({ stage, value: reported, page });
   };
   for (const [index, profile] of profiles.entries()) {
-    const span = (share: number) => (index + share) / profiles.length;
-    const stage = attempts ? "optimizing" : "loading";
-    report(stage, span(0));
+    const span = (share: number) =>
+      (PASS_SHARE * (index + share)) / profiles.length;
+    report(attempts ? "optimizing" : "loading", span(0));
     const output = await runPass(input, profile, (page) =>
-      report("optimizing", span((RENDER_SHARE * Math.min(page, total)) / total), page),
+      report("optimizing", span(Math.min(page, total) / total), page),
     );
     attempts++;
     heapBytes = Math.max(heapBytes, output.heapBytes);
     if (output.bytes.length >= input.length) continue;
-    report("finalizing", span(RENDER_SHARE));
-    await validate(output.bytes, (page) =>
-      report(
-        "finalizing",
-        span(RENDER_SHARE + ((1 - RENDER_SHARE) * Math.min(page, total)) / total),
-        page,
-      ),
-    );
     const candidate = {
       bytes: output.bytes,
       quality: profile.quality,
@@ -174,6 +171,18 @@ export async function compressWithGhostscript(
     } else if (!selected || candidate.bytes.length < selected.bytes.length) {
       selected = candidate;
     }
+  }
+  // Only the released result needs the (slow, per-page) preservation check;
+  // a failure still stops the job rather than falling back silently.
+  if (selected) {
+    report("finalizing", PASS_SHARE);
+    await validate(selected.bytes, (page) =>
+      report(
+        "finalizing",
+        PASS_SHARE + ((1 - PASS_SHARE) * Math.min(page, total)) / total,
+        page,
+      ),
+    );
   }
   report("finalizing", 1);
   const bytes = selected?.bytes ?? input;
