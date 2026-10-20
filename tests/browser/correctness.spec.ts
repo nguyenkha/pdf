@@ -11,6 +11,8 @@ async function process(page: Page, fixture: string) {
 }
 for (const [fixture, pages, selectable] of [['mixed', 1, true], ['multipage', 3, true], ['long', 15, true], ['scan', 1, false]] as const) {
   test(`${fixture}: output opens with all pages and selectable text/links preserved`, async ({ page }) => {
+    // CI's WebKit runner can take far longer than a laptop on 15 pages.
+    test.setTimeout(180000);
     await process(page, fixture);
     const downloadEvent = page.waitForEvent('download');
     await page.getByRole('link', { name: 'Download PDF' }).click();
