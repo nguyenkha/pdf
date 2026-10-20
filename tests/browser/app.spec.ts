@@ -136,6 +136,9 @@ test("size landing page preselects its limit and keeps its URL", async ({ page }
 });
 test("explains a reload caused by running out of memory mid-job", async ({ page }) => {
   await page.goto("/en/");
+  // The app may mount after "load"; set the marker only once it has, or the
+  // first page would consume it before the reload.
+  await expect(page.locator(".drop")).toBeVisible();
   await page.evaluate(() => sessionStorage.setItem("compress-running", "1"));
   await page.reload();
   await expect(page.getByRole("alert")).toContainText("ran out of memory");
