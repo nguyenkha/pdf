@@ -126,14 +126,16 @@ function socialTags(locale, t, title, description, url, tool, alt) {
     .map(([kind, key, value]) => `<meta ${kind}="${key}" content="${escape(value)}">`)
     .join("");
 }
-// Matches ToolSwitcher: built tools plus the unnamed placeholder.
-const switcher = (t, locale) =>
-  TOOLS.length < 2 && !MORE_PLANNED
+// Matches ToolSwitcher: the tool in use, the others behind "+".
+const switcher = (t, locale, tool = TOOLS[0]) => {
+  const href = (item) => `/${locale}/${item.slug ? item.slug + "/" : ""}`;
+  const others = TOOLS.filter((item) => item.id !== tool.id);
+  return !others.length && !MORE_PLANNED
     ? ""
-    : `<nav class="tool-switcher"><ul>${TOOLS.map(
-        (tool) =>
-          `<li><a href="/${locale}/${tool.slug ? tool.slug + "/" : ""}">${escape(t[tool.nameKey])}</a></li>`,
-      ).join("")}${MORE_PLANNED ? `<li><span class="soon">${escape(t.coming)}</span></li>` : ""}</ul></nav>`;
+    : `<nav class="tool-switcher"><a href="${href(tool)}" aria-current="page">${escape(t[tool.nameKey])}</a><details class="tool-more"><summary aria-label="${escape(t.tools)}" title="${escape(t.tools)}">+</summary><ul>${others
+        .map((item) => `<li><a href="${href(item)}">${escape(t[item.nameKey])}</a></li>`)
+        .join("")}${MORE_PLANNED ? `<li class="soon">${escape(t.coming)}</li>` : ""}</ul></details></nav>`;
+};
 // Same boxes as the app's first render, so swapping in the app moves nothing.
 const header = '<header class="site-header"></header>';
 const credits = (t) =>
@@ -186,7 +188,7 @@ for (const locale of locales) {
         })),
       },
     ];
-    const content = `${header}<main><div class="hero"><div class="eyebrow">${escape(t.privacy)}</div><h1>${escape(h1)}</h1><p>${escape(intro)}</p></div><div id="tool">${switcher(t, locale)}<section class="tool-card placeholder" aria-label="${escape(tool ? t[tool.nameKey] : t.compress)}"></section></div><section class="content"><h2>${escape(t.how)}</h2><p>${escape(tool ? text(`${tool.nameKey}HowText`) : t.howText)}</p><h2>${escape(t.why)}</h2><p>${escape(t.whyText)}</p></section><section class="faq"><h2>${escape(t.faq)}</h2>${faq.map(([q, a]) => `<h3>${escape(text(q))}</h3><p>${escape(text(a))}</p>`).join("")}</section><section class="privacy-section"><h2>${escape(t.privacyTitle)}</h2><p class="philosophy">${escape(t.philosophy)}</p><p>${escape(t.privacyBody)}</p><a class="more-link" href="/${locale}/privacy/">${escape(t.privacyMore)} →</a></section>${tool ? "" : sizeLinks}</main>`;
+    const content = `${header}<main><div class="hero"><div class="eyebrow">${escape(t.privacy)}</div><h1>${escape(h1)}</h1><p>${escape(intro)}</p></div><div id="tool">${switcher(t, locale, tool)}<section class="tool-card placeholder" aria-label="${escape(tool ? t[tool.nameKey] : t.compress)}"></section></div><section class="content"><h2>${escape(t.how)}</h2><p>${escape(tool ? text(`${tool.nameKey}HowText`) : t.howText)}</p><h2>${escape(t.why)}</h2><p>${escape(t.whyText)}</p></section><section class="faq"><h2>${escape(t.faq)}</h2>${faq.map(([q, a]) => `<h3>${escape(text(q))}</h3><p>${escape(text(a))}</p>`).join("")}</section><section class="privacy-section"><h2>${escape(t.privacyTitle)}</h2><p class="philosophy">${escape(t.philosophy)}</p><p>${escape(t.privacyBody)}</p><a class="more-link" href="/${locale}/privacy/">${escape(t.privacyMore)} →</a></section>${tool ? "" : sizeLinks}</main>`;
     const html = base(
       locale,
       title,

@@ -203,12 +203,35 @@ test("closing the comparison early leaves no pdf.js worker behind", async ({ pag
   await compare.click();
   await expect.poll(() => page.workers().length, { timeout: 15000 }).toBe(0);
 });
-test("tool switcher shows built tools and one unnamed placeholder", async ({ page }) => {
+test("tool switcher shows the tool in use and the rest behind +", async ({ page }) => {
   await page.goto("/en/compress/");
   const switcher = page.locator(".tool-switcher");
-  await expect(switcher.getByRole("link", { name: "Compress PDF" })).toHaveAttribute("aria-current", "page");
+  await expect(switcher.locator("> a")).toHaveText("Compress PDF");
+  await expect(switcher.locator("> a")).toHaveAttribute("aria-current", "page");
+  await expect(switcher.getByRole("link", { name: "Merge PDF" })).toBeHidden();
+  const more = switcher.getByRole("button", { name: "Tools" });
+  // Tap or click unfolds the rest in the same row; Escape folds it again.
+  await more.click();
+  await expect(more).toHaveAttribute("aria-expanded", "true");
+  await expect(switcher.getByRole("link", { name: "Merge PDF" })).toBeVisible();
   await expect(switcher.locator(".soon")).toHaveText("More tools coming later");
-  await expect(switcher.getByRole("link")).toHaveText(["Compress PDF", "Merge PDF"]);
+  await page.keyboard.press("Escape");
+  await expect(switcher.getByRole("link", { name: "Merge PDF" })).toBeHidden();
+  await expect(more).toBeFocused();
+  // With a mouse, hovering is enough.
+  if (await page.evaluate(() => matchMedia("(hover: hover)").matches)) {
+    await page.mouse.move(5, 5);
+    await more.hover();
+    await expect(switcher.getByRole("link", { name: "Merge PDF" })).toBeVisible();
+    await page.mouse.move(5, 5);
+    await expect(switcher.getByRole("link", { name: "Merge PDF" })).toBeHidden();
+  }
+  await page.goto("/en/merge/");
+  await expect(switcher.locator("> a")).toHaveText("Merge PDF");
+  // The prerendered page carries the same links for crawlers and no-JS readers.
+  const html = await (await page.request.get("/en/merge/")).text();
+  expect(html).toContain('<details class="tool-more">');
+  expect(html).toContain('href="/en/compress/"');
 });
 test("the site and locale homes go straight to compress", async ({ page }) => {
   await page.goto("/");
