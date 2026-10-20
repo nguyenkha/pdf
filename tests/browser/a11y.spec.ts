@@ -18,7 +18,7 @@ for (const scheme of ["light", "dark"] as const)
   test.describe(`accessibility, ${scheme} theme`, () => {
     test.use({ colorScheme: scheme });
     test("landing, level choice, result and comparison", async ({ page }) => {
-      test.setTimeout(180000);
+      test.setTimeout(300000);
       await page.goto("/en/");
       await audit(page, "landing");
       await page.locator("input[type=file]").setInputFiles("tests/fixtures/gray-scan.pdf");
@@ -28,7 +28,8 @@ for (const scheme of ["light", "dark"] as const)
       await audit(page, "level choice");
       await page.getByRole("radio", { name: /Recommended/ }).check();
       await page.getByRole("button", { name: "Compress PDF", exact: true }).click();
-      await expect(page.locator(".result, .error")).toBeVisible({ timeout: 90000 });
+      // CI's WebKit runner can be several times slower than a laptop.
+      await expect(page.locator(".result, .error")).toBeVisible({ timeout: 180000 });
       await page.getByRole("button", { name: "Compare before/after" }).click();
       await expect(page.locator(".compare canvas")).toHaveCount(2);
       await audit(page, "result");
