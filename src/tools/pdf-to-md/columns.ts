@@ -1,3 +1,4 @@
+import type { Ruling } from "./rulings";
 import type { TextPart } from "./text";
 import { detectTables } from "./tables";
 const size = (p: TextPart) =>
@@ -6,6 +7,7 @@ export function restoreReadingOrder(
   parts: TextPart[],
   width: number,
   height: number,
+  rulings: Ruling[] = [],
 ): { parts: TextPart[]; reordered: boolean } {
   if (parts.some((p) => p.dir === "rtl" || p.dir === "ttb"))
     return { parts, reordered: false };
@@ -14,7 +16,9 @@ export function restoreReadingOrder(
     .map(size)
     .sort((a, b) => a - b);
   const body = sizes[Math.floor(sizes.length / 2)] ?? 12;
-  const tableParts = new Set(detectTables(parts).flatMap((t) => [...t.parts]));
+  const tableParts = new Set(
+    detectTables(parts, rulings).flatMap((t) => [...t.parts]),
+  );
   const content = parts.filter(
     (p) =>
       p.str.trim() &&

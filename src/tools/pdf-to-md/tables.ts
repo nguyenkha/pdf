@@ -1,8 +1,20 @@
+import { detectGridTables, type SpannedCell } from "./grid";
+import type { Ruling } from "./rulings";
+import { tableHtml } from "./table-html";
 import { escapeMarkdown, pageText, type TextPart } from "./text";
-export type ConvertedTable = { page: number; cells: string[][]; csv: string };
+export type ConvertedTable = {
+  page: number;
+  cells: string[][];
+  csv: string;
+  merged?: boolean;
+};
 type Cell = { text: string; left: number; right: number; parts: TextPart[] };
 type Row = { y: number; size: number; cells: Cell[]; parts: TextPart[] };
-export type TableRegion = { rows: string[][]; parts: Set<TextPart> };
+export type TableRegion = {
+  rows: string[][];
+  parts: Set<TextPart>;
+  spans?: SpannedCell[];
+};
 const sizeOf = (part: TextPart) =>
   Math.hypot(part.transform[2], part.transform[3]) || part.height || 12;
 const numberLike = (text: string) =>
@@ -109,9 +121,13 @@ function confident(rows: Row[]): boolean {
   return true;
 }
 
-export function detectTables(parts: TextPart[]): TableRegion[] {
-  const rows = visualRows(parts);
-  const tables: TableRegion[] = [];
+export function detectTables(
+  parts: TextPart[],
+  rulings: Ruling[] = [],
+): TableRegion[] {
+  const tables: TableRegion[] = detectGridTables(parts, rulings);
+  const claimed = new Set(tables.flatMap((table) => [...table.parts]));
+  const rows = visualRows(parts.filter((part) => !claimed.has(part)));
   for (let i = 0; i < rows.length; ) {
     const first = rows[i];
     if (first.cells.length < 2) {
@@ -145,7 +161,11 @@ export function detectTables(parts: TextPart[]): TableRegion[] {
       });
     i = end;
   }
-  return tables;
+  return tables.sort(
+    (a, b) =>
+      Math.min(...[...a.parts].map((p) => p.transform[5])) -
+      Math.min(...[...b.parts].map((p) => p.transform[5])),
+  );
 }
 
 export function tableMarkdown(rows: string[][]): string {
@@ -189,4 +209,11 @@ export function splitTableRow(row: string): string[] {
   }
   cells.push(cell.trim());
   return cells;
+}
+
+export function tableMarkup(table: TableRegion): string {
+  return table.spans?.some((c) => c.rowSpan > 1 || c.colSpan > 1) ||
+    table.rows.some((row) => row.some((cell) => cell.includes("\n")))
+    ? tableHtml(table.rows, table.spans)
+    : tableMarkdown(table.rows);
 }

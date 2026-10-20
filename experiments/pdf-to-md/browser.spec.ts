@@ -382,3 +382,52 @@ test("preserves links, ordered/bullet lists and clearly matched footnotes withou
     /1\\\. First ordered item/,
   );
 });
+
+test("recovers ruled grids with multiline and empty cells, merged headers and separate CSVs", async ({
+  page,
+}) => {
+  const requests: string[] = [];
+  page.context().on("request", (request) => requests.push(request.url()));
+  await page.goto(path);
+  await page
+    .locator("input[type=file]")
+    .setInputFiles("experiments/pdf-to-md/fixtures/ruled-tables.pdf");
+  await page.getByRole("button", { name: "Chuyển sang Markdown" }).click();
+  const tables = page.getByRole("table", { name: "Bảng dữ liệu nhận diện" });
+  await expect(tables).toHaveCount(2);
+  await expect(tables.nth(0).locator('td[colspan="2"]')).toHaveText(
+    "Merged heading",
+  );
+  await expect(
+    tables
+      .nth(0)
+      .getByRole("cell", { name: "First line Second line", exact: true }),
+  ).toBeVisible();
+  await expect(
+    tables.nth(0).locator("tr").nth(1).locator("td").nth(1),
+  ).toBeEmpty();
+  await expect(
+    tables.nth(1).getByRole("cell", { name: "Pear", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("CSV đặt nội dung", { exact: false }),
+  ).toBeVisible();
+  const download = page.waitForEvent("download");
+  await page.getByRole("link", { name: "CSV · Bảng 1 · Trang 1" }).click();
+  const result = await download;
+  const csv = await readFile((await result.path())!, "utf8");
+  expect(csv).toContain('"Merged heading","","Value"');
+  expect(csv).toContain('"First line\nSecond line","","42"');
+  await page.getByRole("button", { name: "Markdown", exact: true }).click();
+  await expect(page.getByLabel("Nội dung Markdown")).toHaveValue(
+    /<td rowspan="1" colspan="2">Merged heading<\/td>/,
+  );
+  expect(
+    requests.filter(
+      (url) =>
+        !url.startsWith("http://127.0.0.1:4182/") &&
+        !url.startsWith("blob:") &&
+        !url.startsWith("data:"),
+    ),
+  ).toEqual([]);
+});

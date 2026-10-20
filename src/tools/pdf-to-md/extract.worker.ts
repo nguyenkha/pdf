@@ -1,3 +1,4 @@
+import { extractRulings } from "./rulings";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import { safeUrl } from "./structure";
 import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
@@ -46,6 +47,11 @@ self.onmessage = async (event: MessageEvent<Request>) => {
         const page = await doc.getPage(number);
         const viewport = page.getViewport({ scale: 1 });
         const text = await page.getTextContent();
+        const rulings = extractRulings(
+          await page.getOperatorList(),
+          viewport.transform,
+          pdfjs.OPS,
+        );
         const links = (await page.getAnnotations()).flatMap((annotation) => {
           const url = annotation.url && safeUrl(annotation.url);
           if (!url || annotation.subtype !== "Link" || !annotation.rect)
@@ -66,6 +72,7 @@ self.onmessage = async (event: MessageEvent<Request>) => {
         extracted.push({
           width: viewport.width,
           links,
+          rulings,
           height: viewport.height,
           parts: text.items
             .filter((item) => "str" in item)

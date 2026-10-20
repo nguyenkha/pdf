@@ -1,3 +1,4 @@
+import type { Ruling } from "./rulings";
 import {
   safeUrl,
   linkForLine,
@@ -10,7 +11,7 @@ export { escapeMarkdown, pageText, type TextPart } from "./text";
 import { restoreReadingOrder } from "./columns";
 import {
   detectTables,
-  tableMarkdown,
+  tableMarkup,
   tableCsv,
   type ConvertedTable,
 } from "./tables";
@@ -34,6 +35,7 @@ export type TextPage = {
   width: number;
   height: number;
   links?: PdfLink[];
+  rulings?: Ruling[];
 };
 export type ConversionOptions = {
   keepLineBreaks: boolean;
@@ -178,7 +180,7 @@ export function convertDocument(
   let columnPages = 0;
   const lines = pages.map((page) => {
     const ordered = options.restoreColumns
-      ? restoreReadingOrder(page.parts, page.width, page.height)
+      ? restoreReadingOrder(page.parts, page.width, page.height, page.rulings)
       : { parts: page.parts, reordered: false };
     if (ordered.reordered) columnPages++;
     return linesFromParts(ordered.parts);
@@ -252,7 +254,10 @@ export function convertDocument(
     const usedLinks = new Set<PdfLink>();
     noteCount += notes.definitions.length;
     const regions = options.detectTables
-      ? detectTables(kept.flatMap((line) => line.parts))
+      ? detectTables(
+          kept.flatMap((line) => line.parts),
+          pages[index].rulings,
+        )
       : [];
     const emitted = new Set<(typeof regions)[number]>();
     const blocks: string[] = [];
@@ -265,7 +270,33 @@ export function convertDocument(
       paragraph = "";
       paragraphRefs = [];
     };
-    for (const originalLine of kept) {
+    const tableOwner = new Map(
+      regions.flatMap((region) =>
+        [...region.parts].map((part) => [part, region] as const),
+      ),
+    );
+    // A PDF text line can cross adjacent tables; split ownership without dropping prose.
+    const segmented = kept.flatMap((line) => {
+      const groups = new Map<
+        (typeof regions)[number] | undefined,
+        TextPart[]
+      >();
+      for (const part of line.parts) {
+        const key = tableOwner.get(part);
+        groups.set(key, [...(groups.get(key) ?? []), part]);
+      }
+      if (!line.parts.some((part) => tableOwner.has(part)) || groups.size === 1)
+        return [line];
+      return [...groups.values()]
+        .filter((parts) => parts.some((p) => p.str.trim()))
+        .map((parts) => ({
+          ...line,
+          parts,
+          text: pageText(parts),
+          x: parts[0].transform[4],
+        }));
+    });
+    for (const originalLine of segmented) {
       if (notes.skip.has(originalLine)) continue;
       const refs = notes.references.get(originalLine) ?? [];
       const line = {
@@ -281,11 +312,12 @@ export function convertDocument(
         flush();
         previous = undefined;
         if (!emitted.has(region)) {
-          blocks.push(tableMarkdown(region.rows));
+          blocks.push(tableMarkup(region));
           tables.push({
             page: index + 1,
             cells: region.rows,
             csv: tableCsv(region.rows),
+            merged: region.spans?.some((c) => c.rowSpan > 1 || c.colSpan > 1),
           });
           emitted.add(region);
         }

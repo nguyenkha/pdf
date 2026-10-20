@@ -103,3 +103,27 @@ writePdf(
   ],
   { 0: [{ rect: [50, 677, 200, 695], url: "https://example.com/reference" }] },
 );
+// Closed ruled grids: merged cells, multiline text, blanks and a second table.
+const rule = (x1, y1, x2, y2) => `${x1} ${y1} m ${x2} ${y2} l S\n`;
+writePdf("ruled-tables.pdf", [
+  line("Ruled tables", 50, 750, 24, "F2") +
+    "0.5 w\n" +
+    [700, 660, 610, 570].map((y) => rule(50, y, 500, y)).join("") +
+    [50, 500].map((x) => rule(x, 570, x, 700)).join("") +
+    rule(200, 570, 200, 660) +
+    rule(350, 570, 350, 700) +
+    line("Merged heading", 60, 678) +
+    line("Value", 360, 678) +
+    line("First line", 60, 640) +
+    line("Second line", 60, 624) +
+    line("42", 360, 638) +
+    line("Last row", 60, 584) +
+    line("8", 210, 584) +
+    line("16", 360, 584) +
+    [480, 440, 400].map((y) => rule(50, y, 350, y)).join("") +
+    [50, 200, 350].map((x) => rule(x, 400, x, 480)).join("") +
+    line("Name", 60, 455) +
+    line("Count", 210, 455) +
+    line("Pear", 60, 415) +
+    line("2", 210, 415),
+]);

@@ -224,8 +224,9 @@ function App() {
         <section className="tool-card" aria-label="Chuyển PDF sang Markdown">
           <p className="hint">
             Trích chữ, ghép đoạn và nhận diện tiêu đề theo cỡ chữ. Chưa có OCR,
-            ô gộp hay hình ảnh; thứ tự đọc có thể sai với tài liệu nhiều cột.
-            Các quy tắc định dạng là ước lượng, hãy đối chiếu với PDF gốc.
+            mọi bố cục bảng hay hình ảnh; thứ tự đọc có thể sai với tài liệu
+            nhiều cột. Các quy tắc định dạng là ước lượng, hãy đối chiếu với PDF
+            gốc.
           </p>
           <FileDropZone
             t={{
@@ -365,7 +366,8 @@ function App() {
                 nhấn, preview không tải ảnh ngoài. Chế độ 2 cột chỉ đổi thứ tự
                 khi có khoảng trống chia cột rõ, đọc cột trái trước cột phải.
                 Gộp trang bỏ tiêu đề trang, không tự nối câu qua ranh giới
-                trang. Bảng cần hàng/cột thẳng, không ô gộp. Bảng 2 cột cần dữ
+                trang. Bảng có lưới kẻ rõ hỗ trợ ô trống, chữ nhiều dòng và ô
+                gộp. Bảng không đường kẻ cần hàng/cột thẳng. Bảng 2 cột cần dữ
                 liệu số để giảm nhầm với bố cục nhiều cột. Dòng đầu dạng chữ
                 được dùng làm tiêu đề; hãy kiểm tra lại. Chỉ bỏ dòng nhỏ lặp ở
                 mép ít nhất 3 trang. Bạn có thể tắt từng tùy chọn và xem kết quả
@@ -428,6 +430,12 @@ function App() {
                     <CsvDownload key={i} table={table} index={i + 1} />
                   ))}
                 </div>
+              )}
+              {tables.some((table) => table.merged) && (
+                <p className="md-csv-note">
+                  Ô gộp được giữ trong bảng HTML của Markdown. CSV đặt nội dung
+                  ở ô trên cùng bên trái, các ô được gộp còn lại để trống.
+                </p>
               )}
               <div className="md-actions">
                 <a

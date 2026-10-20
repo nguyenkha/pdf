@@ -1,3 +1,4 @@
+import { parseTableHtml } from "./table-html";
 import { createElement } from "react";
 import { splitTableRow } from "./tables";
 
@@ -13,6 +14,30 @@ export function MarkdownPreview({ markdown }: { markdown: string }) {
         .split(/\n\s*\n/)
         .map((block, index) => {
           if (block === "---") return <hr key={index} />;
+          const grid = parseTableHtml(block);
+          if (grid)
+            return (
+              <div className="md-table-scroll" key={index}>
+                <table aria-label="Bảng dữ liệu nhận diện">
+                  <tbody>
+                    {grid.map((row, r) => (
+                      <tr key={r}>
+                        {row.map((cell, c) => (
+                          <td
+                            key={c}
+                            rowSpan={cell.rowSpan}
+                            colSpan={cell.colSpan}
+                            style={{ whiteSpace: "pre-wrap" }}
+                          >
+                            {cell.text}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
           const rows = block.split("\n");
           if (
             rows.length >= 3 &&

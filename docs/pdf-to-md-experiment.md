@@ -19,7 +19,16 @@ These are geometry heuristics, not semantic understanding. Review complex layout
 
 Simple tables become Markdown tables and HTML tables in the preview. Each detected table has a separate CSV download, with its source page shown. CSV uses UTF-8 BOM, quoted values and CRLF; spreadsheet formula-like cells are prefixed with an apostrophe to reduce formula injection risk. This protection may change such a cell's literal CSV value.
 
-Detection requires at least three consistently aligned rows and two to twelve columns. Two-column tables need numeric data evidence so ordinary prose columns are less likely to be mistaken for tables. Numeric-first tables receive generated column names without losing the first data row. Merged cells, multiline cells, missing cells, irregular alignment and tables spanning pages are not reliably supported. Uncertain regions remain text rather than being forced into a table. The first nonnumeric row is treated as a header; verify this interpretation against the PDF.
+Two complementary detectors run in the existing worker:
+
+- **Ruled tables:** PDF.js operator lists provide visible, thin horizontal/vertical strokes and filled rectangle borders. Graphics transforms, rectangular clipping, line width, opacity and dashed lines are considered. Connected paths must define a closed grid with at least two rows and two columns. Text is assigned only when it fits inside a cell. Wrapped lines stay in that cell, and empty cells remain empty. Missing internal borders can produce rectangular row/column spans. Partial borders, nonrectangular merges, crossing text, tall unruled regions, complex clipping and overly complex grids are declined. The detector is bounded to avoid unbounded layout searches. No image decoding for OCR or new WASM dependency is introduced; PDF.js may decode image resources while building its operator list.
+- **Unruled tables:** the previous conservative alignment detector requires at least three consistently aligned rows and two to twelve columns. Two-column tables need numeric evidence to reduce confusion with prose columns. It does not reconstruct merged cells, missing cells or wrapped cells.
+
+Multiple independent tables on the same page get separate exports. Merged cells and multiline cells are exported as a generated HTML table embedded in Markdown, because pipe-table Markdown cannot represent them reliably. The preview parses only this narrow generated grammar and builds React elements; it never inserts raw HTML. Other Markdown viewers may disable HTML tables.
+
+CSV cannot encode row/column spans: a merged cell's text is placed at its top-left coordinate, with covered positions left empty. Multiline values remain quoted fields containing newlines. The interface explains the merged-cell rule. Ordinary empty cells and covered cells are both empty in CSV, so CSV does not preserve merge metadata. Simple unmerged tables retain pipe-table Markdown. For those, the first nonnumeric row is treated as a header; numeric-first tables receive generated column names without dropping the first data row. Generated HTML uses neutral data cells rather than guessing complex header semantics.
+
+Tables spanning pages, borderless complex tables, nested tables, charts and arbitrary layout recovery remain unsupported. Uncertain regions retain text. Review exports against the PDF: these are geometric heuristics, not a general table-understanding model.
 
 ## Links, lists and footnotes
 
@@ -43,9 +52,9 @@ No document content is uploaded, logged or stored persistently. This entry does 
 
 ## Verification
 
-`pnpm test:pdf-to-md`: **38 unit cases and 26 Chromium/WebKit browser cases** covering structure, margins, tables/CSV, conservative column recovery, page joining, links/lists/footnotes, safe rendering, clipboard fallback, parser cleanup, downloads, unsupported inputs and network privacy. The links fixture verifies that conversion/preview makes no external request. `pnpm lint` and `pnpm build` also pass; the build includes TypeScript checking.
+`pnpm test:pdf-to-md`: **49 unit cases and 28 Chromium/WebKit browser cases** covering structure, margins, tables/CSV, conservative column recovery, page joining, links/lists/footnotes, safe rendering, clipboard fallback, parser cleanup, downloads, unsupported inputs and network privacy. The links fixture verifies that conversion/preview makes no external request. `pnpm lint` and `pnpm build` also pass; the build includes TypeScript checking.
 
-`node scripts/make-md-fixture.mjs` regenerates synthetic structured, table, two-column and links/lists/footnotes PDFs. They contain no personal data.
+`node scripts/make-md-fixture.mjs` regenerates synthetic structured, simple and ruled tables, two-column and links/lists/footnotes PDFs. They contain no personal data.
 
 ### Public PDF corpus
 
@@ -53,4 +62,4 @@ Run `node scripts/download-pdf-samples.mjs`, then `pnpm test:pdf-to-md:corpus`. 
 
 Sources: [Tabula-java fixtures](https://github.com/tabulapdf/tabula-java) at pinned revision `2cdf3b4fd3f7e921dca8cc6814cdd9316be40f0f`, and the [W3C PDF table example](https://w3c.github.io/wcag/techniques/pdf/PDF6).
 
-All **7 corpus cases passed**. The W3C example produced one correct table, including the expected Elm Street CSV row. AnimalSounds, twotables, spreadsheet_no_bounding_frame, spanning_cells, MultiColumn and 12s0324 produced no tables and retained text. These six are conservative fallback checks, not evidence of successful table extraction or complete reading-order accuracy. Improving recall requires further layout work; OCR is a separate future step.
+All **7 corpus cases passed**. W3C produces one table with the expected Elm Street CSV row. **twotables** produces two Japanese financial tables: merged headers, multiline labels, empty cells and final balance rows are checked. **spanning_cells** produces two tables with merged scenario headers and checked CSV values. That is five recovered tables in three sample files, rather than the previous one file. Representative rows and spans are verified; this is not exhaustive cell-by-cell verification of every public table. AnimalSounds, spreadsheet_no_bounding_frame, MultiColumn and 12s0324 still retain text without detected tables. These four are conservative fallback checks, not successful table extraction. In particular, 12s0324 has a large sparsely ruled body that must not be collapsed into one multiline cell. OCR remains deferred.
