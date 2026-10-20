@@ -98,8 +98,11 @@ function writePage(locale, suffix, html) {
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, "index.html"), html);
 }
-function socialTags(locale, t, title, description, url) {
-  const image = `https://pdf.kha.do/og/${locale}.png`;
+// Each tool has its own share image; compress keeps the original address.
+const ogImage = (locale, tool) =>
+  `https://pdf.kha.do/og/${tool ? `${tool.id}-` : ""}${locale}.png`;
+function socialTags(locale, t, title, description, url, tool, alt) {
+  const image = ogImage(locale, tool);
   return [
     ["property", "og:type", "website"],
     ["property", "og:site_name", "pdf.kha.do"],
@@ -114,7 +117,7 @@ function socialTags(locale, t, title, description, url) {
     ["property", "og:image:type", "image/png"],
     ["property", "og:image:width", "1200"],
     ["property", "og:image:height", "630"],
-    ["property", "og:image:alt", t.hero],
+    ["property", "og:image:alt", alt],
     ["name", "twitter:card", "summary_large_image"],
     ["name", "twitter:title", title],
     ["name", "twitter:description", description],
@@ -170,7 +173,7 @@ for (const locale of locales) {
         inLanguage: locale,
         url,
         description,
-        image: `https://pdf.kha.do/og/${locale}.png`,
+        image: ogImage(locale, tool),
         offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
       },
       {
@@ -190,7 +193,7 @@ for (const locale of locales) {
       description,
       url,
       alternates(suffix) +
-        socialTags(locale, t, title, description, url) +
+        socialTags(locale, t, title, description, url, tool, h1) +
         `<script type="application/ld+json">${JSON.stringify(structured)}</script>`,
     ).replace('<div id="root"></div>', `<div id="root">${content}</div>`);
     writePage(locale, suffix, html);

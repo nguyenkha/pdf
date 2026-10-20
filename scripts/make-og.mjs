@@ -1,5 +1,7 @@
-// Renders the 1200x630 share images in public/og/. Run after changing the
-// hero copy: node scripts/make-og.mjs (needs Playwright's Chromium locally).
+// Renders the 1200x630 share images in public/og/, one per tool and locale:
+// og/<locale>.png for compress (its address is already cached by social
+// sites) and og/<tool>-<locale>.png for the others. Run after changing a
+// hero: node scripts/make-og.mjs (needs Playwright's Chromium locally).
 import fs from "node:fs";
 import { chromium } from "@playwright/test";
 
@@ -10,7 +12,11 @@ const escape = (value) =>
 fs.mkdirSync("public/og", { recursive: true });
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1200, height: 630 } });
-for (const locale of locales) {
+const tools = [
+  { file: "", hero: "hero", name: "compress" },
+  { file: "merge-", hero: "toolMergeHero", name: "toolMerge" },
+];
+for (const locale of locales) for (const tool of tools) {
   const t = (await import(`../src/i18n/${locale}.ts`)).default;
   await page.setContent(`<!doctype html><html lang="${locale}" dir="${locale === "ar" ? "rtl" : "ltr"}"><style>
     body{margin:0;width:1200px;height:630px;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI","Noto Sans","Hiragino Sans","PingFang SC",sans-serif;background:radial-gradient(circle at 1130px 640px,#ffead8 0 300px,transparent 301px),#fcfaf7;color:#14201a;display:flex;flex-direction:column;justify-content:space-between;padding:72px 80px;box-sizing:border-box;position:relative;overflow:hidden}
@@ -21,9 +27,9 @@ for (const locale of locales) {
     .chips span{background:#fff;border:2px solid #efd8c8;color:#a33c15;border-radius:100px;padding:12px 24px;font-size:26px;font-weight:650}
   </style><body>
     <div class="brand">${icon}pdf.kha.do</div>
-    <h1>${escape(t.hero)}</h1>
-    <div class="chips"><span>${escape(t.compress)}</span><span>${escape(t.privacy)}</span></div>
+    <h1>${escape(t[tool.hero])}</h1>
+    <div class="chips"><span>${escape(t[tool.name])}</span><span>${escape(t.privacy)}</span></div>
   </body></html>`);
-  await page.screenshot({ path: `public/og/${locale}.png` });
+  await page.screenshot({ path: `public/og/${tool.file}${locale}.png` });
 }
 await browser.close();
