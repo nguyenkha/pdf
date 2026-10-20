@@ -404,7 +404,10 @@ function MergeResult({
         t={t}
         locale={locale}
         file={new File([blob], name, { type: "application/pdf" })}
-        steps={[{ tool: "compress", label: t.compressThis }]}
+        steps={[
+          { tool: "compress", label: t.compressThis },
+          { tool: "organize", label: t.organizeThis },
+        ]}
       />
       <button type="button" className="link-button" onClick={onReset}>
         <RotateCcw size={15} aria-hidden="true" />

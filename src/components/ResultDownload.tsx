@@ -95,7 +95,10 @@ export function ResultDownload({
           t={t}
           locale={locale}
           file={new File([result.blob], outputName(file.name), { type: "application/pdf" })}
-          steps={[{ tool: "merge", label: t.mergeWithOthers }]}
+          steps={[
+            { tool: "merge", label: t.mergeWithOthers },
+            { tool: "organize", label: t.organizeThis },
+          ]}
         />
       )}
       <button type="button" className="link-button" onClick={onReset}>

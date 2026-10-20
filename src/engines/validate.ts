@@ -251,3 +251,41 @@ export async function firstPage(
     await task.destroy();
   }
 }
+/**
+ * Small previews of every page, one at a time, for arranging pages. Each is
+ * a PNG about 160 px wide (sharp at the grid's size on phones), drawn with
+ * the page's own rotation; pages past `limit` get no preview.
+ */
+export async function pageThumbnails(
+  data: Uint8Array,
+  onPages: (count: number) => void,
+  onThumbnail: (index: number, thumbnail: Blob) => void,
+  limit: number,
+): Promise<void> {
+  const task = open(data, undefined, true);
+  try {
+    const doc = await load(task);
+    if (!doc.numPages) throw new Error("corrupt");
+    onPages(doc.numPages);
+    if (typeof OffscreenCanvas === "undefined") return;
+    for (let number = 1; number <= Math.min(doc.numPages, limit); number++) {
+      const page = await doc.getPage(number);
+      const base = page.getViewport({ scale: 1 });
+      const viewport = page.getViewport({ scale: 160 / Math.max(base.width, base.height) });
+      const canvas = new OffscreenCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
+      const context = canvas.getContext("2d");
+      if (context) {
+        await page.render({
+          canvasContext: context as unknown as CanvasRenderingContext2D,
+          viewport,
+          background: "white",
+        }).promise;
+        onThumbnail(number - 1, await canvas.convertToBlob({ type: "image/png" }));
+      }
+      canvas.width = canvas.height = 0;
+      page.cleanup();
+    }
+  } finally {
+    await task.destroy();
+  }
+}

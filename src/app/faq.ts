@@ -25,6 +25,23 @@ export const FAQ_BY_TOOL: Record<string, readonly (readonly [string, string])[]>
     ["mdTablesQ", "mdTablesA"],
     ["mdLayoutQ", "mdLayoutA"],
   ],
+  organize: [
+    ["organizeRotateQ", "organizeRotateA"],
+    ["organizeDeleteQ", "organizeDeleteA"],
+    ["organizeKeptQ", "organizeKeptA"],
+    ["organizeLockedQ", "organizeLockedA"],
+  ],
+  // Landing pages lead with the question their search asks.
+  "rotate-pdf": [
+    ["organizeRotateQ", "organizeRotateA"],
+    ["organizeKeptQ", "organizeKeptA"],
+    ["organizeLockedQ", "organizeLockedA"],
+  ],
+  "delete-pdf-pages": [
+    ["organizeDeleteQ", "organizeDeleteA"],
+    ["organizeKeptQ", "organizeKeptA"],
+    ["organizeLockedQ", "organizeLockedA"],
+  ],
 };
 export function faqFor(toolId: string) {
   return [...(FAQ_BY_TOOL[toolId] ?? []), ...FAQ_GENERAL];

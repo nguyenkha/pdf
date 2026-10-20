@@ -1,11 +1,21 @@
-import { mergePdfs } from "../engines/merge";
+import { mergePdfs, organizePdf, type PagePlan } from "../engines/merge";
 import { withoutSignatures } from "../engines/signatures";
 
-// pdf-lib lives only in this worker, which starts when the user merges (or
-// asks to compress a signed PDF without its signatures).
-self.onmessage = async (event: MessageEvent<{ files: File[]; type?: "signatures" }>) => {
+// pdf-lib lives only in this worker, which starts when the user merges,
+// saves arranged pages, or asks to compress a signed PDF without signatures.
+self.onmessage = async (
+  event: MessageEvent<{ files: File[]; type?: "signatures" | "organize"; plan?: PagePlan[] }>,
+) => {
   const { files } = event.data;
   try {
+    if (event.data.type === "organize") {
+      const { bytes, pages, signed } = await organizePdf(new Uint8Array(await files[0].arrayBuffer()), event.data.plan ?? []);
+      self.postMessage({
+        type: "result",
+        result: { blob: new Blob([bytes as BlobPart], { type: "application/pdf" }), pages, signed },
+      });
+      return;
+    }
     if (event.data.type === "signatures") {
       const bytes = await withoutSignatures(new Uint8Array(await files[0].arrayBuffer()));
       self.postMessage({ type: "result", result: new Blob([bytes as BlobPart], { type: "application/pdf" }) });

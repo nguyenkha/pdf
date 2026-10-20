@@ -8,6 +8,12 @@ const TOOLS = [
   { id: "compress", slug: "compress", nameKey: "compress" },
   { id: "merge", slug: "merge", nameKey: "toolMerge" },
   { id: "markdown", slug: "markdown", nameKey: "toolMarkdown" },
+  { id: "organize", slug: "organize", nameKey: "toolOrganize" },
+];
+// Mirrors the tools' landing pages: own texts and FAQ, the tool's app.
+const LANDINGS = [
+  { id: "rotate-pdf", slug: "rotate-pdf", nameKey: "toolRotate", tool: "organize" },
+  { id: "delete-pdf-pages", slug: "delete-pdf-pages", nameKey: "toolDeletePages", tool: "organize" },
 ];
 import fs from "node:fs";
 import path from "node:path";
@@ -85,7 +91,9 @@ const sizePath = (slug) => `compress-pdf-to-${slug}/`;
 // <id>Intro strings (prefix = its nameKey); the build fails without them.
 // Compress keeps the original home-page content and strings.
 const COMPRESS = "compress/";
-const toolPages = TOOLS.filter((tool) => tool.nameKey !== "compress");
+const toolPages = [...TOOLS.filter((tool) => tool.nameKey !== "compress"), ...LANDINGS];
+// The tool behind a page: itself, or the tool a landing page opens.
+const appOf = (page) => (page?.tool ? TOOLS.find((tool) => tool.id === page.tool) : page);
 const families = [
   COMPRESS,
   ...SIZE_PAGES.map(sizePath),
@@ -174,7 +182,7 @@ for (const locale of locales) {
         inLanguage: locale,
         url,
         description,
-        image: ogImage(locale, tool),
+        image: ogImage(locale, appOf(tool)),
         offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
       },
       {
@@ -187,14 +195,14 @@ for (const locale of locales) {
         })),
       },
     ];
-    const content = `${header}<main><div class="hero"><div class="eyebrow">${escape(t.privacy)}</div><h1>${escape(h1)}</h1><p>${escape(intro)}</p></div><div id="tool">${switcher(t, locale, tool)}<section class="tool-card placeholder" aria-label="${escape(tool ? t[tool.nameKey] : t.compress)}"></section></div><section class="content"><h2>${escape(t.how)}</h2><p>${escape(tool ? text(`${tool.nameKey}HowText`) : t.howText)}</p><h2>${escape(t.why)}</h2><p>${escape(t.whyText)}</p></section><section class="faq"><h2>${escape(t.faq)}</h2>${faq.map(([q, a]) => `<h3>${escape(text(q))}</h3><p>${escape(text(a))}</p>`).join("")}</section><section class="privacy-section"><h2>${escape(t.privacyTitle)}</h2><p class="philosophy">${escape(t.philosophy)}</p><p>${escape(t.privacyBody)}</p><a class="more-link" href="/${locale}/privacy/">${escape(t.privacyMore)} →</a></section>${tool ? "" : sizeLinks}</main>`;
+    const content = `${header}<main><div class="hero"><div class="eyebrow">${escape(t.privacy)}</div><h1>${escape(h1)}</h1><p>${escape(intro)}</p></div><div id="tool">${switcher(t, locale, appOf(tool))}<section class="tool-card placeholder" aria-label="${escape(tool ? t[appOf(tool).nameKey] : t.compress)}"></section></div><section class="content"><h2>${escape(t.how)}</h2><p>${escape(tool ? text(`${tool.nameKey}HowText`) : t.howText)}</p><h2>${escape(t.why)}</h2><p>${escape(t.whyText)}</p></section><section class="faq"><h2>${escape(t.faq)}</h2>${faq.map(([q, a]) => `<h3>${escape(text(q))}</h3><p>${escape(text(a))}</p>`).join("")}</section><section class="privacy-section"><h2>${escape(t.privacyTitle)}</h2><p class="philosophy">${escape(t.philosophy)}</p><p>${escape(t.privacyBody)}</p><a class="more-link" href="/${locale}/privacy/">${escape(t.privacyMore)} →</a></section>${tool ? "" : sizeLinks}</main>`;
     const html = base(
       locale,
       title,
       description,
       url,
       alternates(suffix) +
-        socialTags(locale, t, title, description, url, tool, h1) +
+        socialTags(locale, t, title, description, url, appOf(tool), h1) +
         `<script type="application/ld+json">${JSON.stringify(structured)}</script>`,
     ).replace('<div id="root"></div>', `<div id="root">${content}</div>`);
     writePage(locale, suffix, html);

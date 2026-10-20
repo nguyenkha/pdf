@@ -16,6 +16,7 @@ const tools = [
   { file: "", hero: "hero", name: "compress" },
   { file: "merge-", hero: "toolMergeHero", name: "toolMerge" },
   { file: "markdown-", hero: "toolMarkdownHero", name: "toolMarkdown" },
+  { file: "organize-", hero: "toolOrganizeHero", name: "toolOrganize" },
 ];
 for (const locale of locales) for (const tool of tools) {
   const t = (await import(`../src/i18n/${locale}.ts`)).default;
