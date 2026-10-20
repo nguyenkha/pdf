@@ -3,14 +3,12 @@ import { SIZE_PAGES } from "../src/app/sizes.ts";
 import { faqFor } from "../src/app/faq.ts";
 
 // Mirrors the built tools in src/app/tools.ts (that file imports React
-// components); the locale home page redirects to compress. MORE_PLANNED mirrors its
-// unnamed "more tools coming" placeholder.
+// components); the locale home page redirects to compress.
 const TOOLS = [
   { id: "compress", slug: "compress", nameKey: "compress" },
   { id: "merge", slug: "merge", nameKey: "toolMerge" },
   { id: "markdown", slug: "markdown", nameKey: "toolMarkdown" },
 ];
-const MORE_PLANNED = true;
 import fs from "node:fs";
 import path from "node:path";
 
@@ -131,11 +129,11 @@ function socialTags(locale, t, title, description, url, tool, alt) {
 const switcher = (t, locale, tool = TOOLS[0]) => {
   const href = (item) => `/${locale}/${item.slug ? item.slug + "/" : ""}`;
   const others = TOOLS.filter((item) => item.id !== tool.id);
-  return !others.length && !MORE_PLANNED
+  return !others.length
     ? ""
     : `<nav class="tool-switcher"><a href="${href(tool)}" aria-current="page">${escape(t[tool.nameKey])}</a><details class="tool-more"><summary>+ ${escape(t.moreTools.replace("{count}", String(others.length)))}</summary><ul>${others
         .map((item) => `<li><a href="${href(item)}">${escape(t[item.nameKey])}</a></li>`)
-        .join("")}${MORE_PLANNED ? `<li class="soon">${escape(t.coming)}</li>` : ""}</ul></details></nav>`;
+        .join("")}</ul></details></nav>`;
 };
 // Same boxes as the app's first render, so swapping in the app moves nothing.
 const header = '<header class="site-header"></header>';

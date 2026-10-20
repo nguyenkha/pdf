@@ -20,9 +20,8 @@ export type Tool = {
   load?: () => Promise<{ default: ComponentType<ToolProps> }>;
 };
 // Adding a tool: build it under src/tools/<id>/, give it `load` and its
-// strings; the switcher, routes, SEO pages and sitemap pick it up. While
-// any tool is still planned, the switcher shows one unnamed "more tools
-// coming" placeholder.
+// strings; the switcher, routes, SEO pages and sitemap pick it up. Planned
+// tools (no `load`) never show.
 export const tools: Tool[] = [
   {
     id: "compress",
@@ -50,7 +49,6 @@ export const tools: Tool[] = [
   { id: "pdf-to-images", slug: "pdf-to-jpg", nameKey: "compress", icon: FileArchive },
 ];
 export const availableTools = tools.filter((tool) => tool.load);
-export const morePlanned = availableTools.length < tools.length;
 /** The tool a URL path points at; size pages belong to compress. */
 export function toolFromPath(pathname: string): Tool {
   const segment = pathname.split("/")[2] ?? "";

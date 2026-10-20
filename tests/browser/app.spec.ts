@@ -239,7 +239,6 @@ test("tool switcher shows the tool in use and the rest behind +", async ({ page 
   await more.click();
   await expect(more).toHaveAttribute("aria-expanded", "true");
   await expect(switcher.getByRole("link", { name: "Merge PDF" })).toBeVisible();
-  await expect(switcher.locator(".soon")).toHaveText("More tools coming later");
   await page.keyboard.press("Escape");
   await expect(switcher.getByRole("link", { name: "Merge PDF" })).toBeHidden();
   await expect(more).toBeFocused();
@@ -251,6 +250,9 @@ test("tool switcher shows the tool in use and the rest behind +", async ({ page 
     await page.mouse.move(5, 5);
     await more.hover();
     await expect(switcher.getByRole("link", { name: "Merge PDF" })).toBeVisible();
+    // A click right after hovering keeps it open rather than folding it.
+    await more.click();
+    await expect(more).toHaveAttribute("aria-expanded", "true");
     await page.mouse.move(5, 5);
     await expect(switcher.getByRole("link", { name: "Merge PDF" })).toBeHidden();
   }

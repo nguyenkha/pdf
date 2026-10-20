@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, LayoutGrid, Plus } from "lucide-react";
+import { ChevronDown, LayoutGrid } from "lucide-react";
 import type { Messages } from "../i18n";
-import { availableTools, morePlanned, type Tool } from "../app/tools";
+import { availableTools, type Tool } from "../app/tools";
 /** Header menu of all built tools, reachable from every page. */
 export function ToolsMenu({
   t,
@@ -57,12 +57,6 @@ export function ToolsMenu({
               </li>
             );
           })}
-          {morePlanned && (
-            <li className="soon">
-              <Plus size={16} aria-hidden="true" />
-              {t.coming}
-            </li>
-          )}
         </ul>
       )}
     </div>
