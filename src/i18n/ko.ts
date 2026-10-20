@@ -183,4 +183,5 @@ export default {
   mergeUnlockLabel: "{name}은(는) 비밀번호로 보호되어 있어요. 합치려면 비밀번호를 입력하세요.",
   mergeUnlockedNote: "합친 PDF에는 비밀번호가 없어요. 공유하기 전에 필요하면 다시 보호하세요.",
   compressThis: "이 PDF 압축",
+  batchDoneTitle: "PDF {count}개 중 {done}개를 압축했어요",
 } satisfies Messages;

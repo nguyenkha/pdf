@@ -177,4 +177,5 @@ export default {
   mergeUnlockLabel: "{name} 受密码保护。请输入密码以合并。",
   mergeUnlockedNote: "合并后的 PDF 没有密码。如有需要，分享前请重新加密保护。",
   compressThis: "压缩此 PDF",
+  batchDoneTitle: "已压缩 {done}/{count} 个 PDF",
 } satisfies Messages;

@@ -185,4 +185,5 @@ export default {
   mergeUnlockLabel: "{name} está protegido con contraseña. Introduce la contraseña para unirlo.",
   mergeUnlockedNote: "El PDF unido no tiene contraseña. Protégelo de nuevo antes de compartirlo si hace falta.",
   compressThis: "Comprimir este PDF",
+  batchDoneTitle: "{done} de {count} PDF comprimidos",
 } satisfies Messages;

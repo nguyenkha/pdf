@@ -182,4 +182,5 @@ export default {
   mergeUnlockLabel: "{name} is password-protected. Enter its password to merge it.",
   mergeUnlockedNote: "The merged PDF has no password. Protect it again before sharing if needed.",
   compressThis: "Compress this PDF",
+  batchDoneTitle: "Compressed {done} of {count} PDFs",
 };

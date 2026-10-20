@@ -184,4 +184,5 @@ export default {
   mergeUnlockLabel: "{name} पासवर्ड से सुरक्षित है। इसे मर्ज करने के लिए पासवर्ड दर्ज करें।",
   mergeUnlockedNote: "मर्ज किए गए PDF में पासवर्ड नहीं है। ज़रूरत हो तो साझा करने से पहले इसे फिर सुरक्षित करें।",
   compressThis: "यह PDF संपीड़ित करें",
+  batchDoneTitle: "{count} में से {done} PDF कंप्रेस हुए",
 } satisfies Messages;

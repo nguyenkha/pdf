@@ -186,4 +186,5 @@ export default {
   mergeUnlockLabel: "{name} est protégé par mot de passe. Saisissez-le pour le fusionner.",
   mergeUnlockedNote: "Le PDF fusionné n’a pas de mot de passe. Protégez-le à nouveau avant de le partager si besoin.",
   compressThis: "Compresser ce PDF",
+  batchDoneTitle: "{done} PDF sur {count} compressés",
 } satisfies Messages;

@@ -185,4 +185,5 @@ export default {
   mergeUnlockLabel: "{name} có mật khẩu. Nhập mật khẩu để gộp file này.",
   mergeUnlockedNote: "File gộp không có mật khẩu. Nếu cần, hãy đặt lại mật khẩu trước khi chia sẻ.",
   compressThis: "Nén PDF này",
+  batchDoneTitle: "Đã nén {done}/{count} PDF",
 } satisfies Messages;

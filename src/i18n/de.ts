@@ -185,4 +185,5 @@ export default {
   mergeUnlockLabel: "{name} ist passwortgeschützt. Gib das Passwort ein, um es zusammenzufügen.",
   mergeUnlockedNote: "Das zusammengefügte PDF hat kein Passwort. Schütze es bei Bedarf vor der Weitergabe erneut.",
   compressThis: "Dieses PDF komprimieren",
+  batchDoneTitle: "{done} von {count} PDFs komprimiert",
 } satisfies Messages;

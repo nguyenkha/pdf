@@ -182,4 +182,5 @@ export default {
   mergeUnlockLabel: "{name} محمي بكلمة مرور. أدخل كلمة المرور لدمجه.",
   mergeUnlockedNote: "ملف PDF المدموج بلا كلمة مرور. احمِه مرة أخرى قبل المشاركة عند الحاجة.",
   compressThis: "ضغط ملف PDF هذا",
+  batchDoneTitle: "تم ضغط {done} من {count} ملفات PDF",
 } satisfies Messages;

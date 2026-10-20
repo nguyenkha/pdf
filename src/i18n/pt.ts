@@ -185,4 +185,5 @@ export default {
   mergeUnlockLabel: "{name} é protegido por senha. Digite a senha para juntá-lo.",
   mergeUnlockedNote: "O PDF juntado não tem senha. Proteja-o novamente antes de compartilhar, se precisar.",
   compressThis: "Comprimir este PDF",
+  batchDoneTitle: "{done} de {count} PDFs comprimidos",
 } satisfies Messages;

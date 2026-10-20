@@ -183,4 +183,5 @@ export default {
   mergeUnlockLabel: "{name} защищён паролем. Введите пароль, чтобы объединить его.",
   mergeUnlockedNote: "У объединённого PDF нет пароля. При необходимости защитите его снова перед отправкой.",
   compressThis: "Сжать этот PDF",
+  batchDoneTitle: "Сжато PDF: {done} из {count}",
 } satisfies Messages;

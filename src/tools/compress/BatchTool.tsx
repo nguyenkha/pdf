@@ -7,6 +7,7 @@ import { planOptions, type PlanChoice } from "../../lib/plan";
 import { safeEntryName, uniqueNames, zipBlobs } from "../../lib/zip";
 import { CompressionPlan } from "../../components/CompressionPlan";
 import { useObjectUrl } from "../../hooks/useObjectUrl";
+import { Outcome } from "../../components/Outcome";
 import { probeFile, runCompression } from "./run";
 import { errorMessage } from "./errors";
 
@@ -179,15 +180,25 @@ export function BatchTool({
       )}
       {complete && (
         <div className="result">
+          <Outcome
+            tone={finished.length ? "success" : "neutral"}
+            title={
+              finished.length
+                ? fill(t.batchDoneTitle, { done: finished.length, count: files.length })
+                : t.noReduction
+            }
+            detail={
+              finished.length
+                ? fill(t.batchSaved, {
+                    before: formatSize(before, locale),
+                    after: formatSize(after, locale),
+                    percent: `${savings(before, after)}%`,
+                  })
+                : undefined
+            }
+          />
           {finished.length > 0 && (
             <>
-              <p className="success">
-                {fill(t.batchSaved, {
-                  before: formatSize(before, locale),
-                  after: formatSize(after, locale),
-                  percent: `${savings(before, after)}%`,
-                })}
-              </p>
               {zipUrl ? (
                 <a className="primary" href={zipUrl} download="pdf-kha-do-compressed.zip">
                   <Archive size={18} aria-hidden="true" />
@@ -205,8 +216,8 @@ export function BatchTool({
               </div>
             </>
           )}
-          <button type="button" className="secondary" onClick={onReset}>
-            <RotateCcw size={16} aria-hidden="true" />
+          <button type="button" className="link-button" onClick={onReset}>
+            <RotateCcw size={15} aria-hidden="true" />
             {t.another}
           </button>
         </div>
