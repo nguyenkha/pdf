@@ -243,7 +243,7 @@ test("tool switcher shows the tool in use and the rest behind +", async ({ page 
   await expect(switcher.getByRole("link", { name: "Merge PDF" })).toBeHidden();
   await expect(more).toBeFocused();
   await more.click();
-  await expect(switcher.locator(".tool-more-list a")).toHaveText(["Merge PDF", "PDF to Markdown"]);
+  await expect(switcher.locator(".tool-more-list a")).toHaveText(["Merge PDF", "PDF to Markdown", "Organize PDF pages"]);
   await page.keyboard.press("Escape");
   // With a mouse, hovering is enough.
   if (await page.evaluate(() => matchMedia("(hover: hover)").matches)) {

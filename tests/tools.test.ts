@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { availableTools, toolFromPath, tools } from "../src/app/tools";
+import { availableTools, pageFromPath, toolFromPath, tools } from "../src/app/tools";
 
 describe("tool registry", () => {
   it("routes home and size pages to compress", () => {
@@ -12,8 +12,16 @@ describe("tool registry", () => {
     expect(toolFromPath("/en/merge/").id).toBe("merge");
     expect(availableTools.every((tool) => tool.load)).toBe(true);
   });
+  it("routes landing pages to their tool with their own texts", () => {
+    expect(toolFromPath("/vi/rotate-pdf/").id).toBe("organize");
+    expect(pageFromPath("/vi/rotate-pdf/").nameKey).toBe("toolRotate");
+    expect(toolFromPath("/en/delete-pdf-pages/").id).toBe("organize");
+    expect(pageFromPath("/en/organize/").nameKey).toBe("toolOrganize");
+    expect(pageFromPath("/en/merge/").id).toBe("merge");
+  });
   it("has unique ids and slugs", () => {
     expect(new Set(tools.map((tool) => tool.id)).size).toBe(tools.length);
-    expect(new Set(tools.map((tool) => tool.slug)).size).toBe(tools.length);
+    const slugs = tools.flatMap((tool) => [tool.slug, ...(tool.pages ?? []).map((page) => page.slug)]);
+    expect(new Set(slugs).size).toBe(slugs.length);
   });
 });

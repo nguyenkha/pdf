@@ -1,8 +1,10 @@
 import {
+  degrees,
   PDFArray,
   PDFDict,
   PDFDocument,
   PDFHexString,
+  type PDFPage,
   PDFName,
   PDFRef,
   PDFString,
@@ -63,16 +65,53 @@ const isInternalLink = (annot: PDFDict) => {
   );
 };
 /**
- * Copies every page of each source, in order, into one new document.
+ * Copies the given pages of `input`, in that order, to the end of `output`.
  * Pages are copied as objects (not re-rendered), so text, images, links and
- * annotations stay as they were. Links to another page of the same source
- * are re-pointed at that page in the merged file: copied as is, named
- * destinations would dangle, which also stops strict readers such as the
- * compress engine. Links that cannot be resolved are dropped. Bookmarks and form fields are
- * not carried over; encrypted sources must be unlocked first. Digital
- * signatures cannot survive a merge: their appearance is drawn into the page
- * first, so stamps and signature images still show, and `signed` lists the
- * sources that had them.
+ * annotations stay as they were. Links to another copied page are re-pointed
+ * at its copy: copied as is, named destinations would dangle, which also
+ * stops strict readers such as the compress engine. Links to pages left out,
+ * or that cannot be resolved, are dropped.
+ */
+export async function copyLinkedPages(
+  output: PDFDocument,
+  input: PDFDocument,
+  indices: number[],
+): Promise<PDFPage[]> {
+  const sourcePages = input.getPages();
+  const pages = await output.copyPages(input, indices);
+  for (const page of pages) output.addPage(page);
+  // Where each source page landed, if it was copied.
+  const copied = new Map(indices.map((source, at) => [sourcePages[source].ref, pages[at]]));
+  indices.forEach((source, at) => {
+    const before = sourcePages[source].node.lookup(name("Annots"));
+    const after = pages[at].node.lookup(name("Annots"));
+    if (!(before instanceof PDFArray) || !(after instanceof PDFArray)) return;
+    // Walk backwards so dropping a link keeps earlier indices valid.
+    for (let i = before.size() - 1; i >= 0; i--) {
+      const original = before.lookup(i);
+      const copy = after.lookup(i);
+      if (!(original instanceof PDFDict) || !(copy instanceof PDFDict)) continue;
+      if (!isInternalLink(original)) continue;
+      const dest = destination(input, original);
+      const target = dest?.get(0);
+      const page = target instanceof PDFRef ? copied.get(target) : undefined;
+      if (!dest || !page) {
+        after.remove(i);
+        continue;
+      }
+      copy.set(name("Dest"), output.context.obj([page.ref, ...dest.asArray().slice(1)]));
+      copy.delete(name("A"));
+    }
+  });
+  return pages;
+}
+/**
+ * Copies every page of each source, in order, into one new document (see
+ * copyLinkedPages). Bookmarks and form fields are not carried over;
+ * encrypted sources must be unlocked first. Digital signatures cannot
+ * survive a merge: their appearance is drawn into the page first, so stamps
+ * and signature images still show, and `signed` lists the sources that had
+ * them.
  */
 export async function mergePdfs(
   sources: MergeSource[],
@@ -86,35 +125,7 @@ export async function mergePdfs(
       const input = await PDFDocument.load(source.bytes);
       if (!input.getPageCount()) throw new Error("no pages");
       if (flattenSignatureFields(input)) signed.push(index);
-      const sourcePages = input.getPages();
-      const pages = await output.copyPages(input, input.getPageIndices());
-      for (const page of pages) output.addPage(page);
-      sourcePages.forEach((sourcePage, pageIndex) => {
-        const before = sourcePage.node.lookup(name("Annots"));
-        const after = pages[pageIndex].node.lookup(name("Annots"));
-        if (!(before instanceof PDFArray) || !(after instanceof PDFArray)) return;
-        // Walk backwards so dropping a link keeps earlier indices valid.
-        for (let i = before.size() - 1; i >= 0; i--) {
-          const original = before.lookup(i);
-          const copy = after.lookup(i);
-          if (!(original instanceof PDFDict) || !(copy instanceof PDFDict)) continue;
-          if (!isInternalLink(original)) continue;
-          const dest = destination(input, original);
-          const target = dest?.get(0);
-          const page = target instanceof PDFRef
-            ? sourcePages.findIndex((candidate) => candidate.ref === target)
-            : -1;
-          if (!dest || page < 0) {
-            after.remove(i);
-            continue;
-          }
-          copy.set(
-            name("Dest"),
-            output.context.obj([pages[page].ref, ...dest.asArray().slice(1)]),
-          );
-          copy.delete(name("A"));
-        }
-      });
+      await copyLinkedPages(output, input, input.getPageIndices());
     } catch (error) {
       // Name the source, so the interface can point at the file to fix.
       throw new Error(
@@ -124,6 +135,33 @@ export async function mergePdfs(
       );
     }
   }
+  output.setProducer("pdf.kha.do");
+  output.setCreator("pdf.kha.do");
+  return { bytes: await output.save(), pages: output.getPageCount(), signed };
+}
+/** One page of the result: which source page, and how much more to turn it. */
+export type PagePlan = { page: number; rotate: number };
+/**
+ * One PDF with its pages reordered, turned or left out, as planned. Rotation
+ * adds to the page's own in quarter turns; page content is not touched.
+ */
+export async function organizePdf(
+  bytes: Uint8Array,
+  plan: PagePlan[],
+): Promise<{ bytes: Uint8Array; pages: number; signed: boolean }> {
+  const input = await PDFDocument.load(bytes).catch((error: Error) => {
+    throw new Error(/encrypt/i.test(error.message) ? "password" : "corrupt");
+  });
+  const count = input.getPageCount();
+  if (!plan.length || plan.some(({ page }) => !Number.isInteger(page) || page < 0 || page >= count))
+    throw new Error("plan");
+  const signed = flattenSignatureFields(input) > 0;
+  const output = await PDFDocument.create();
+  const pages = await copyLinkedPages(output, input, plan.map(({ page }) => page));
+  plan.forEach(({ rotate }, at) => {
+    const turn = (((pages[at].getRotation().angle + rotate) % 360) + 360) % 360;
+    pages[at].setRotation(degrees(turn - (turn % 90)));
+  });
   output.setProducer("pdf.kha.do");
   output.setCreator("pdf.kha.do");
   return { bytes: await output.save(), pages: output.getPageCount(), signed };

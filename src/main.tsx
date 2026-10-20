@@ -16,7 +16,7 @@ import { metadata } from "./i18n/metadata";
 // Loaded eagerly (~9 KB gzip): a lazy fallback swapped for the full card
 // shifted the page below it (Lighthouse CLS 0.22).
 import CompressTool from "./tools/compress/CompressTool";
-import { toolFromPath, type ToolProps } from "./app/tools";
+import { pageFromPath, toolFromPath, type ToolProps } from "./app/tools";
 import { faqFor } from "./app/faq";
 import { ToolSwitcher } from "./components/ToolSwitcher";
 import { ToolsMenu } from "./components/ToolsMenu";
@@ -48,11 +48,13 @@ function Credits({ text }: { text: string }) {
 }
 const preset = sizeFromPath(location.pathname);
 const activeTool = toolFromPath(location.pathname);
+// A landing page ("rotate PDF") has its own texts but runs its tool.
+const activePage = pageFromPath(location.pathname);
 const home = activeTool.id === "compress";
 // Tool pages beyond compress read <nameKey>Title, Description, Hero, Intro
 // and HowText (the same strings scripts/seo.mjs prerenders).
 const toolText = (m: Messages, part: "Title" | "Description" | "Hero" | "Intro" | "HowText") =>
-  m[`${activeTool.nameKey}${part}` as keyof Messages];
+  m[`${activePage.nameKey}${part}` as keyof Messages];
 // Compress is the home tool and renders eagerly; others load on their page.
 const ToolComponent: ComponentType<ToolProps> =
   activeTool.id === "compress" ? CompressTool : lazy(activeTool.load!);
@@ -63,8 +65,8 @@ const suffix = location.pathname.endsWith("/privacy/")
   ? "privacy/"
   : preset
     ? sizePath(preset.slug)
-    : activeTool.slug
-      ? `${activeTool.slug}/`
+    : activePage.slug
+      ? `${activePage.slug}/`
       : "";
 function App({
   firstLocale,
@@ -234,7 +236,7 @@ function App({
           {/* This tool's questions, then the ones every tool shares. */}
           <section className="faq">
             <h2>{t.faq}</h2>
-            {faqFor(activeTool.id).map(([question, answer]) => (
+            {faqFor(activePage.id).map(([question, answer]) => (
               <details key={question}>
                 <summary>{t[question as keyof Messages]}</summary>
                 <p>{t[answer as keyof Messages]}</p>

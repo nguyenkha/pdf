@@ -51,6 +51,14 @@ for (const scheme of ["light", "dark"] as const)
       await expect(page.getByLabel("Original PDF, page 1")).toBeVisible({ timeout: 30000 });
       await audit(page, "markdown result");
     });
+    test("organize tool", async ({ page }) => {
+      await page.goto("/en/organize/");
+      await audit(page, "organize empty");
+      await page.locator("input[type=file]").setInputFiles("tests/fixtures/multipage.pdf");
+      await expect(page.locator(".page-grid img")).toHaveCount(3, { timeout: 30000 });
+      await page.getByRole("button", { name: "Delete page 2" }).click();
+      await audit(page, "organize grid");
+    });
     test("markdown OCR offer", async ({ page }) => {
       await page.goto("/en/markdown/");
       await page.locator("input[type=file]").setInputFiles("tests/fixtures/scanned-text.pdf");
