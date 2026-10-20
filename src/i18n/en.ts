@@ -118,4 +118,5 @@ export default {
   sizePageTitle: "Compress PDF to {size} – Free, No Upload | pdf.kha.do",
   sizePageDescription: "Reduce a PDF to {size} or less in your browser. Free and private: no upload, no sign-up, no watermark.",
   taggedNotice: "This PDF has accessibility tags for screen readers. The compressed copy keeps text, links and pages, but not those tags.",
+  crashed: "The last compression stopped because the browser ran out of memory. Try \"Smallest file\", fewer pages, or a computer.",
 };

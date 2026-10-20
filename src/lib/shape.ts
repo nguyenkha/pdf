@@ -2,8 +2,9 @@ export type PageShape = {
   text: string;
   width: number;
   height: number;
-  operators: number;
-  imageCount: number;
+  /** Only for sampled pages; see samplePages. */
+  operators?: number;
+  imageCount?: number;
   annotations: string[];
   thumbnail?: Uint8Array;
 };
@@ -20,7 +21,7 @@ export function verifyShape(before: PdfShape, after: PdfShape): void {
       Math.abs(page.height - result.height) > 1
     )
       throw new Error("preservation");
-    if (page.operators > 0 && result.operators === 0)
+    if ((page.operators ?? 0) > 0 && result.operators === 0)
       throw new Error("preservation");
     if (JSON.stringify(page.annotations) !== JSON.stringify(result.annotations))
       throw new Error("preservation");

@@ -9,6 +9,7 @@ import {
 } from "../src/lib/pdf";
 import { resolveLocale, locales } from "../src/i18n/config";
 import { verifyShape, type PdfShape } from "../src/lib/shape";
+import { samplePages } from "../src/engines/validate";
 import {
   attemptsFor,
   ghostscriptArgs,
@@ -118,35 +119,34 @@ describe("quality-first pipeline", () => {
     );
   });
   it("retains the original when every result is larger", async () => {
-    const bytes = new Uint8Array(100);
     const result = await compressWithGhostscript(
-      bytes,
+      100,
       { preference: "quality", imageQuality: "auto" },
       () => {},
       async () => ({ bytes: new Uint8Array(110), heapBytes: 64 }),
       async () => {},
     );
-    expect(result.bytes).toBe(bytes);
+    expect(result.bytes).toBeUndefined();
     expect(result.lossy).toBe(false);
   });
   it("handles non-monotonic sizes and stops at the highest ranked valid result", async () => {
     const sizes = [120, 90, 95, 40];
     let index = 0;
     const result = await compressWithGhostscript(
-      new Uint8Array(100),
+      100,
       { preference: "quality", imageQuality: "auto", target: 50 },
       () => {},
       async () => ({ bytes: new Uint8Array(sizes[index++]), heapBytes: 64 }),
       async () => {},
     );
-    expect(result.bytes.length).toBe(40);
+    expect(result.bytes?.length).toBe(40);
     expect(result.attempts).toBe(4);
     expect(result.achieved).toBe(true);
   });
   it("never releases a result after a preservation failure", async () => {
     await expect(
       compressWithGhostscript(
-        new Uint8Array(100),
+        100,
         { preference: "quality", imageQuality: "auto" },
         () => {},
         async () => ({ bytes: new Uint8Array(50), heapBytes: 64 }),
@@ -174,10 +174,10 @@ describe("page progress and passwords", () => {
     const sizes = [120, 80, 60];
     let index = 0;
     await compressWithGhostscript(
-      new Uint8Array(100),
+      100,
       { preference: "smallest", imageQuality: "auto" },
       (progress) => values.push(progress.value),
-      async (_input, _profile, onPage) => {
+      async (_profile, onPage) => {
         for (let page = 1; page <= 4; page++) onPage(page);
         return { bytes: new Uint8Array(sizes[index++] ?? 50), heapBytes: 64 };
       },
@@ -234,7 +234,7 @@ describe("lazy preservation check", () => {
     let index = 0;
     const checked: number[] = [];
     const result = await compressWithGhostscript(
-      new Uint8Array(100),
+      100,
       { preference: "smallest", imageQuality: "auto" },
       () => {},
       async () => ({ bytes: new Uint8Array(sizes[index++] ?? 99), heapBytes: 64 }),
@@ -242,13 +242,13 @@ describe("lazy preservation check", () => {
         checked.push(bytes.length);
       },
     );
-    expect(result.bytes.length).toBe(60);
+    expect(result.bytes?.length).toBe(60);
     expect(checked).toEqual([60]);
   });
   it("skips the check when the original is kept", async () => {
     let checks = 0;
     await compressWithGhostscript(
-      new Uint8Array(100),
+      100,
       { preference: "balanced", imageQuality: "auto" },
       () => {},
       async () => ({ bytes: new Uint8Array(120), heapBytes: 64 }),
@@ -257,5 +257,40 @@ describe("lazy preservation check", () => {
       },
     );
     expect(checks).toBe(0);
+  });
+});
+
+describe("render sample", () => {
+  it("checks every page of short documents", () =>
+    expect([...samplePages(5)]).toEqual([1, 2, 3, 4, 5]));
+  it("spreads eight pages over long ones, first and last included", () => {
+    const sample = [...samplePages(23)];
+    expect(sample).toHaveLength(8);
+    expect(sample[0]).toBe(1);
+    expect(sample.at(-1)).toBe(23);
+  });
+});
+
+describe("image-heavy scans", () => {
+  it("skip the lossless pass unless quality or a target is asked", async () => {
+    const seen: number[] = [];
+    const run = (options: Parameters<typeof compressWithGhostscript>[1]) =>
+      compressWithGhostscript(
+        10 * 1048576,
+        options,
+        () => {},
+        async (profile) => {
+          seen.push(profile.quality);
+          return { bytes: new Uint8Array(10), heapBytes: 64 };
+        },
+        async () => {},
+        true,
+        10,
+      );
+    await run({ preference: "balanced", imageQuality: "auto" });
+    expect(seen[0]).toBeLessThan(101);
+    seen.length = 0;
+    await run({ preference: "quality", imageQuality: "auto" });
+    expect(seen[0]).toBe(101);
   });
 });

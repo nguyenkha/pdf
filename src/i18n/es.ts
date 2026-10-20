@@ -121,4 +121,5 @@ export default {
   sizePageTitle: "Comprimir PDF a {size} gratis, sin subir | pdf.kha.do",
   sizePageDescription: "Reduce un PDF a {size} o menos en tu navegador. Gratis y privado: sin subir archivos, sin registro y sin marca de agua.",
   taggedNotice: "Este PDF tiene etiquetas de accesibilidad para lectores de pantalla. La copia comprimida conserva el texto, los enlaces y las páginas, pero no esas etiquetas.",
+  crashed: "La última compresión se detuvo porque el navegador se quedó sin memoria. Prueba \"Archivo más pequeño\", menos páginas o un ordenador.",
 } satisfies Messages;

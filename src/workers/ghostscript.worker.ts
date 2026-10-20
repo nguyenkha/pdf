@@ -1,7 +1,7 @@
 import { ENGINE_BASE, type CoreFactory } from "../engines/core";
 
 self.onmessage = async (
-  event: MessageEvent<{ bytes: Uint8Array; args: string[] }>,
+  event: MessageEvent<{ file: Blob; args: string[] }>,
 ) => {
   try {
     const { default: createCore } = (await import(
@@ -19,7 +19,12 @@ self.onmessage = async (
       },
       printErr: () => {},
     });
-    core.FS.writeFile("/input.pdf", event.data.bytes);
+    // Read the File here rather than receiving a copy: on phones every extra
+    // copy of a large scan counts against the tab's memory limit.
+    core.FS.writeFile(
+      "/input.pdf",
+      new Uint8Array(await event.data.file.arrayBuffer()),
+    );
     let status = 0;
     try {
       status = core.callMain(event.data.args);
@@ -31,11 +36,13 @@ self.onmessage = async (
       }
     }
     if (status !== 0) throw new Error("processing");
+    core.FS.unlink("/input.pdf");
+    // readFile returns a fresh array, so it can be transferred as is.
     const bytes = core.FS.readFile("/result.pdf");
-    const copy = new Uint8Array(bytes);
+    core.FS.unlink("/result.pdf");
     self.postMessage(
-      { type: "result", bytes: copy, heapBytes: core.getHeapBytes() },
-      [copy.buffer],
+      { type: "result", bytes, heapBytes: core.getHeapBytes() },
+      [bytes.buffer],
     );
   } catch (error) {
     const message = error instanceof Error ? error.message.toLowerCase() : "";

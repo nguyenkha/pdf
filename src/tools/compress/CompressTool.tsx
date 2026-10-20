@@ -34,6 +34,15 @@ function errorMessage(t: Messages, failure: unknown) {
   if (/memory|allocation/.test(message)) return t.memory;
   return t.failed;
 }
+const RUNNING = "compress-running";
+function mark(running: boolean) {
+  try {
+    if (running) sessionStorage.setItem(RUNNING, "1");
+    else sessionStorage.removeItem(RUNNING);
+  } catch {
+    /* Storage may be disabled. */
+  }
+}
 // Warm the HTTP and service worker cache while the user picks a level.
 let engineWarmed = false;
 function warmEngine() {
@@ -61,6 +70,18 @@ export default function CompressTool({ t, locale, preset }: Props) {
   const [result, setResult] = useState<CompressionResult>();
   const [busy, setBusy] = useState(false);
   const job = useRef<{ cancel: () => void } | undefined>(undefined);
+  // Phones kill and reload a tab that runs out of memory mid-job. A marker
+  // that survives the reload lets us explain it instead of starting blank.
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem(RUNNING)) {
+        sessionStorage.removeItem(RUNNING);
+        setError(t.crashed);
+      }
+    } catch {
+      /* Storage may be disabled. */
+    }
+  }, [t.crashed]);
   const card = useRef<HTMLElement>(null);
   // On phones the next action can sit below the fold after a step changes.
   useEffect(() => {
@@ -172,6 +193,7 @@ export default function CompressTool({ t, locale, preset }: Props) {
     setError("");
     setBusy(true);
     setProgress({ stage: "reading", value: 0 });
+    mark(true);
     try {
       const active = runCompression(file, chosen, (next) => {
         if (id === generation.current) setProgress(next);
@@ -191,6 +213,7 @@ export default function CompressTool({ t, locale, preset }: Props) {
       if (!(failure instanceof Error && failure.message === "cancelled"))
         setError(errorMessage(t, failure));
     } finally {
+      mark(false);
       if (id === generation.current) {
         setBusy(false);
         job.current = undefined;

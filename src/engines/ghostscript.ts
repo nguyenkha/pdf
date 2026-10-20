@@ -9,7 +9,8 @@ export type CompressOptions = {
   password?: string;
 };
 export type RunResult = {
-  bytes: Uint8Array;
+  /** The released output; undefined when the original should be kept. */
+  bytes?: Uint8Array;
   achieved: boolean;
   attempts: number;
   heapBytes: number;
@@ -109,8 +110,9 @@ export function ghostscriptArgs(profile: Profile, password?: string): string[] {
   return [...args, "/input.pdf"];
 }
 
+// The pass reads the input itself, so the caller never holds a copy of
+// the (possibly very large) original while passes run.
 export type EnginePass = (
-  input: Uint8Array,
   profile: Profile,
   onPage: (page: number) => void,
 ) => Promise<{ bytes: Uint8Array; heapBytes: number }>;
@@ -120,11 +122,12 @@ export type Progress = {
   value: number;
   page?: number;
 };
+const IMAGE_HEAVY_PER_PAGE = 200 * 1024;
 // Share of the progress bar for the passes; the rest is the one
 // preservation check of the chosen result.
 const PASS_SHARE = 0.85;
 export async function compressWithGhostscript(
-  input: Uint8Array,
+  inputSize: number,
   options: CompressOptions,
   onProgress: (progress: Progress) => void,
   runPass: EnginePass,
@@ -135,7 +138,14 @@ export async function compressWithGhostscript(
   let selected: Candidate | undefined;
   let attempts = 0;
   let heapBytes = 0;
-  const profiles = hasImages ? attemptsFor(options) : attemptsFor(options).slice(0,1);
+  // On image-heavy scans the lossless rewrite only re-wraps the same images:
+  // a whole extra engine run (and its memory) for no saving.
+  const imageHeavy = inputSize / Math.max(1, pages) > IMAGE_HEAVY_PER_PAGE;
+  const skipLossless =
+    imageHeavy && !options.target && options.preference !== "quality";
+  const profiles = !hasImages
+    ? attemptsFor(options).slice(0, 1)
+    : attemptsFor(options).slice(skipLossless ? 1 : 0);
   const total = Math.max(1, pages);
   let reported = 0;
   const report = (stage: Progress["stage"], value: number, page?: number) => {
@@ -146,12 +156,12 @@ export async function compressWithGhostscript(
     const span = (share: number) =>
       (PASS_SHARE * (index + share)) / profiles.length;
     report(attempts ? "optimizing" : "loading", span(0));
-    const output = await runPass(input, profile, (page) =>
+    const output = await runPass(profile, (page) =>
       report("optimizing", span(Math.min(page, total) / total), page),
     );
     attempts++;
     heapBytes = Math.max(heapBytes, output.heapBytes);
-    if (output.bytes.length >= input.length) continue;
+    if (output.bytes.length >= inputSize) continue;
     const candidate = {
       bytes: output.bytes,
       quality: profile.quality,
@@ -185,10 +195,10 @@ export async function compressWithGhostscript(
     );
   }
   report("finalizing", 1);
-  const bytes = selected?.bytes ?? input;
+  const size = selected?.bytes.length ?? inputSize;
   return {
-    bytes,
-    achieved: options.target !== undefined && bytes.length <= options.target,
+    bytes: selected?.bytes,
+    achieved: options.target !== undefined && size <= options.target,
     attempts,
     heapBytes,
     lossy: selected !== undefined && selected.quality <= 100,

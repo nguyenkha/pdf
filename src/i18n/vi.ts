@@ -121,4 +121,5 @@ export default {
   sizePageTitle: "Nén PDF xuống {size} – Miễn phí, không tải lên | pdf.kha.do",
   sizePageDescription: "Giảm dung lượng PDF xuống {size} hoặc nhỏ hơn ngay trong trình duyệt. Miễn phí, riêng tư: không tải lên, không đăng ký, không watermark.",
   taggedNotice: "PDF này có tag hỗ trợ trình đọc màn hình. Bản nén giữ chữ, link và các trang, nhưng không giữ các tag đó.",
+  crashed: "Lần nén trước bị dừng vì trình duyệt hết bộ nhớ. Hãy thử \"File nhỏ nhất\", tách bớt trang, hoặc dùng máy tính.",
 } satisfies Messages;

@@ -133,3 +133,11 @@ test("size landing page preselects its limit and keeps its URL", async ({ page }
   await page.getByLabel("Language").selectOption("vi");
   await expect(page).toHaveURL(/\/vi\/compress-pdf-to-200kb\/$/);
 });
+test("explains a reload caused by running out of memory mid-job", async ({ page }) => {
+  await page.goto("/en/");
+  await page.evaluate(() => sessionStorage.setItem("compress-running", "1"));
+  await page.reload();
+  await expect(page.getByRole("alert")).toContainText("ran out of memory");
+  await page.reload();
+  await expect(page.getByRole("alert")).toHaveCount(0);
+});

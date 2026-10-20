@@ -5,6 +5,7 @@ import {
   type EnginePass,
 } from "../engines/ghostscript";
 import { inspectPdf, probePdf } from "../engines/validate";
+import type { PdfShape } from "../lib/shape";
 import { verifyShape } from "../lib/shape";
 
 // Overall progress: reading and the first preservation scan, then the passes.
@@ -12,7 +13,16 @@ const READ = 0.02;
 const ANALYZE = 0.12;
 let child: Worker | undefined;
 let cancelled = false;
-const runPass: EnginePass = (bytes, profile, onPage) =>
+let input: File | undefined;
+async function inspect(
+  source: Blob,
+  secret: string | undefined,
+  onPage: (page: number, total: number) => void,
+): Promise<PdfShape> {
+  // pdf.js owns the buffer it is given, so this worker keeps no copy.
+  return inspectPdf(new Uint8Array(await source.arrayBuffer()), secret, onPage, true);
+}
+const runPass: EnginePass = (profile, onPage) =>
   new Promise((resolve, reject) => {
     child = new Worker(new URL("./ghostscript.worker.ts", import.meta.url), {
       type: "module",
@@ -37,7 +47,7 @@ const runPass: EnginePass = (bytes, profile, onPage) =>
       finish();
       reject(new Error("initialization"));
     };
-    child.postMessage({ bytes, args: ghostscriptArgs(profile, password) });
+    child.postMessage({ file: input, args: ghostscriptArgs(profile, password) });
   });
 let password: string | undefined;
 let pageCount = 0;
@@ -67,27 +77,31 @@ self.onmessage = async (event: MessageEvent<Request>) => {
     const progress = (stage: string, value: number, page?: number, pages?: number) =>
       self.postMessage({ type: "progress", stage, value, page, pages });
     progress("reading", 0);
-    const input = new Uint8Array(await request.file.arrayBuffer());
+    input = request.file;
     if (cancelled) return;
     progress("analyzing", READ);
-    const before = await inspectPdf(input, password, (page, pages) =>
+    const before = await inspect(input, password, (page, pages) =>
       progress("analyzing", READ + ((ANALYZE - READ) * page) / pages, page, pages),
     );
     const pages = before.pages.length;
     pageCount = pages;
     if (cancelled) return;
+    let released: Blob | undefined;
     const result = await compressWithGhostscript(
-      input,
+      input.size,
       request.options,
       ({ stage, value, page }) =>
         progress(stage, ANALYZE + (1 - ANALYZE) * value, page, pages),
       runPass,
       async (bytes, onPage) => {
-        // The output is written without encryption, so it opens without a password.
-        const after = await inspectPdf(bytes, undefined, (page) => onPage(page));
+        // Park the output in a Blob and check that copy in its own workers,
+        // so no extra in-memory copy is held here. The output is written
+        // without encryption, so it opens without a password.
+        released = new Blob([bytes as BlobPart], { type: "application/pdf" });
+        const after = await inspect(released, undefined, (page) => onPage(page));
         verifyShape(before, after);
       },
-      before.pages.some((page) => page.imageCount > 0),
+      before.pages.some((page) => (page.imageCount ?? 0) > 0),
       pages,
     );
     if (!cancelled) {
@@ -97,7 +111,7 @@ self.onmessage = async (event: MessageEvent<Request>) => {
         result: {
           ...statistics,
           pages,
-          blob: new Blob([bytes as BlobPart], { type: "application/pdf" }),
+          blob: bytes && released ? released : input,
         },
       });
     }

@@ -11,9 +11,11 @@ class WorkerCanvasFactory {
   destroy(pair: CanvasPair) { if(pair.canvas){pair.canvas.width=0;pair.canvas.height=0;}pair.canvas=null;pair.context=null; }
 }
 
-function open(data: Uint8Array, password?: string) {
+// pdf.js transfers the buffer it is given to its worker; `owned` hands it
+// over instead of copying when the caller no longer needs the bytes.
+function open(data: Uint8Array, password?: string, owned = false) {
   return pdfjs.getDocument({
-    data: data.slice(),
+    data: owned ? data : data.slice(),
     password,
     stopAtErrors: true,
     isEvalSupported: false,
@@ -23,6 +25,10 @@ function open(data: Uint8Array, password?: string) {
     cMapPacked: true,
     standardFontDataUrl: new URL("/pdfjs/standard_fonts/",self.location.origin).href,
     useWorkerFetch: true, CanvasFactory: WorkerCanvasFactory,
+    // Decoded images then arrive as plain arrays the GC reclaims promptly;
+    // ImageBitmaps of full-resolution scans piled up page after page and
+    // pushed phones past their tab memory limit.
+    isOffscreenCanvasSupported: false,
   });
 }
 // pdf.js reports PasswordException code 1 (needed) or 2 (incorrect).
@@ -58,7 +64,7 @@ export async function probePdf(
   data: Uint8Array,
   password?: string,
 ): Promise<PdfSummary> {
-  const task = open(data, password);
+  const task = open(data, password, true);
   try {
     const doc = await load(task);
     if (!doc.numPages) throw new Error("corrupt");
@@ -76,22 +82,38 @@ export async function probePdf(
     await task.destroy();
   }
 }
+// getOperatorList decodes every image at full resolution. Doing that for
+// all pages of a long scan, before and after compressing, pushed phones past
+// their memory limit, so the render checks run on an even sample of pages.
+const RENDER_SAMPLE = 8;
+export function samplePages(total: number): Set<number> {
+  if (total <= RENDER_SAMPLE) return new Set(Array.from({ length: total }, (_, i) => i + 1));
+  return new Set(
+    Array.from({ length: RENDER_SAMPLE }, (_, i) =>
+      1 + Math.round((i * (total - 1)) / (RENDER_SAMPLE - 1)),
+    ),
+  );
+}
 export async function inspectPdf(
   data: Uint8Array,
   password?: string,
   onPage: (page: number, pages: number) => void = () => {},
+  owned = false,
 ): Promise<PdfShape> {
-  const task = open(data, password);
+  const task = open(data, password, owned);
   try {
     const doc = await load(task);
     if (!doc.numPages) throw new Error("corrupt");
     await rejectUnsupported(doc);
+    const sample = samplePages(doc.numPages);
     const pages: PageShape[] = [];
     for (let number = 1; number <= doc.numPages; number++) {
       onPage(number, doc.numPages);
       const page = await doc.getPage(number);
       const text = await page.getTextContent();
-      const operators = await page.getOperatorList();
+      const operators = sample.has(number)
+        ? (await page.getOperatorList()).fnArray
+        : undefined;
       const annotations = await page.getAnnotations();
       const viewport = page.getViewport({ scale: 1 });
       const shape: PageShape = {
@@ -103,8 +125,8 @@ export async function inspectPdf(
           .replace(/\s/g, ""),
         width: viewport.width,
         height: viewport.height,
-        operators: operators.fnArray.length,
-        imageCount: operators.fnArray.filter((operator) => IMAGE_OPS.includes(operator)).length,
+        operators: operators?.length,
+        imageCount: operators?.filter((operator) => IMAGE_OPS.includes(operator)).length,
         annotations: annotations
           .map((annotation) =>
             JSON.stringify({
@@ -119,7 +141,7 @@ export async function inspectPdf(
           )
           .sort(),
       };
-      if (typeof OffscreenCanvas !== "undefined") {
+      if (operators && typeof OffscreenCanvas !== "undefined") {
         const preview = page.getViewport({ scale: 96 / viewport.width });
         const canvas = new OffscreenCanvas(
           Math.ceil(preview.width),

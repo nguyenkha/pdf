@@ -119,4 +119,5 @@ export default {
   sizePageTitle: "PDF を {size} に圧縮｜無料・アップロード不要 | pdf.kha.do",
   sizePageDescription: "ブラウザーで PDF を {size} 以下に軽量化。無料でプライバシーも安心。アップロード、登録、透かしはありません。",
   taggedNotice: "この PDF にはスクリーンリーダー向けのアクセシビリティタグがあります。圧縮後もテキスト、リンク、ページは保たれますが、タグは保持されません。",
+  crashed: "ブラウザーのメモリー不足で前回の圧縮が止まりました。「最小サイズ」、ページを減らす、またはパソコンでお試しください。",
 } satisfies Messages;
