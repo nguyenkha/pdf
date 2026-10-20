@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState, type ComponentType } from "react";
 import { createRoot } from "react-dom/client";
 import {
   ArrowUpRight,
@@ -17,6 +17,8 @@ import { metadata } from "./i18n/metadata";
 // Loaded eagerly (~9 KB gzip): a lazy fallback swapped for the full card
 // shifted the page below it (Lighthouse CLS 0.22).
 import CompressTool from "./tools/compress/CompressTool";
+import { toolFromPath, type ToolProps } from "./app/tools";
+import { ToolSwitcher } from "./components/ToolSwitcher";
 import { config } from "./app/config";
 import { SIZE_PAGES, sizeFromPath, sizeFromSlug, sizePath } from "./app/sizes";
 import { fill } from "./i18n/fill";
@@ -43,6 +45,10 @@ function Credits({ text }: { text: string }) {
   );
 }
 const preset = sizeFromPath(location.pathname);
+const activeTool = toolFromPath(location.pathname);
+// Compress is the home tool and renders eagerly; others load on their page.
+const ToolComponent: ComponentType<ToolProps> =
+  activeTool.id === "compress" ? CompressTool : lazy(activeTool.load!);
 // Read before the URL is normalised below; the tool loads lazily.
 const shared = new URLSearchParams(location.search).has("shared");
 // Keeps /privacy/ or a size page when the locale changes.
@@ -50,7 +56,9 @@ const suffix = location.pathname.endsWith("/privacy/")
   ? "privacy/"
   : preset
     ? sizePath(preset.slug)
-    : "";
+    : activeTool.slug
+      ? `${activeTool.slug}/`
+      : "";
 function App({
   firstLocale,
   firstMessages,
@@ -202,7 +210,10 @@ function App({
             <p className="support">{t.support}</p>
           </div>
           <div id="tool">
-            <CompressTool t={t} locale={locale} preset={preset} shared={shared} />
+            <ToolSwitcher t={t} locale={locale} active={activeTool} />
+            <Suspense fallback={<section className="tool-card placeholder" />}>
+              <ToolComponent t={t} locale={locale} preset={preset} shared={shared} />
+            </Suspense>
           </div>
           <div className="content" id="about">
             <div className="info-card how">

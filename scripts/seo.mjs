@@ -1,5 +1,11 @@
 import { metadata } from "../src/i18n/metadata.ts";
 import { SIZE_PAGES } from "../src/app/sizes.ts";
+
+// Mirrors the built tools in src/app/tools.ts (that file imports React
+// components); slug "" is the locale home page. MORE_PLANNED mirrors its
+// unnamed "more tools coming" placeholder.
+const TOOLS = [{ slug: "", nameKey: "compress" }];
+const MORE_PLANNED = true;
 import fs from "node:fs";
 import path from "node:path";
 
@@ -70,7 +76,15 @@ const sizeLabel = (slug) => slug.replace(/(\d+)(kb|mb)/, (_, n, u) => `${n} ${u.
 const sizePath = (slug) => `compress-pdf-to-${slug}/`;
 // Every page family: home, one page per size limit, privacy. Alternates
 // list the same family in each locale.
-const families = ["", ...SIZE_PAGES.map(sizePath), "privacy/"];
+// A tool beyond compress needs <id>Title, <id>Description, <id>Hero and
+// <id>Intro strings (prefix = its nameKey); the build fails without them.
+const toolPages = TOOLS.filter((tool) => tool.slug);
+const families = [
+  "",
+  ...SIZE_PAGES.map(sizePath),
+  ...toolPages.map((tool) => `${tool.slug}/`),
+  "privacy/",
+];
 function writePage(locale, suffix, html) {
   const dir = path.join("dist", locale, suffix);
   fs.mkdirSync(dir, { recursive: true });
@@ -102,6 +116,14 @@ function socialTags(locale, t, title, description, url) {
     .join("");
 }
 const FAQ = [1, 2, 3, 4, 5, 6];
+// Matches ToolSwitcher: built tools plus the unnamed placeholder.
+const switcher = (t, locale) =>
+  TOOLS.length < 2 && !MORE_PLANNED
+    ? ""
+    : `<nav class="tool-switcher"><ul>${TOOLS.map(
+        (tool) =>
+          `<li><a href="/${locale}/${tool.slug ? tool.slug + "/" : ""}">${escape(t[tool.nameKey])}</a></li>`,
+      ).join("")}${MORE_PLANNED ? `<li><span class="soon">${escape(t.coming)}</span></li>` : ""}</ul></nav>`;
 // Same boxes as the app's first render, so swapping in the app moves nothing.
 const header = '<header class="site-header"></header>';
 const credits = (t) =>
@@ -112,13 +134,20 @@ for (const locale of locales) {
   const t = (await import(`../src/i18n/${locale}.ts`)).default;
   const sizeLinks = `<nav class="sizes"><span>${escape(t.sizesTitle)}:</span>${SIZE_PAGES.map((slug) => `<a href="/${locale}/${sizePath(slug)}" title="${escape(fill(t.sizeLink, { size: sizeLabel(slug) }))}">${sizeLabel(slug)}</a>`).join("")}</nav>`;
   for (const suffix of families.slice(0, -1)) {
-    const slug = suffix && suffix.slice("compress-pdf-to-".length, -1);
+    const tool = toolPages.find((entry) => `${entry.slug}/` === suffix);
+    const text = (key) => {
+      if (!t[key]) throw new Error(`seo: missing string ${key} for ${locale}`);
+      return t[key];
+    };
+    const slug = !tool && suffix && suffix.slice("compress-pdf-to-".length, -1);
     const size = slug && sizeLabel(slug);
-    const [title, description] = size
-      ? [fill(t.sizePageTitle, { size }), fill(t.sizePageDescription, { size })]
-      : metadata[locale];
-    const h1 = size ? fill(t.sizeHero, { size }) : t.hero;
-    const intro = size ? fill(t.sizeIntro, { size }) : t.sub;
+    const [title, description] = tool
+      ? [text(`${tool.nameKey}Title`), text(`${tool.nameKey}Description`)]
+      : size
+        ? [fill(t.sizePageTitle, { size }), fill(t.sizePageDescription, { size })]
+        : metadata[locale];
+    const h1 = tool ? text(`${tool.nameKey}Hero`) : size ? fill(t.sizeHero, { size }) : t.hero;
+    const intro = tool ? text(`${tool.nameKey}Intro`) : size ? fill(t.sizeIntro, { size }) : t.sub;
     const url = `https://pdf.kha.do/${locale}/${suffix}`;
     const structured = [
       {
@@ -145,7 +174,7 @@ for (const locale of locales) {
         })),
       },
     ];
-    const content = `${header}<main><div class="hero"><div class="eyebrow">${escape(t.privacy)}</div><h1>${escape(h1)}</h1><p>${escape(intro)}</p><p class="support">${escape(t.support)}</p></div><div id="tool"><section class="tool-card placeholder" aria-label="${escape(t.compress)}"></section></div><section class="content"><h2>${escape(t.how)}</h2><p>${escape(t.howText)}</p><h2>${escape(t.why)}</h2><p>${escape(t.whyText)}</p></section><section class="faq"><h2>${escape(t.faq)}</h2>${FAQ.map((i) => `<h3>${escape(t["q" + i])}</h3><p>${escape(t["a" + i])}</p>`).join("")}</section><section class="privacy-section"><h2>${escape(t.privacyTitle)}</h2><p>${escape(t.siteLoads)}</p><p>${escape(t.privacyBody)}</p>${credits(t)}</section>${sizeLinks}</main>`;
+    const content = `${header}<main><div class="hero"><div class="eyebrow">${escape(t.privacy)}</div><h1>${escape(h1)}</h1><p>${escape(intro)}</p><p class="support">${escape(t.support)}</p></div><div id="tool">${switcher(t, locale)}<section class="tool-card placeholder" aria-label="${escape(t.compress)}"></section></div><section class="content"><h2>${escape(t.how)}</h2><p>${escape(t.howText)}</p><h2>${escape(t.why)}</h2><p>${escape(t.whyText)}</p></section><section class="faq"><h2>${escape(t.faq)}</h2>${FAQ.map((i) => `<h3>${escape(t["q" + i])}</h3><p>${escape(t["a" + i])}</p>`).join("")}</section><section class="privacy-section"><h2>${escape(t.privacyTitle)}</h2><p>${escape(t.siteLoads)}</p><p>${escape(t.privacyBody)}</p>${credits(t)}</section>${sizeLinks}</main>`;
     const html = base(
       locale,
       title,

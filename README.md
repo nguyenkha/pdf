@@ -101,3 +101,6 @@ Merge, split, rotate, extraction and images-to-PDF may be added as independent l
 
 `pnpm test:corpus` builds a synthetic corpus with native Ghostscript (`scripts/make-corpus.mjs`: 300 dpi color and gray scans, a long text document, one with bookmarks and page links), compresses each file in WebKit with an iPhone profile and in desktop Chromium, and fails when the output loses pages or bookmarks, or when a job's peak memory passes a 2 GB ceiling. Browser resident memory varies by up to ~50% between identical runs, so the ceiling only catches gross regressions; the measured peaks are reported for trends. CI writes the timings and peaks to the run summary.
 
+## Adding a tool
+
+Tools are listed in `src/app/tools.ts` and mirrored in `scripts/seo.mjs`. Build the component under `src/tools/<id>/` against `ToolProps`, add it to both lists with a slug, and add its strings (`<nameKey>Title`, `Description`, `Hero`, `Intro`) to every locale. The page, hreflang, sitemap and offline cache follow from the slug. Planned tools (entries without `load`) never show by name; while any exist, the switcher ends with one "more tools coming" placeholder.

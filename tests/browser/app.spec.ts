@@ -203,3 +203,10 @@ test("closing the comparison early leaves no pdf.js worker behind", async ({ pag
   await compare.click();
   await expect.poll(() => page.workers().length, { timeout: 15000 }).toBe(0);
 });
+test("tool switcher shows built tools and one unnamed placeholder", async ({ page }) => {
+  await page.goto("/en/");
+  const switcher = page.locator(".tool-switcher");
+  await expect(switcher.getByRole("link", { name: "Compress PDF" })).toHaveAttribute("aria-current", "page");
+  await expect(switcher.locator(".soon")).toHaveText("More tools coming later");
+  await expect(switcher.getByRole("link")).toHaveCount(1);
+});

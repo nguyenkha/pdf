@@ -295,6 +295,53 @@ main {
   box-shadow: var(--shadow);
   padding: 28px;
 }
+.tool-switcher {
+  width: min(100%, 680px);
+  margin: 0 auto 12px;
+}
+.tool-switcher ul {
+  list-style: none;
+  margin: 0;
+  padding: 2px;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tool-switcher li {
+  flex-shrink: 0;
+}
+.tool-switcher a,
+.tool-switcher .soon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 100px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.tool-switcher a {
+  color: var(--text);
+}
+.tool-switcher a:hover {
+  border-color: var(--border-strong);
+}
+.tool-switcher a[aria-current="page"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+.tool-switcher .soon {
+  color: var(--muted);
+  background: transparent;
+  border-style: dashed;
+  cursor: default;
+}
 /* Static first paint holds the card's space until the app renders. */
 .tool-card.placeholder {
   min-height: 371px;
