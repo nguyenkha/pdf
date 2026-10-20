@@ -271,4 +271,5 @@ export default {
   ocrLoading: "Erkennung wird vorbereitet…",
   ocrDoneNote: "Der Text von {count} Seiten wurde per OCR erkannt und kann Fehler enthalten; vergleiche ihn mit dem PDF.",
   ocrFailed: "Die Texterkennung hat bei dieser Datei nicht funktioniert. Prüfe die Sprache des Dokuments oder versuche einen schärferen Scan.",
+  shareLimit: "Eine Ausnahme: Wenn du ein PDF aus einer anderen App an die installierte App teilst (Teilen-Menü von Android), übergibt der Browser es als Upload an diese Seite. Normalerweise nimmt der Offline-Teil der App es auf deinem Gerät an; läuft er nicht (etwa direkt nach dem Löschen der Website-Daten), erreicht die Datei den Webhoster, der sie ablehnt und nicht speichert. Um sicherzugehen, öffne die Datei direkt in der App.",
 } satisfies Messages;

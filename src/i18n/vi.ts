@@ -271,4 +271,5 @@ export default {
   ocrLoading: "Đang chuẩn bị bộ nhận dạng…",
   ocrDoneNote: "Chữ ở {count} trang được nhận dạng bằng OCR và có thể sai; hãy so sánh với PDF.",
   ocrFailed: "Không nhận dạng được chữ trong file này. Hãy kiểm tra ngôn ngữ của file, hoặc thử bản scan rõ hơn.",
+  shareLimit: "Có một ngoại lệ: khi bạn chia sẻ PDF từ app khác vào app đã cài (menu chia sẻ của Android), trình duyệt gửi file như một lần tải lên trang này. Bình thường phần chạy offline của app nhận file ngay trên máy; nếu phần đó không chạy (ví dụ ngay sau khi xóa dữ liệu trang), file sẽ tới máy chủ web, nơi từ chối và không lưu file. Muốn chắc chắn, hãy mở file từ trong app.",
 } satisfies Messages;

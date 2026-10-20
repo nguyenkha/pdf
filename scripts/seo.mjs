@@ -202,7 +202,7 @@ for (const locale of locales) {
     writePage(locale, suffix, html);
   }
   const privacyUrl = `https://pdf.kha.do/${locale}/privacy/`;
-  const privacyContent = `${header}<main class="privacy-page"><a href="/${locale}/compress/">pdf.kha.do</a><h1>${escape(t.privacyTitle)}</h1><p class="philosophy">${escape(t.philosophy)}</p><p>${escape(t.siteLoads)}</p><p>${escape(t.privacyBody)}</p>${credits(t)}<p>${escape(t.limitations)}</p><h2>${escape(t.how)}</h2><p>${escape(t.howText)}</p><p>${escape(t.support)}</p></main>`;
+  const privacyContent = `${header}<main class="privacy-page"><a href="/${locale}/compress/">pdf.kha.do</a><h1>${escape(t.privacyTitle)}</h1><p class="philosophy">${escape(t.philosophy)}</p><p>${escape(t.siteLoads)}</p><p>${escape(t.privacyBody)}</p>${credits(t)}<p>${escape(t.limitations)}</p><p>${escape(t.shareLimit)}</p><h2>${escape(t.how)}</h2><p>${escape(t.howText)}</p><p>${escape(t.support)}</p></main>`;
   const privacyHtml = base(
     locale,
     `${t.privacyTitle} | pdf.kha.do`,

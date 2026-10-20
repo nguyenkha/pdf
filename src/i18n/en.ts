@@ -268,4 +268,5 @@ export default {
   ocrLoading: "Preparing the recognizer…",
   ocrDoneNote: "Text on {count} pages was recognized with OCR and may contain mistakes; compare it with the PDF.",
   ocrFailed: "Text recognition did not work on this file. Check the document language, or try a sharper scan.",
+  shareLimit: "One exception: when you share a PDF to the installed app from another app (Android's share sheet), the browser hands it over as an upload to this site. The app's offline helper normally catches it on your device; if that helper is not running (for example right after clearing site data), the file reaches the web host, which rejects it without storing it. To be sure, open the file from inside the app instead.",
 };

@@ -195,6 +195,7 @@ function App({
           <p>{t.privacyBody}</p>
           <Credits text={t.credits} />
           <p>{t.limitations}</p>
+          <p>{t.shareLimit}</p>
           <h2>{t.how}</h2>
           <p>{t.howText}</p>
           <p>{t.support}</p>

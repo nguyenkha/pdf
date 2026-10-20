@@ -272,4 +272,5 @@ export default {
   ocrLoading: "Préparation de la reconnaissance…",
   ocrDoneNote: "Le texte de {count} pages a été reconnu par OCR et peut contenir des erreurs ; comparez-le au PDF.",
   ocrFailed: "La reconnaissance du texte n'a pas fonctionné sur ce fichier. Vérifiez la langue du document ou essayez un scan plus net.",
+  shareLimit: "Une exception : quand vous partagez un PDF vers l'appli installée depuis une autre appli (menu de partage d'Android), le navigateur le transmet comme un envoi vers ce site. Normalement, le composant hors ligne de l'appli le reçoit sur votre appareil ; s'il ne tourne pas (par exemple juste après avoir effacé les données du site), le fichier atteint l'hébergeur web, qui le refuse sans le conserver. Pour être sûr, ouvrez plutôt le fichier depuis l'appli.",
 } satisfies Messages;
