@@ -448,6 +448,9 @@ main {
   background: var(--border);
 }
 .replace-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   position: relative;
   overflow: hidden;
   flex-shrink: 0;
@@ -809,6 +812,26 @@ input[type="number"],
   border-color: color-mix(in srgb, var(--teal) 35%, transparent);
   background: var(--teal-soft);
 }
+.result-actions {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 10px;
+  margin-top: 18px;
+}
+.result-actions .primary,
+.result-actions .secondary {
+  margin: 0;
+  white-space: nowrap;
+}
+/* The hero eyebrow already says this above the fold on wider screens. */
+@media (min-width: 681px) {
+  .reassurance {
+    display: none;
+  }
+}
+.tool-card {
+  scroll-margin-top: 12px;
+}
 .result .result-note {
   font-size: 12px;
 }
@@ -1013,6 +1036,20 @@ footer a:hover {
   }
   .steps li {
     font-size: 11px;
+    white-space: nowrap;
+  }
+  .replace-file span {
+    display: none;
+  }
+  .file-details small {
+    font-size: 12px;
+  }
+  /* Only the chosen goal keeps its description on phones. */
+  .goals label:not(.selected) small {
+    display: none;
+  }
+  .goals label {
+    padding-block: 11px;
   }
   .goals {
     grid-template-columns: 1fr;

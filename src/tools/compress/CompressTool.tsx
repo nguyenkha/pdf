@@ -59,6 +59,15 @@ export default function CompressTool({ t, locale }: Props) {
   const [result, setResult] = useState<CompressionResult>();
   const [busy, setBusy] = useState(false);
   const job = useRef<{ cancel: () => void } | undefined>(undefined);
+  const card = useRef<HTMLElement>(null);
+  // On phones the next action can sit below the fold after a step changes.
+  useEffect(() => {
+    const element = card.current;
+    if (!element || (!summary && !result)) return;
+    const { bottom } = element.getBoundingClientRect();
+    if (bottom > innerHeight)
+      element.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [summary, result]);
   const generation = useRef(0);
   useEffect(
     () => () => {
@@ -192,7 +201,7 @@ export default function CompressTool({ t, locale }: Props) {
   }
   const step = result ? 3 : file && (summary || locked) ? 2 : 1;
   return (
-    <section className="tool-card" aria-label={t.compress}>
+    <section className="tool-card" aria-label={t.compress} ref={card}>
       <div className="tool-title">
         <span className="tool-icon">
           <FileArchive size={21} aria-hidden="true" />

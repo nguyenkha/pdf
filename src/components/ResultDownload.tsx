@@ -1,7 +1,8 @@
-import { Download, RotateCcw } from "lucide-react";
+import { Download, Eye, RotateCcw } from "lucide-react";
 import { formatSize, savings, outputName } from "../lib/pdf";
 import { useObjectUrl } from "../hooks/useObjectUrl";
 import type { Messages } from "../i18n";
+import { fill } from "../i18n/fill";
 export type CompressionResult = {
   blob: Blob;
   achieved: boolean;
@@ -39,11 +40,12 @@ export function ResultDownload({
       </div>
       {reduced ? (
         <p className="success">
-          {new Intl.NumberFormat(locale, {
-            style: "percent",
-            maximumFractionDigits: 0,
-          }).format(savings(file.size, result.blob.size) / 100)}{" "}
-          {t.saved}
+          {fill(t.saved, {
+            percent: new Intl.NumberFormat(locale, {
+              style: "percent",
+              maximumFractionDigits: 0,
+            }).format(savings(file.size, result.blob.size) / 100),
+          })}
         </p>
       ) : (
         <p>{t.noReduction}</p>
@@ -52,10 +54,17 @@ export function ResultDownload({
         <p>{result.achieved ? t.targetMet : t.targetMiss}</p>
       )}
       {reduced && url && (
-        <a className="primary" href={url} download={outputName(file.name)}>
-          <Download size={18} aria-hidden="true" />
-          {t.download}
-        </a>
+        <div className="result-actions">
+          <a className="primary" href={url} download={outputName(file.name)}>
+            <Download size={18} aria-hidden="true" />
+            {t.download}
+          </a>
+          {/* Opens the browser's own PDF viewer; CSP forbids blob: frames. */}
+          <a className="secondary" href={url} target="_blank" rel="noopener">
+            <Eye size={18} aria-hidden="true" />
+            {t.preview}
+          </a>
+        </div>
       )}
       {result.lossy && <p className="result-note">{t.lossyNotice}</p>}
       {reduced && result.unlocked && (

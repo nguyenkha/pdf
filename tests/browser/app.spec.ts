@@ -48,6 +48,9 @@ test("compresses a real scan and downloads a PDF", async ({ page }) => {
     .setInputFiles("tests/fixtures/scan.pdf");
   await page.getByRole("button", { name: "Compress PDF" }).click();
   await expectSuccess(page);
+  const preview = page.getByRole("link", { name: "Preview" });
+  await expect(preview).toHaveAttribute("target", "_blank");
+  await expect(preview).toHaveAttribute("href", /^blob:/);
   const download = page.waitForEvent("download");
   await page.getByRole("link", { name: "Download PDF" }).click();
   expect((await download).suggestedFilename()).toBe("scan-compressed.pdf");

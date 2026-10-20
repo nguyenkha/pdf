@@ -28,7 +28,9 @@ export const names = [
 export function resolveLocale(value: string): Locale {
   const match =
     locales.find((l) => l.toLowerCase() === value.toLowerCase()) ??
-    locales.find((l) => l.split("-")[0] === value.split("-")[0]);
+    locales.find(
+      (l) => l.split("-")[0] === value.split("-")[0].toLowerCase(),
+    );
   return match ?? "en";
 }
 export function initialLocale(): Locale {
@@ -40,5 +42,12 @@ export function initialLocale(): Locale {
   } catch {
     /* Storage may be disabled. */
   }
-  return saved ? resolveLocale(saved) : resolveLocale(navigator.language);
+  if (saved) return resolveLocale(saved);
+  const preferred = navigator.languages?.length
+    ? navigator.languages
+    : [navigator.language];
+  return resolveLocale(
+    preferred.find((value) => resolveLocale(value) !== "en" || /^en\b/i.test(value)) ??
+      "en",
+  );
 }

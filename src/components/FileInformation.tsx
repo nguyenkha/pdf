@@ -1,4 +1,4 @@
-import { FileText, X } from "lucide-react";
+import { FileText, RefreshCw, X } from "lucide-react";
 import { formatSize } from "../lib/pdf";
 import type { Messages } from "../i18n";
 import { fill } from "../i18n/fill";
@@ -31,7 +31,8 @@ export function FileInformation({
         </small>
       </div>
       {!busy && (
-        <label className="replace-file">
+        <label className="replace-file" title={t.replace}>
+          <RefreshCw size={15} aria-hidden="true" />
           <span>{t.replace}</span>
           <input
             type="file"

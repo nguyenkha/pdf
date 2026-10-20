@@ -49,6 +49,7 @@ describe("PDF helpers", () => {
     expect(resolveLocale("xx")).toBe("en");
     expect(resolveLocale("zh-TW")).toBe("zh-CN");
     expect(resolveLocale("vi-VN")).toBe("vi");
+    expect(resolveLocale("VI")).toBe("vi");
     expect(locales.at(-1)).toBe("vi");
   });
   it("validates files", () => {

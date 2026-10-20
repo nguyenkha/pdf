@@ -13,15 +13,24 @@ try {
     "vi",
   ];
   var saved = localStorage.getItem("locale");
-  var preferred = saved || navigator.language || "en";
-  var match =
-    supported.find(function (x) {
-      return x.toLowerCase() === preferred.toLowerCase();
-    }) ||
-    supported.find(function (x) {
-      return x.split("-")[0] === preferred.split("-")[0];
-    }) ||
-    "en";
+  // Walk the whole browser preference list, not only the first language.
+  var preferred = (saved ? [saved] : []).concat(
+    navigator.languages && navigator.languages.length
+      ? navigator.languages
+      : [navigator.language || "en"],
+  );
+  var match;
+  for (var i = 0; i < preferred.length && !match; i++) {
+    var wanted = preferred[i].toLowerCase();
+    match =
+      supported.find(function (x) {
+        return x.toLowerCase() === wanted;
+      }) ||
+      supported.find(function (x) {
+        return x.split("-")[0].toLowerCase() === wanted.split("-")[0];
+      });
+  }
+  match = match || "en";
   location.replace("/" + match + "/");
 } catch {
   location.replace("/en/");

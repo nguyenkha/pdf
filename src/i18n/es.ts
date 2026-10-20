@@ -40,8 +40,9 @@ export default {
   cancel: "Cancelar",
   original: "Original",
   result: "Resultado",
-  saved: "ahorrado",
+  saved: "{percent} ahorrado",
   download: "Descargar PDF",
+  preview: "Vista previa",
   another: "Comprimir otro PDF",
   noReduction:
     "No fue posible reducirlo de forma significativa. Conserva el archivo original.",
