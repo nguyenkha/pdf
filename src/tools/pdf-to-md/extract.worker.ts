@@ -3,7 +3,7 @@ import { findImages, type PageImage } from "./images";
 import { imageObject, imageSource, type PdfImage } from "./pdf-image";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import { safeUrl } from "./structure";
-import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.min.mjs?url";
 import {
   convertDocument,
   documentTitle,

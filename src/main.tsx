@@ -53,9 +53,22 @@ const home = activeTool.id === "compress";
 // and HowText (the same strings scripts/seo.mjs prerenders).
 const toolText = (m: Messages, part: "Title" | "Description" | "Hero" | "Intro" | "HowText") =>
   m[`${activeTool.nameKey}${part}` as keyof Messages];
-// Compress is the home tool and renders eagerly; others load on their page.
-const ToolComponent: ComponentType<ToolProps> =
-  activeTool.id === "compress" ? CompressTool : lazy(activeTool.load!);
+// Compress is the home tool and renders eagerly; others load on their page,
+// alongside the messages, so the first render already has them: a lazy
+// component that suspends is held back by React's ~300 ms fallback throttle.
+// If the chunk fails here, the lazy component retries it when rendered.
+let ToolComponent: ComponentType<ToolProps> = CompressTool;
+const toolReady =
+  activeTool.id === "compress"
+    ? Promise.resolve()
+    : activeTool.load!().then(
+        (module) => {
+          ToolComponent = module.default;
+        },
+        () => {
+          ToolComponent = lazy(activeTool.load!);
+        },
+      );
 // Read before the URL is normalised below; the tool loads lazily.
 const shared = new URLSearchParams(location.search).has("shared");
 // Keeps /privacy/ or a size page when the locale changes.
@@ -300,9 +313,8 @@ const firstLocale = initialLocale();
 const atHome = /^\/[^/]+\/$/.test(location.pathname);
 if (atHome) location.replace(`/${firstLocale}/compress/${location.search}`);
 if (!atHome)
-  messages(firstLocale)
-  .catch(() => en)
-  .then((firstMessages) =>
+  Promise.all([messages(firstLocale).catch(() => en), toolReady])
+  .then(([firstMessages]) =>
     createRoot(document.getElementById("root")!).render(
       <App firstLocale={firstLocale} firstMessages={firstMessages} />,
     ),
