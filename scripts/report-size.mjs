@@ -11,7 +11,8 @@ function walk(dir) {
   }
 }
 walk(root);
-const html = fs.readFileSync("dist/en/index.html", "utf8");
+// The locale home only redirects; the compress page is the real first load.
+const html = fs.readFileSync("dist/en/compress/index.html", "utf8");
 const initial = new Set(
   [...html.matchAll(/(?:src|href)="(\/assets\/[^"]+\.(?:js|css))"/g)].map(
     (match) => path.join(root, match[1]),
@@ -20,7 +21,7 @@ const initial = new Set(
 for (const file of files.filter((file) => /CompressTool-[^/]+\.js$/.test(file)))
   initial.add(file);
 for (const file of [
-  "en/index.html",
+  "en/compress/index.html",
   "theme.js",
   "icons/icon.svg",
   "manifest.webmanifest",
