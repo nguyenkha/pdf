@@ -615,6 +615,12 @@ input[type="number"],
   line-height: 1.45;
   color: var(--muted);
 }
+.estimate {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--teal);
+  font-weight: 600;
+}
 .limits {
   margin-top: 14px;
   display: flex;
@@ -824,8 +830,8 @@ input[type="number"],
   background: var(--teal-soft);
 }
 .result-actions {
-  display: grid;
-  grid-template-columns: 3fr 2fr;
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   margin-top: 18px;
 }
@@ -833,6 +839,66 @@ input[type="number"],
 .result-actions .secondary {
   margin: 0;
   white-space: nowrap;
+}
+.result-actions .primary {
+  flex-basis: 100%;
+}
+.result-actions .secondary {
+  flex: 1 1 auto;
+  width: auto;
+}
+.result-actions .secondary[aria-expanded="true"] {
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+.compare {
+  margin-top: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+  background: var(--surface-2);
+}
+.compare-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.compare-panes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.compare figure {
+  margin: 0;
+  min-width: 0;
+}
+.compare figcaption {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.compare-box {
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+  line-height: 0;
+}
+.compare-box.zoomed {
+  overflow: auto;
+  max-height: 420px;
+}
+.compare canvas {
+  display: block;
+  max-width: none;
+}
+.compare-box:not(.zoomed) canvas {
+  width: 100% !important;
+  height: auto;
 }
 /* The hero eyebrow already says this above the fold on wider screens. */
 @media (min-width: 681px) {

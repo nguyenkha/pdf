@@ -116,4 +116,12 @@ export default {
   crashed: "上次压缩因浏览器内存不足而中断。请尝试“最小文件”、减少页数或使用电脑。",
   grayscale: "灰度（更小，耗时更长）",
   credits: "压缩由 Artifex 开源的 PDF 引擎 {gs} 驱动，并编译为 WebAssembly；结果检查使用 Mozilla 的 {pdfjs}。感谢 Ghostscript。",
+  estimating: "正在估算结果大小…",
+  estimate: "预计结果：约 {size}（缩小 {percent}）",
+  share: "分享",
+  compare: "前后对比",
+  previousPage: "上一页",
+  nextPage: "下一页",
+  zoomIn: "放大",
+  zoomOut: "缩小",
 } satisfies Messages;

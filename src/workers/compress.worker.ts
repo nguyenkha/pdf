@@ -3,6 +3,7 @@ import {
   ghostscriptArgs,
   mergeArgs,
   splitPages,
+  estimateProfile,
   type CompressOptions,
   type PageRange,
   type EnginePass,
@@ -111,6 +112,7 @@ let pageCount = 0;
 type Request =
   | { type: "cancel" }
   | { type: "probe"; file: File; password?: string }
+  | { type: "estimate"; file: File; options: CompressOptions; pages: number }
   | { type?: "compress"; file: File; options: CompressOptions };
 self.onmessage = async (event: MessageEvent<Request>) => {
   const request = event.data;
@@ -127,6 +129,36 @@ self.onmessage = async (event: MessageEvent<Request>) => {
       self.postMessage({
         type: "result",
         result: await probePdf(input, request.password),
+      });
+      return;
+    }
+    if (request.type === "estimate") {
+      // Rewrite up to two middle pages losslessly and with the likely
+      // profile; their ratio scales the whole file. A ratio, not a sum, so
+      // resources shared by every page (fonts, a repeated logo) cancel out.
+      const { file, options, pages } = request;
+      const first = Math.max(1, Math.ceil(pages / 2));
+      const range = { first, last: Math.min(pages, first + 1) };
+      const sample = (profile: Parameters<typeof ghostscriptArgs>[0]) =>
+        runGhostscript(
+          [{ path: "/input.pdf", blob: file }],
+          ghostscriptArgs(profile, options.password, range),
+          () => {},
+        ).then((output) => output.bytes.length);
+      const reference = await sample({ quality: 101, dpi: 0 });
+      const compressed = await sample(estimateProfile(options));
+      const sampled = range.last - range.first + 1;
+      // The per-page figure caps the ratio when the source repeats images
+      // that the rewrite deduplicates; neither sees document-wide repeats.
+      self.postMessage({
+        type: "result",
+        result: Math.round(
+          Math.min(
+            file.size,
+            (file.size * compressed) / reference,
+            (compressed * pages) / sampled,
+          ),
+        ),
       });
       return;
     }

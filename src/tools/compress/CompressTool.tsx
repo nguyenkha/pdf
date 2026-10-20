@@ -4,7 +4,7 @@ import type { Messages } from "../../i18n";
 import type { Locale } from "../../i18n/config";
 import { targetBytes, validateFile, LARGE_FILE_BYTES } from "../../lib/pdf";
 import { recommendedPreference, suggestedLimit } from "../../lib/plan";
-import { probeFile, runCompression, type JobProgress } from "./run";
+import { estimateFile, probeFile, runCompression, type JobProgress } from "./run";
 import type { CompressOptions } from "../../engines/ghostscript";
 import type { PdfSummary } from "../../engines/validate";
 import { ENGINE_BASE } from "../../engines/core";
@@ -84,6 +84,7 @@ export default function CompressTool({ t, locale, preset }: Props) {
     }
   }, [t.crashed]);
   const card = useRef<HTMLElement>(null);
+  const [estimate, setEstimate] = useState<{ size?: number; loading: boolean }>();
   // On phones the next action can sit below the fold after a step changes.
   useEffect(() => {
     const element = card.current;
@@ -183,6 +184,31 @@ export default function CompressTool({ t, locale, preset }: Props) {
           : plan.goal,
     };
   }
+  // A quick sample run gives an expected size for the chosen level.
+  const estimateKey = file && summary && !busy && !result && plan.goal !== "limit" && summary.hasImages
+    ? `${file.name}|${file.size}|${file.lastModified}|${summary.pages}|${plan.goal}|${plan.imageQuality}|${plan.gray}`
+    : "";
+  useEffect(() => {
+    setEstimate(undefined);
+    if (!estimateKey || !file || !summary) return;
+    const chosen = options();
+    if (!chosen) return;
+    let active = true;
+    let sample: ReturnType<typeof estimateFile> | undefined;
+    const timer = setTimeout(() => {
+      setEstimate({ loading: true });
+      sample = estimateFile(file, chosen, summary.pages);
+      sample.promise
+        .then((size) => active && setEstimate({ size, loading: false }))
+        .catch(() => active && setEstimate(undefined));
+    }, 400);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+      sample?.cancel();
+    };
+    // options() reads plan, file and summary, all covered by the key.
+  }, [estimateKey]);
   async function start() {
     if (!file || busy) return;
     const chosen = options();
@@ -276,6 +302,7 @@ export default function CompressTool({ t, locale, preset }: Props) {
             summary={summary}
             value={plan}
             onChange={setPlan}
+            estimate={estimate}
           />
           <button type="button" className="primary" onClick={start}>
             {t.compress}
@@ -296,6 +323,8 @@ export default function CompressTool({ t, locale, preset }: Props) {
           result={result}
           t={t}
           locale={locale}
+          pages={summary?.pages ?? 1}
+          password={password}
           onReset={reset}
         />
       )}

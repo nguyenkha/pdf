@@ -125,4 +125,12 @@ export default {
   crashed: "La dernière compression s'est arrêtée car le navigateur manquait de mémoire. Essayez « Fichier le plus petit », moins de pages ou un ordinateur.",
   grayscale: "Niveaux de gris (plus petit, plus long)",
   credits: "La compression repose sur {gs}, le moteur PDF open source d'Artifex, compilé en WebAssembly ; la vérification utilise {pdfjs} de Mozilla. Merci, Ghostscript.",
+  estimating: "Estimation de la taille…",
+  estimate: "Résultat attendu : environ {size} ({percent} de moins)",
+  share: "Partager",
+  compare: "Comparer avant/après",
+  previousPage: "Page précédente",
+  nextPage: "Page suivante",
+  zoomIn: "Zoom avant",
+  zoomOut: "Zoom arrière",
 } satisfies Messages;

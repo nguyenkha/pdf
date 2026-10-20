@@ -123,4 +123,12 @@ export default {
   crashed: "पिछला कंप्रेशन रुक गया क्योंकि ब्राउज़र की मेमोरी खत्म हो गई। \"सबसे छोटी फ़ाइल\", कम पेज या कंप्यूटर आज़माएँ।",
   grayscale: "ग्रेस्केल (छोटी फ़ाइल, ज़्यादा समय)",
   credits: "कंप्रेशन {gs} से होता है, जो Artifex का ओपन-सोर्स PDF इंजन है और WebAssembly में कंपाइल किया गया है; नतीजे की जाँच Mozilla के {pdfjs} से होती है। धन्यवाद, Ghostscript।",
+  estimating: "आकार का अनुमान लगाया जा रहा है…",
+  estimate: "अनुमानित नतीजा: लगभग {size} ({percent} छोटा)",
+  share: "शेयर करें",
+  compare: "पहले/बाद की तुलना",
+  previousPage: "पिछला पेज",
+  nextPage: "अगला पेज",
+  zoomIn: "ज़ूम इन",
+  zoomOut: "ज़ूम आउट",
 } satisfies Messages;

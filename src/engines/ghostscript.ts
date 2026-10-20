@@ -182,6 +182,15 @@ export function ghostscriptArgs(
 
 // The pass reads the input itself, so the caller never holds a copy of
 // the (possibly very large) original while passes run.
+/**
+ * The pass most likely to be released for these options, used to estimate
+ * the result from a sample of pages before the real run.
+ */
+export function estimateProfile(options: CompressOptions): Profile {
+  const rows = attemptsFor(options).filter((row) => row.quality <= 100);
+  if (!rows.length) return { quality: 101, dpi: 0 };
+  return options.preference === "quality" ? rows[0] : rows[rows.length - 1];
+}
 export type EnginePass = (
   profile: Profile,
   onPage: (page: number) => void,

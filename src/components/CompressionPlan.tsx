@@ -4,6 +4,7 @@ import type { ImageQuality } from "../engines/ghostscript";
 import type { PdfSummary } from "../engines/validate";
 import { formatSize } from "../lib/pdf";
 import { limitChoices, type Goal } from "../lib/plan";
+import { fill } from "../i18n/fill";
 export type PlanChoice = {
   goal: Goal;
   imageQuality: ImageQuality;
@@ -19,6 +20,7 @@ export function CompressionPlan({
   summary,
   value,
   onChange,
+  estimate,
 }: {
   t: Messages;
   locale: string;
@@ -26,6 +28,7 @@ export function CompressionPlan({
   summary: PdfSummary;
   value: PlanChoice;
   onChange: (next: PlanChoice) => void;
+  estimate?: { size?: number; loading: boolean };
 }) {
   const set = (patch: Partial<PlanChoice>) => onChange({ ...value, ...patch });
   const limits = limitChoices(file.size);
@@ -66,6 +69,19 @@ export function CompressionPlan({
           </label>
         ))}
       </div>
+      {estimate && value.goal !== "limit" && (
+        <p className="estimate" aria-live="polite">
+          {estimate.loading || estimate.size === undefined
+            ? t.estimating
+            : fill(t.estimate, {
+                size: formatSize(estimate.size, locale),
+                percent: new Intl.NumberFormat(locale, {
+                  style: "percent",
+                  maximumFractionDigits: 0,
+                }).format(Math.max(0, 1 - estimate.size / file.size)),
+              })}
+        </p>
+      )}
       {value.goal === "limit" && (
         <div className="limits">
           <div className="chips" role="group" aria-label={t.limit}>

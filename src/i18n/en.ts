@@ -121,4 +121,12 @@ export default {
   crashed: "The last compression stopped because the browser ran out of memory. Try \"Smallest file\", fewer pages, or a computer.",
   grayscale: "Grayscale (smaller, takes longer)",
   credits: "Compression is powered by {gs}, the open-source PDF engine by Artifex, compiled to WebAssembly; result checks use Mozilla's {pdfjs}. Thank you, Ghostscript.",
+  estimating: "Estimating result size…",
+  estimate: "Expected result: about {size} ({percent} smaller)",
+  share: "Share",
+  compare: "Compare before/after",
+  previousPage: "Previous page",
+  nextPage: "Next page",
+  zoomIn: "Zoom in",
+  zoomOut: "Zoom out",
 };

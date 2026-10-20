@@ -124,4 +124,12 @@ export default {
   crashed: "Lần nén trước bị dừng vì trình duyệt hết bộ nhớ. Hãy thử \"File nhỏ nhất\", tách bớt trang, hoặc dùng máy tính.",
   grayscale: "Chuyển trắng đen (nhỏ hơn, chậm hơn)",
   credits: "Việc nén chạy bằng {gs}, bộ xử lý PDF mã nguồn mở của Artifex, được biên dịch sang WebAssembly; bước kiểm tra kết quả dùng {pdfjs} của Mozilla. Cảm ơn Ghostscript.",
+  estimating: "Đang ước tính dung lượng…",
+  estimate: "Dự kiến: khoảng {size} (nhỏ hơn {percent})",
+  share: "Chia sẻ",
+  compare: "So sánh trước/sau",
+  previousPage: "Trang trước",
+  nextPage: "Trang sau",
+  zoomIn: "Phóng to",
+  zoomOut: "Thu nhỏ",
 } satisfies Messages;

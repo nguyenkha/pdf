@@ -124,4 +124,12 @@ export default {
   crashed: "La última compresión se detuvo porque el navegador se quedó sin memoria. Prueba \"Archivo más pequeño\", menos páginas o un ordenador.",
   grayscale: "Escala de grises (más pequeño, tarda más)",
   credits: "La compresión funciona con {gs}, el motor PDF de código abierto de Artifex, compilado a WebAssembly; la verificación usa {pdfjs} de Mozilla. Gracias, Ghostscript.",
+  estimating: "Calculando el tamaño…",
+  estimate: "Resultado esperado: unos {size} ({percent} menos)",
+  share: "Compartir",
+  compare: "Comparar antes/después",
+  previousPage: "Página anterior",
+  nextPage: "Página siguiente",
+  zoomIn: "Acercar",
+  zoomOut: "Alejar",
 } satisfies Messages;

@@ -122,4 +122,12 @@ export default {
   crashed: "ブラウザーのメモリー不足で前回の圧縮が止まりました。「最小サイズ」、ページを減らす、またはパソコンでお試しください。",
   grayscale: "グレースケール（小さく、時間がかかる）",
   credits: "圧縮には Artifex のオープンソース PDF エンジン {gs} を WebAssembly で使用し、結果の確認には Mozilla の {pdfjs} を使っています。ありがとう、Ghostscript。",
+  estimating: "サイズを見積もり中…",
+  estimate: "予想サイズ：約 {size}（{percent} 削減）",
+  share: "共有",
+  compare: "圧縮前後を比較",
+  previousPage: "前のページ",
+  nextPage: "次のページ",
+  zoomIn: "拡大",
+  zoomOut: "縮小",
 } satisfies Messages;

@@ -121,4 +121,12 @@ export default {
   crashed: "توقف الضغط الأخير لأن المتصفح نفدت ذاكرته. جرّب \"أصغر ملف\" أو صفحات أقل أو جهاز كمبيوتر.",
   grayscale: "تدرج رمادي (أصغر، يستغرق وقتًا أطول)",
   credits: "يعتمد الضغط على {gs}، محرك PDF مفتوح المصدر من Artifex، بعد تحويله إلى WebAssembly، ويستخدم التحقق من النتيجة {pdfjs} من Mozilla. شكرًا Ghostscript.",
+  estimating: "جارٍ تقدير الحجم…",
+  estimate: "النتيجة المتوقعة: نحو {size} (أصغر بنسبة {percent})",
+  share: "مشاركة",
+  compare: "مقارنة قبل/بعد",
+  previousPage: "الصفحة السابقة",
+  nextPage: "الصفحة التالية",
+  zoomIn: "تكبير",
+  zoomOut: "تصغير",
 } satisfies Messages;

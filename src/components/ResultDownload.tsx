@@ -1,4 +1,5 @@
-import { Download, Eye, RotateCcw } from "lucide-react";
+import { lazy, Suspense, useMemo, useState } from "react";
+import { Columns2, Download, Eye, RotateCcw, Share2 } from "lucide-react";
 import { formatSize, savings, outputName } from "../lib/pdf";
 import { useObjectUrl } from "../hooks/useObjectUrl";
 import type { Messages } from "../i18n";
@@ -10,21 +11,36 @@ export type CompressionResult = {
   lossy: boolean;
   unlocked?: boolean;
 };
+// pdf.js for the comparison loads only when someone opens it.
+const ComparePreview = lazy(() => import("./ComparePreview"));
 export function ResultDownload({
   file,
   result,
   t,
   locale,
+  pages,
+  password,
   onReset,
 }: {
   file: File;
   result: CompressionResult;
   t: Messages;
   locale: string;
+  pages: number;
+  password?: string;
   onReset: () => void;
 }) {
   const url = useObjectUrl(result.blob);
   const reduced = result.blob.size < file.size;
+  const [comparing, setComparing] = useState(false);
+  // The system share sheet reaches Drive, Dropbox, OneDrive, Files, Mail...
+  const shareFile = useMemo(
+    () => new File([result.blob], outputName(file.name), { type: "application/pdf" }),
+    [result.blob, file.name],
+  );
+  const canShare =
+    typeof navigator.canShare === "function" &&
+    navigator.canShare({ files: [shareFile] });
   return (
     <div className="result" aria-live="polite">
       <h3 className="result-heading">{t.complete}</h3>
@@ -64,7 +80,39 @@ export function ResultDownload({
             <Eye size={18} aria-hidden="true" />
             {t.preview}
           </a>
+          {canShare && (
+            <button
+              type="button"
+              className="secondary"
+              onClick={() =>
+                navigator.share({ files: [shareFile], title: shareFile.name }).catch(() => {})
+              }
+            >
+              <Share2 size={18} aria-hidden="true" />
+              {t.share}
+            </button>
+          )}
+          <button
+            type="button"
+            className="secondary"
+            aria-expanded={comparing}
+            onClick={() => setComparing(!comparing)}
+          >
+            <Columns2 size={18} aria-hidden="true" />
+            {t.compare}
+          </button>
         </div>
+      )}
+      {comparing && (
+        <Suspense fallback={<p className="hint">{t.loading}</p>}>
+          <ComparePreview
+            t={t}
+            original={file}
+            result={result.blob}
+            pages={pages}
+            password={password}
+          />
+        </Suspense>
       )}
       {result.lossy && <p className="result-note">{t.lossyNotice}</p>}
       {reduced && result.unlocked && (

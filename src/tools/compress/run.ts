@@ -81,3 +81,7 @@ export function runCompression(
 export function probeFile(file: File, password?: string) {
   return startJob<PdfSummary>({ type: "probe", file, password }, 60_000);
 }
+/** Approximate output size from a short sample run. */
+export function estimateFile(file: File, options: CompressOptions, pages: number) {
+  return startJob<number>({ type: "estimate", file, options, pages }, 60_000);
+}

@@ -124,4 +124,12 @@ export default {
   crashed: "Die letzte Komprimierung wurde abgebrochen, weil dem Browser der Speicher ausging. Versuchen Sie „Kleinste Datei\", weniger Seiten oder einen Computer.",
   grayscale: "Graustufen (kleiner, dauert länger)",
   credits: "Die Komprimierung nutzt {gs}, die Open-Source-PDF-Engine von Artifex, kompiliert zu WebAssembly; die Prüfung nutzt {pdfjs} von Mozilla. Danke, Ghostscript.",
+  estimating: "Größe wird geschätzt…",
+  estimate: "Erwartet: etwa {size} ({percent} kleiner)",
+  share: "Teilen",
+  compare: "Vorher/Nachher vergleichen",
+  previousPage: "Vorherige Seite",
+  nextPage: "Nächste Seite",
+  zoomIn: "Vergrößern",
+  zoomOut: "Verkleinern",
 } satisfies Messages;

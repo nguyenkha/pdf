@@ -150,3 +150,14 @@ test("privacy page keeps the site header, footer and credits", async ({ page }) 
   await expect(page).toHaveURL(/\/en\/privacy\/$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Privacy");
 });
+test("estimates the result and compares before/after", async ({ page }) => {
+  test.setTimeout(180000);
+  await page.goto("/en/");
+  await page.locator("input[type=file]").setInputFiles("tests/fixtures/scan.pdf");
+  await expect(page.locator(".estimate")).toContainText(/Expected result: about .* smaller/, { timeout: 60000 });
+  await page.getByRole("button", { name: "Compress PDF", exact: true }).click();
+  await expectSuccess(page);
+  await page.getByRole("button", { name: "Compare before/after" }).click();
+  await expect(page.locator(".compare canvas")).toHaveCount(2);
+  await expect(page.getByText("page 1 of 1")).toBeVisible({ timeout: 30000 });
+});
