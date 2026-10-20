@@ -5,6 +5,7 @@ export type TextPart = {
   height: number;
   hasEOL: boolean;
   fontFamily?: string;
+  dir?: string;
 };
 
 export function escapeMarkdown(text: string): string {

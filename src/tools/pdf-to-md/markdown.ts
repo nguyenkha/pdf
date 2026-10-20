@@ -1,5 +1,6 @@
 import { escapeMarkdown, pageText, type TextPart } from "./text";
 export { escapeMarkdown, pageText, type TextPart } from "./text";
+import { restoreReadingOrder } from "./columns";
 import { detectTables, tableMarkdown, tableCsv, type ConvertedTable } from "./tables";
 
 export function makeMarkdown(name: string, pages: string[]): string {
@@ -22,12 +23,16 @@ export type ConversionOptions = {
   detectHeadings: boolean;
   removeMargins: boolean;
   detectTables: boolean;
+  restoreColumns: boolean;
+  joinPages: boolean;
 };
 export const defaultOptions: ConversionOptions = {
   keepLineBreaks: false,
   detectHeadings: true,
   removeMargins: true,
   detectTables: true,
+  restoreColumns: false,
+  joinPages: false,
 };
 type Line = { text: string; x: number; y: number; size: number; bold: boolean; parts: TextPart[] };
 
@@ -139,7 +144,12 @@ export function convertDocument(
   pages: TextPage[],
   options: ConversionOptions,
 ) {
-  const lines = pages.map((page) => linesFromParts(page.parts));
+  let columnPages = 0;
+  const lines = pages.map(page => {
+    const ordered = options.restoreColumns ? restoreReadingOrder(page.parts,page.width,page.height) : { parts:page.parts,reordered:false };
+    if(ordered.reordered)columnPages++;
+    return linesFromParts(ordered.parts);
+  });
   const bodySize = weightedSize(
     lines.flat().map((line) => ({ size: line.size, weight: line.text.length })),
   );
@@ -214,7 +224,7 @@ export function convertDocument(
       if (heading) {
         flush();
         blocks.push(
-          `${"#".repeat(3 + headingLevels.indexOf(heading))} ${escapeMarkdown(line.text)}`,
+          `${"#".repeat((options.joinPages ? 2 : 3) + headingLevels.indexOf(heading))} ${escapeMarkdown(line.text)}`,
         );
         headings++;
         previous = undefined;
@@ -245,11 +255,12 @@ export function convertDocument(
     return `## Trang ${index + 1}\n\n${content}`;
   });
   return {
-    markdown: `# ${escapeMarkdown(name.replace(/\.pdf$/i, ""))}\n\n${pageMarkdowns.join("\n\n---\n\n")}\n`,
+    markdown: `# ${escapeMarkdown(name.replace(/\.pdf$/i, ""))}\n\n${options.joinPages ? pageMarkdowns.map(page=>page.replace(/^## Trang \d+\n\n/, "")).join("\n\n") : pageMarkdowns.join("\n\n---\n\n")}\n`,
     pageMarkdowns,
     emptyPages,
     removedLines,
     headings,
     tables,
+    columnPages,
   };
 }

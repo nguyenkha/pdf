@@ -29,6 +29,7 @@ function App() {
   const [pageMarkdowns, setPageMarkdowns] = useState<string[]>([]);
   const [removedLines, setRemovedLines] = useState(0);
   const [headings, setHeadings] = useState(0);
+  const [columnPages,setColumnPages]=useState(0);
   const [tables, setTables] = useState<ConvertedTable[]>([]);
   const [compare, setCompare] = useState(false);
   const [page, setPage] = useState(1);
@@ -125,7 +126,7 @@ function App() {
         setMarkdown(data.markdown);
         setPageMarkdowns(data.pageMarkdowns);
         setRemovedLines(data.removedLines);
-        setHeadings(data.headings); setTables(data.tables);
+        setColumnPages(data.columnPages); setHeadings(data.headings); setTables(data.tables);
         setCopyStatus("idle");
         setEmptyPages(data.emptyPages);
         setDownloadBlob(
@@ -251,7 +252,10 @@ function App() {
                 Bỏ header/footer lặp
               </label>
               <label><input type="checkbox" checked={options.detectTables} onChange={event=>updateOptions({...options,detectTables:event.target.checked})} />Nhận diện bảng đơn giản</label>
+              <label><input type="checkbox" checked={options.restoreColumns} onChange={event=>updateOptions({...options,restoreColumns:event.target.checked})} />Khôi phục thứ tự 2 cột</label>
+              <label><input type="checkbox" checked={options.joinPages} onChange={event=>updateOptions({...options,joinPages:event.target.checked})} />Gộp trang (bỏ mốc trang)</label>
               <small>
+                Chế độ 2 cột chỉ đổi thứ tự khi có khoảng trống chia cột rõ, đọc cột trái trước cột phải. Gộp trang bỏ tiêu đề trang, không tự nối câu qua ranh giới trang.
                 Bảng cần hàng/cột thẳng, không ô gộp. Bảng 2 cột cần dữ liệu số để giảm nhầm với bố cục nhiều cột. Dòng đầu dạng chữ được dùng làm tiêu đề; hãy kiểm tra lại.
                 Chỉ bỏ dòng nhỏ lặp ở mép ít nhất 3 trang. Bạn có thể tắt từng
                 tùy chọn và xem kết quả cập nhật.
@@ -297,7 +301,7 @@ function App() {
                   : ""}
               </p>
               <p className="hint">
-                {headings} tiêu đề và {tables.length} bảng được nhận diện.{" "}
+                {headings} tiêu đề và {tables.length} bảng được nhận diện. {options.restoreColumns ? `Đã khôi phục 2 cột trên ${columnPages} trang; trang không rõ giữ nguyên thứ tự.` : ""}{" "}
                 {removedLines > 0
                   ? `Đã bỏ ${removedLines} dòng header/footer lặp; tắt tùy chọn nếu muốn giữ lại.`
                   : "Không bỏ dòng header/footer nào."}

@@ -261,3 +261,15 @@ test("recognizes a simple table, previews it and exports its own CSV",async({pag
  const download=page.waitForEvent('download');await page.getByRole('link',{name:'CSV · Bảng 1 · Trang 1'}).click();const result=await download;expect(result.suggestedFilename()).toBe('table-page-1-1.csv');expect(await readFile((await result.path())!,'utf8')).toContain('"Apple","12","$24"');
  await page.getByLabel('Nhận diện bảng đơn giản').uncheck();await expect(page.getByRole('table')).toHaveCount(0);await expect(page.getByRole('article',{name:'Xem trước Markdown'})).toContainText('Apple');await expect(page.getByRole('link',{name:/CSV · Bảng/})).toHaveCount(0);
 });
+
+test('restores clear two-column reading order and can keep original order',async({page})=>{
+ await page.goto(path);await page.locator('input[type=file]').setInputFiles('experiments/pdf-to-md/fixtures/two-column.pdf');await page.getByRole('button',{name:'Chuyển sang Markdown'}).click();await page.getByRole('button',{name:'Markdown',exact:true}).click();
+ const source=page.getByLabel('Nội dung Markdown');await expect(source).toHaveValue(/Right column sentence/);const original=await source.inputValue();expect(original.indexOf('Right column sentence 1')).toBeLessThan(original.indexOf('Left column sentence 4'));
+ await page.getByLabel('Khôi phục thứ tự 2 cột').check();await expect(page.getByText(/Đã khôi phục 2 cột trên 1 trang/)).toBeVisible();const restored=await source.inputValue();expect(restored.indexOf('Left column sentence 4')).toBeLessThan(restored.indexOf('Right column sentence 1'));
+ await page.getByLabel('Khôi phục thứ tự 2 cột').uncheck();await expect(source).toHaveValue(original);
+});
+test('can join pages without losing page text or comparison navigation',async({page})=>{
+ await page.goto(path);await page.locator('input[type=file]').setInputFiles('tests/fixtures/multipage.pdf');await page.getByRole('button',{name:'Chuyển sang Markdown'}).click();await page.getByRole('button',{name:'Markdown',exact:true}).click();await expect(page.getByLabel('Nội dung Markdown')).toHaveValue(/## Trang 3/);
+ await page.getByLabel('Gộp trang (bỏ mốc trang)').check();await expect(page.getByLabel('Nội dung Markdown')).not.toHaveValue(/## Trang/);await expect(page.getByLabel('Nội dung Markdown')).toHaveValue(/Selectable page 3/);
+ await page.getByRole('button',{name:'So sánh với PDF'}).click();await expect(page.getByText('Trang 1/3',{exact:true})).toBeVisible();
+});
