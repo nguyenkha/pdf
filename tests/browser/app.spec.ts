@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 async function expectSuccess(page: Page) {
   await expect(page.locator('.result, .error')).toBeVisible({timeout:90000});
   await expect(page.getByRole('alert')).toHaveCount(0);
@@ -160,4 +161,26 @@ test("estimates the result and compares before/after", async ({ page }) => {
   await page.getByRole("button", { name: "Compare before/after" }).click();
   await expect(page.locator(".compare canvas")).toHaveCount(2);
   await expect(page.getByText("page 1 of 1")).toBeVisible({ timeout: 30000 });
+});
+test("compresses several PDFs and downloads them as one ZIP", async ({ page }) => {
+  test.setTimeout(240000);
+  await page.goto("/en/");
+  await page.locator("input[type=file]").setInputFiles([
+    "tests/fixtures/scan.pdf",
+    "tests/fixtures/text-vector.pdf",
+    "tests/fixtures/password.pdf",
+  ]);
+  await expect(page.getByText("PDFs: 3")).toBeVisible();
+  await page.getByRole("button", { name: "Compress 3 PDFs" }).click();
+  const zip = page.getByRole("link", { name: "Download all (ZIP)" });
+  await expect(zip).toBeVisible({ timeout: 180000 });
+  await expect(page.getByText(/already optimized, original kept/)).toBeVisible();
+  await expect(page.getByText(/password-protected, compress it on its own/)).toBeVisible();
+  const download = page.waitForEvent("download");
+  await zip.click();
+  const file = await (await download).path();
+  const bytes = await readFile(file!);
+  // Local file header signature, then the one compressed PDF's name.
+  expect(bytes.readUInt32LE(0)).toBe(0x04034b50);
+  expect(bytes.includes(Buffer.from("scan-compressed.pdf"))).toBe(true);
 });

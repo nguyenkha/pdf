@@ -2,8 +2,8 @@ import { useRef, useState, useEffect } from "react";
 import { FileArchive, ShieldCheck } from "lucide-react";
 import type { Messages } from "../../i18n";
 import type { Locale } from "../../i18n/config";
-import { targetBytes, validateFile, LARGE_FILE_BYTES } from "../../lib/pdf";
-import { recommendedPreference, suggestedLimit } from "../../lib/plan";
+import { validateFile, LARGE_FILE_BYTES } from "../../lib/pdf";
+import { planOptions, suggestedLimit } from "../../lib/plan";
 import { estimateFile, probeFile, runCompression, type JobProgress } from "./run";
 import type { CompressOptions } from "../../engines/ghostscript";
 import type { PdfSummary } from "../../engines/validate";
@@ -21,20 +21,13 @@ import {
   type CompressionResult,
 } from "../../components/ResultDownload";
 import { Steps } from "../../components/Steps";
+import { errorMessage } from "./errors";
+import { BatchTool } from "./BatchTool";
 import type { SizePreset } from "../../app/sizes";
 
 type Props = { t: Messages; locale: Locale; preset?: SizePreset };
-function errorMessage(t: Messages, failure: unknown) {
-  const message = failure instanceof Error ? failure.message.toLowerCase() : "";
-  if (message === "password-incorrect") return t.passwordWrong;
-  if (message.includes("password")) return t.password;
-  if (["unsupported", "preservation"].includes(message)) return t.unsupported;
-  if (message === "corrupt" || message.includes("invalid pdf"))
-    return t.corrupt;
-  if (/memory|allocation/.test(message)) return t.memory;
-  return t.failed;
-}
 const RUNNING = "compress-running";
+const MAX_BATCH = 20;
 function mark(running: boolean) {
   try {
     if (running) sessionStorage.setItem(RUNNING, "1");
@@ -54,6 +47,8 @@ function warmEngine() {
 }
 export default function CompressTool({ t, locale, preset }: Props) {
   const [file, setFile] = useState<File>();
+  const [batch, setBatch] = useState<File[]>();
+  const [batchDone, setBatchDone] = useState(false);
   const [summary, setSummary] = useState<PdfSummary>();
   const [password, setPassword] = useState<string>();
   const [locked, setLocked] = useState(false);
@@ -108,6 +103,7 @@ export default function CompressTool({ t, locale, preset }: Props) {
   }
   function reset() {
     stop();
+    setBatch(undefined);
     setFile(undefined);
     setSummary(undefined);
     setPassword(undefined);
@@ -156,8 +152,15 @@ export default function CompressTool({ t, locale, preset }: Props) {
   function select(files: File[]) {
     if (!files.length) return;
     reset();
-    if (files.length !== 1) {
-      setError(t.oneFile);
+    if (files.length > MAX_BATCH) {
+      setError(t.tooMany);
+      return;
+    }
+    if (files.length > 1) {
+      const pdfs = files.filter((candidate) => !validateFile(candidate));
+      if (pdfs.length < files.length) setError(t.invalid);
+      if (pdfs.length > 1) setBatch(pdfs);
+      else if (pdfs.length === 1) select(pdfs);
       return;
     }
     if (validateFile(files[0])) {
@@ -169,20 +172,7 @@ export default function CompressTool({ t, locale, preset }: Props) {
   }
   function options(): CompressOptions | undefined {
     if (!file || !summary) return;
-    const base = { imageQuality: plan.imageQuality, gray: plan.gray, password };
-    if (plan.goal === "limit") {
-      const target = plan.custom.trim()
-        ? targetBytes(plan.custom, plan.unit)
-        : plan.limit;
-      return target ? { ...base, preference: "smallest", target } : undefined;
-    }
-    return {
-      ...base,
-      preference:
-        plan.goal === "recommended"
-          ? recommendedPreference(file.size, summary.pages, summary.hasImages)
-          : plan.goal,
-    };
+    return planOptions(plan, file.size, summary, password);
   }
   // A quick sample run gives an expected size for the chosen level.
   const estimateKey = file && summary && !busy && !result && plan.goal !== "limit" && summary.hasImages
@@ -251,7 +241,7 @@ export default function CompressTool({ t, locale, preset }: Props) {
     stop();
     setBusy(false);
   }
-  const step = result ? 3 : file && (summary || locked) ? 2 : 1;
+  const step = batch ? (batchDone ? 3 : 2) : result ? 3 : file && (summary || locked) ? 2 : 1;
   return (
     <section className="tool-card" aria-label={t.compress} ref={card}>
       <div className="tool-title">
@@ -264,7 +254,15 @@ export default function CompressTool({ t, locale, preset }: Props) {
         </div>
       </div>
       <Steps t={t} current={step} />
-      {file ? (
+      {batch ? (
+        <BatchTool
+          t={t}
+          locale={locale}
+          files={batch}
+          onReset={reset}
+          onComplete={setBatchDone}
+        />
+      ) : file ? (
         <FileInformation
           file={file}
           locale={locale}
@@ -298,7 +296,7 @@ export default function CompressTool({ t, locale, preset }: Props) {
           <CompressionPlan
             t={t}
             locale={locale}
-            file={file}
+            size={file.size}
             summary={summary}
             value={plan}
             onChange={setPlan}
@@ -333,7 +331,7 @@ export default function CompressTool({ t, locale, preset }: Props) {
           {error}
         </p>
       )}
-      {!file && (
+      {!file && !batch && (
         <div className="reassurance">
           <ShieldCheck size={16} aria-hidden="true" />
           {t.privacy}

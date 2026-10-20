@@ -3,20 +3,13 @@ import type { Messages } from "../i18n";
 import type { ImageQuality } from "../engines/ghostscript";
 import type { PdfSummary } from "../engines/validate";
 import { formatSize } from "../lib/pdf";
-import { limitChoices, type Goal } from "../lib/plan";
+import { limitChoices, type Goal, type PlanChoice } from "../lib/plan";
 import { fill } from "../i18n/fill";
-export type PlanChoice = {
-  goal: Goal;
-  imageQuality: ImageQuality;
-  gray: boolean;
-  limit?: number;
-  custom: string;
-  unit: "KB" | "MB";
-};
+export type { PlanChoice } from "../lib/plan";
 export function CompressionPlan({
   t,
   locale,
-  file,
+  size,
   summary,
   value,
   onChange,
@@ -24,14 +17,15 @@ export function CompressionPlan({
 }: {
   t: Messages;
   locale: string;
-  file: File;
+  /** File size, or the largest file of a batch. */
+  size: number;
   summary: PdfSummary;
   value: PlanChoice;
   onChange: (next: PlanChoice) => void;
   estimate?: { size?: number; loading: boolean };
 }) {
   const set = (patch: Partial<PlanChoice>) => onChange({ ...value, ...patch });
-  const limits = limitChoices(file.size);
+  const limits = limitChoices(size);
   const goals: [Goal, string, string, LucideIcon][] = [
     [
       "recommended",
@@ -78,7 +72,7 @@ export function CompressionPlan({
                 percent: new Intl.NumberFormat(locale, {
                   style: "percent",
                   maximumFractionDigits: 0,
-                }).format(Math.max(0, 1 - estimate.size / file.size)),
+                }).format(Math.max(0, 1 - estimate.size / size)),
               })}
         </p>
       )}

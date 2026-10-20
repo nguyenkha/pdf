@@ -1,4 +1,5 @@
-import type { Preference } from "../engines/ghostscript";
+import type { CompressOptions, ImageQuality, Preference } from "../engines/ghostscript";
+import { targetBytes } from "./pdf";
 
 export type Goal = "recommended" | "quality" | "smallest" | "limit";
 const MB = 1048576;
@@ -30,4 +31,33 @@ export function suggestedLimit(size: number, pages: number): number | undefined 
     choices.find((bytes) => bytes >= pages * REACHABLE_PER_PAGE) ??
     choices.at(-1)
   );
+}
+
+export type PlanChoice = {
+  goal: Goal;
+  imageQuality: ImageQuality;
+  gray: boolean;
+  limit?: number;
+  custom: string;
+  unit: "KB" | "MB";
+};
+/** Engine options for a chosen plan; undefined when the limit is invalid. */
+export function planOptions(
+  plan: PlanChoice,
+  size: number,
+  summary: { pages: number; hasImages: boolean },
+  password?: string,
+): CompressOptions | undefined {
+  const base = { imageQuality: plan.imageQuality, gray: plan.gray, password };
+  if (plan.goal === "limit") {
+    const target = plan.custom.trim() ? targetBytes(plan.custom, plan.unit) : plan.limit;
+    return target ? { ...base, preference: "smallest", target } : undefined;
+  }
+  return {
+    ...base,
+    preference:
+      plan.goal === "recommended"
+        ? recommendedPreference(size, summary.pages, summary.hasImages)
+        : plan.goal,
+  };
 }

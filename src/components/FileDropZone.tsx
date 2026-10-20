@@ -26,6 +26,7 @@ export function FileDropZone({
       <input
         type="file"
         accept=".pdf,application/pdf"
+        multiple
         onChange={(event) => onSelect(Array.from(event.target.files ?? []))}
         aria-label={t.drop}
       />

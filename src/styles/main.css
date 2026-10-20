@@ -615,6 +615,66 @@ input[type="number"],
   line-height: 1.45;
   color: var(--muted);
 }
+.batch-count {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+.batch-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 320px;
+  overflow: auto;
+}
+.batch-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+.batch-list li > svg:first-child {
+  color: var(--accent-text);
+  flex-shrink: 0;
+}
+.batch-list .ok {
+  color: var(--teal);
+  flex-shrink: 0;
+}
+.batch-list .bad {
+  color: var(--danger);
+  flex-shrink: 0;
+}
+.batch-error small {
+  color: var(--danger);
+}
+.progress.small {
+  display: block;
+  height: 4px;
+  margin-top: 4px;
+}
+.batch-links {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 12px;
+  font-size: 12px;
+}
+.batch-links a {
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .estimate {
   margin: 12px 0 0;
   font-size: 13px;
