@@ -40,9 +40,7 @@ export function ProcessingStatus({
     progress.value > 0.1 && elapsed > 4
       ? (elapsed / progress.value) * (1 - progress.value)
       : undefined;
-  // Ghostscript makes several passes and checks each one. Showing every
-  // pass's page counter looked like a loop, so after the one-time stages
-  // the label stays on "compressing" and only the percentage moves.
+  // Keep one label while page counters restart between compression passes.
   const once = ["reading", "analyzing", "loading"].includes(progress.stage);
   const stage = once ? t[progress.stage as Stage] : t.optimizing;
   return (

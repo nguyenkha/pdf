@@ -8,3 +8,14 @@ public/engine/
 .pnpm-store/
 *.tsbuildinfo
 public/pdfjs/
+
+# Local workspace files
+AGENTS.md
+CLAUDE.md
+LOCAL_HISTORY_HANDOFF.md
+.claude/
+.codex/
+.agents/
+plans/
+handoff/
+.tmp*/
