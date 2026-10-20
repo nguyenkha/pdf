@@ -9,7 +9,7 @@ export function summarizeFile(file: File) {
   );
 }
 export function mergeFiles(files: File[], onProgress: (value: number) => void) {
-  return startJob<Blob>(
+  return startJob<{ blob: Blob; pages: number }>(
     { files },
     10 * 60_000,
     (progress) => onProgress(progress.value),

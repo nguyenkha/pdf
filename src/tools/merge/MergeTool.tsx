@@ -44,7 +44,7 @@ export default function MergeTool({ t, locale }: ToolProps) {
   const [items, setItems] = useState<Item[]>([]);
   const [error, setError] = useState("");
   const [progress, setProgress] = useState<number>();
-  const [result, setResult] = useState<Blob>();
+  const [result, setResult] = useState<{ blob: Blob; pages: number }>();
   const [dragging, setDragging] = useState<number>();
   const [descending, setDescending] = useState(false);
   const job = useRef<{ cancel: () => void } | undefined>(undefined);
@@ -199,10 +199,10 @@ export default function MergeTool({ t, locale }: ToolProps) {
         <MergeResult
           t={t}
           locale={locale}
-          blob={result}
+          blob={result.blob}
           name={mergedName(items[0].file)}
           count={items.length}
-          pages={pages}
+          pages={result.pages}
           unlocked={items.some((item) => item.unlocked)}
           onReset={reset}
         />
