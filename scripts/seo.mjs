@@ -31,18 +31,38 @@ const alternates = (suffix) =>
     )
     .join("") +
   `<link rel="alternate" hreflang="x-default" href="https://pdf.kha.do/en/${suffix}">`;
-function base(locale, title, description, url, extra = "") {
-  return template
-    .replace(
-      '<html lang="en">',
-      `<html lang="${locale}"${locale === "ar" ? ' dir="rtl"' : ""}>`,
-    )
-    .replace(/<title>[^<]*<\/title>/, `<title>${escape(title)}</title>`)
-    .replace(
-      /<meta name="description" content="[^"]*">/,
-      `<meta name="description" content="${escape(description)}"><link rel="canonical" href="${url}">${extra}`,
-    );
+// Fail the build instead of silently shipping pages without SEO tags.
+function replaceOnce(html, pattern, value) {
+  if (!pattern.test(html)) throw new Error(`seo: ${pattern} not found`);
+  return html.replace(pattern, value);
 }
+function base(locale, title, description, url, extra = "") {
+  let html = replaceOnce(
+    template,
+    /<html lang="en">/,
+    `<html lang="${locale}"${locale === "ar" ? ' dir="rtl"' : ""}>`,
+  );
+  html = replaceOnce(html, /<title>[^<]*<\/title>/, `<title>${escape(title)}</title>`);
+  return replaceOnce(
+    html,
+    /<meta\s+name="description"\s+content="[^"]*"\s*\/?>/,
+    `<meta name="description" content="${escape(description)}"><link rel="canonical" href="${url}">${extra}`,
+  );
+}
+// Open Graph wants language_TERRITORY; Facebook lists ar_AR for Arabic.
+const ogLocales = {
+  en: "en_US",
+  "zh-CN": "zh_CN",
+  es: "es_ES",
+  ar: "ar_AR",
+  fr: "fr_FR",
+  pt: "pt_BR",
+  ru: "ru_RU",
+  hi: "hi_IN",
+  ja: "ja_JP",
+  de: "de_DE",
+  vi: "vi_VN",
+};
 for (const locale of locales) {
   const t = (await import(`../src/i18n/${locale}.ts`)).default;
   const [title, description] = metadata[locale];
@@ -55,9 +75,32 @@ for (const locale of locales) {
     operatingSystem: "Any",
     url,
     description,
+    image: `https://pdf.kha.do/og/${locale}.png`,
     offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
   };
-  const social = `<meta property="og:type" content="website"><meta property="og:site_name" content="pdf.kha.do"><meta property="og:locale" content="${locale}"><meta property="og:title" content="${escape(title)}"><meta property="og:description" content="${escape(description)}"><meta property="og:url" content="${url}"><meta property="og:image" content="https://pdf.kha.do/icons/icon.svg"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="${escape(title)}"><meta name="twitter:description" content="${escape(description)}"><script type="application/ld+json">${JSON.stringify(structured)}</script>`;
+  const image = `https://pdf.kha.do/og/${locale}.png`;
+  const social = [
+    ["property", "og:type", "website"],
+    ["property", "og:site_name", "pdf.kha.do"],
+    ["property", "og:locale", ogLocales[locale]],
+    ...locales
+      .filter((other) => other !== locale)
+      .map((other) => ["property", "og:locale:alternate", ogLocales[other]]),
+    ["property", "og:title", title],
+    ["property", "og:description", description],
+    ["property", "og:url", url],
+    ["property", "og:image", image],
+    ["property", "og:image:type", "image/png"],
+    ["property", "og:image:width", "1200"],
+    ["property", "og:image:height", "630"],
+    ["property", "og:image:alt", t.hero],
+    ["name", "twitter:card", "summary_large_image"],
+    ["name", "twitter:title", title],
+    ["name", "twitter:description", description],
+    ["name", "twitter:image", image],
+  ]
+    .map(([kind, key, value]) => `<meta ${kind}="${key}" content="${escape(value)}">`)
+    .join("") + `<script type="application/ld+json">${JSON.stringify(structured)}</script>`;
   const content = `<main><div class="hero"><h1>${escape(t.hero)}</h1><p>${escape(t.sub)}</p><p>${escape(t.support)}</p></div><section class="content"><h2>${escape(t.how)}</h2><p>${escape(t.howText)}</p><h2>${escape(t.why)}</h2><p>${escape(t.whyText)}</p></section><section class="faq"><h2>${escape(t.faq)}</h2>${[1, 2, 3, 4].map((i) => `<h3>${escape(t["q" + i])}</h3><p>${escape(t["a" + i])}</p>`).join("")}</section><section class="privacy-section"><h2>${escape(t.privacyTitle)}</h2><p>${escape(t.siteLoads)}</p><p>${escape(t.privacyBody)}</p></section></main>`;
   const html = base(
     locale,
