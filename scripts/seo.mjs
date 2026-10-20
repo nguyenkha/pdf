@@ -102,6 +102,8 @@ function socialTags(locale, t, title, description, url) {
     .join("");
 }
 const FAQ = [1, 2, 3, 4, 5, 6];
+// Same boxes as the app's first render, so swapping in the app moves nothing.
+const header = '<header class="site-header"></header>';
 const credits = (t) =>
   `<p class="credits">${escape(t.credits)
     .replace("{gs}", '<a href="https://www.ghostscript.com/">Ghostscript</a>')
@@ -143,7 +145,7 @@ for (const locale of locales) {
         })),
       },
     ];
-    const content = `<main><div class="hero"><h1>${escape(h1)}</h1><p>${escape(intro)}</p><p>${escape(t.support)}</p></div><section class="content"><h2>${escape(t.how)}</h2><p>${escape(t.howText)}</p><h2>${escape(t.why)}</h2><p>${escape(t.whyText)}</p></section><section class="faq"><h2>${escape(t.faq)}</h2>${FAQ.map((i) => `<h3>${escape(t["q" + i])}</h3><p>${escape(t["a" + i])}</p>`).join("")}</section><section class="privacy-section"><h2>${escape(t.privacyTitle)}</h2><p>${escape(t.siteLoads)}</p><p>${escape(t.privacyBody)}</p>${credits(t)}</section>${sizeLinks}</main>`;
+    const content = `${header}<main><div class="hero"><div class="eyebrow">${escape(t.privacy)}</div><h1>${escape(h1)}</h1><p>${escape(intro)}</p><p class="support">${escape(t.support)}</p></div><div id="tool"><section class="tool-card placeholder" aria-label="${escape(t.compress)}"></section></div><section class="content"><h2>${escape(t.how)}</h2><p>${escape(t.howText)}</p><h2>${escape(t.why)}</h2><p>${escape(t.whyText)}</p></section><section class="faq"><h2>${escape(t.faq)}</h2>${FAQ.map((i) => `<h3>${escape(t["q" + i])}</h3><p>${escape(t["a" + i])}</p>`).join("")}</section><section class="privacy-section"><h2>${escape(t.privacyTitle)}</h2><p>${escape(t.siteLoads)}</p><p>${escape(t.privacyBody)}</p>${credits(t)}</section>${sizeLinks}</main>`;
     const html = base(
       locale,
       title,
@@ -156,7 +158,7 @@ for (const locale of locales) {
     writePage(locale, suffix, html);
   }
   const privacyUrl = `https://pdf.kha.do/${locale}/privacy/`;
-  const privacyContent = `<main class="privacy-page"><a href="/${locale}/">pdf.kha.do</a><h1>${escape(t.privacyTitle)}</h1><p class="philosophy">${escape(t.philosophy)}</p><p>${escape(t.siteLoads)}</p><p>${escape(t.privacyBody)}</p>${credits(t)}<p>${escape(t.limitations)}</p><h2>${escape(t.how)}</h2><p>${escape(t.howText)}</p><p>${escape(t.support)}</p></main>`;
+  const privacyContent = `${header}<main class="privacy-page"><a href="/${locale}/">pdf.kha.do</a><h1>${escape(t.privacyTitle)}</h1><p class="philosophy">${escape(t.philosophy)}</p><p>${escape(t.siteLoads)}</p><p>${escape(t.privacyBody)}</p>${credits(t)}<p>${escape(t.limitations)}</p><h2>${escape(t.how)}</h2><p>${escape(t.howText)}</p><p>${escape(t.support)}</p></main>`;
   const privacyHtml = base(
     locale,
     `${t.privacyTitle} | pdf.kha.do`,

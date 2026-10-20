@@ -1,4 +1,4 @@
-import React, { useEffect, useState, Suspense } from "react";
+import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   ArrowUpRight,
@@ -14,12 +14,13 @@ import { initialLocale, locales, names, type Locale } from "./i18n/config";
 import { messages, type Messages } from "./i18n";
 import en from "./i18n/en";
 import { metadata } from "./i18n/metadata";
-import { tools } from "./app/tools";
+// Loaded eagerly (~9 KB gzip): a lazy fallback swapped for the full card
+// shifted the page below it (Lighthouse CLS 0.22).
+import CompressTool from "./tools/compress/CompressTool";
 import { config } from "./app/config";
 import { SIZE_PAGES, sizeFromPath, sizeFromSlug, sizePath } from "./app/sizes";
 import { fill } from "./i18n/fill";
 import "./styles/main.css";
-const CompressTool = React.lazy(tools[0].load);
 // The engines this site is built on, linked inside the translated sentence.
 function Credits({ text }: { text: string }) {
   const links: Record<string, [string, string]> = {
@@ -201,9 +202,7 @@ function App({
             <p className="support">{t.support}</p>
           </div>
           <div id="tool">
-            <Suspense fallback={<div className="tool-card">{t.loading}</div>}>
-              <CompressTool t={t} locale={locale} preset={preset} shared={shared} />
-            </Suspense>
+            <CompressTool t={t} locale={locale} preset={preset} shared={shared} />
           </div>
           <div className="content" id="about">
             <div className="info-card how">
