@@ -8,12 +8,20 @@ export type TextPart = {
   dir?: string;
 };
 
+/**
+ * Escapes only what Markdown would read as syntax: inline markers anywhere,
+ * block markers (headings, lists, quotes, rules) at the start of a line.
+ * Raw HTML never survives, so PDF text cannot inject tags or links.
+ */
 export function escapeMarkdown(text: string): string {
   return text
-    .replace(/&/g, "&amp;")
+    .replace(/&(?=#?\w+;)/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/[\\`*_{}[\]()#+.!|~-]/g, "\\$&");
+    .replace(/[\\`*_[\]|~]/g, "\\$&")
+    .replace(/^(\s*)(#{1,6}|[-+])(?=\s|$)/gm, "$1\\$2")
+    .replace(/^(\s*\d{1,9})([.)])(?=\s|$)/gm, "$1\\$2")
+    .replace(/^(\s*)([-=]{2,})\s*$/gm, "$1\\$2");
 }
 
 export function pageText(parts: TextPart[]): string {

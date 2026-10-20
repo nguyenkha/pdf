@@ -21,3 +21,5 @@ export const PreviewLabelsContext = createContext<PreviewLabels>({
 });
 export const fillLabel = (template: string, values: Record<string, string | number>) =>
   template.replace(/\{(\w+)\}/g, (match, key: string) => String(values[key] ?? match));
+/** Object URLs of the extracted images, by their path in the Markdown. */
+export const ImageUrlsContext = createContext<ReadonlyMap<string, string>>(new Map());

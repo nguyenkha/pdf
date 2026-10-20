@@ -1,6 +1,6 @@
 import { parseTableHtml } from "./table-html";
 import { createElement, useContext } from "react";
-import { PreviewLabelsContext } from "./labels";
+import { ImageUrlsContext, PreviewLabelsContext } from "./labels";
 import { splitTableRow } from "./tables";
 
 import { readableMarkdown as readable } from "./text";
@@ -9,6 +9,7 @@ import { InlineMarkdown } from "./InlineMarkdown";
 /** Renders the headings, page breaks and text emitted by makeMarkdown. */
 export function MarkdownPreview({ markdown }: { markdown: string }) {
   const labels = useContext(PreviewLabelsContext);
+  const images = useContext(ImageUrlsContext);
   return (
     <article className="md-preview" aria-label={labels.preview}>
       {markdown
@@ -16,6 +17,24 @@ export function MarkdownPreview({ markdown }: { markdown: string }) {
         .split(/\n\s*\n/)
         .map((block, index) => {
           if (block === "---") return <hr key={index} />;
+          const marker = /^<!-- (.+) -->$/.exec(block);
+          if (marker)
+            return (
+              <p className="md-page-mark" key={index}>
+                {marker[1]}
+              </p>
+            );
+          const picture = /^!\[(.*)\]\((images\/[\w.-]+)\)$/.exec(block);
+          if (picture) {
+            const url = images.get(picture[2]);
+            return url ? (
+              <img className="md-image" src={url} alt={readable(picture[1])} key={index} />
+            ) : (
+              <p key={index}>
+                <em>{readable(picture[1])}</em>
+              </p>
+            );
+          }
           const grid = parseTableHtml(block);
           if (grid)
             return (

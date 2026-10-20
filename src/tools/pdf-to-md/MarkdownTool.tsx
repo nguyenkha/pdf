@@ -1,9 +1,10 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Columns2, Copy, RotateCcw, Table } from "lucide-react";
+import { ChevronLeft, ChevronRight, Columns2, Copy, FileDown, RotateCcw, Table } from "lucide-react";
 import type { ToolProps } from "../../app/tools";
 import type { Messages } from "../../i18n";
 import { fill } from "../../i18n/fill";
-import { formatSize, validateFile } from "../../lib/pdf";
+import { validateFile } from "../../lib/pdf";
+import { safeEntryName, zipBlobs } from "../../lib/zip";
 import { FileDropZone } from "../../components/FileDropZone";
 import { FileInformation } from "../../components/FileInformation";
 import { Steps } from "../../components/Steps";
@@ -13,7 +14,7 @@ import { PasswordPrompt } from "../../components/PasswordPrompt";
 import { useObjectUrl } from "../../hooks/useObjectUrl";
 import { unlockFile } from "../compress/run";
 import { MarkdownPreview } from "./MarkdownPreview";
-import { PreviewLabelsContext, type PreviewLabels } from "./labels";
+import { ImageUrlsContext, PreviewLabelsContext, type PreviewLabels } from "./labels";
 import { defaultOptions, type ConversionOptions } from "./markdown";
 import type { ConvertedTable } from "./tables";
 import "./tool.css";
@@ -31,6 +32,7 @@ type Result = {
   linkCount: number;
   noteCount: number;
   listCount: number;
+  images: { path: string; blob: Blob }[];
 };
 const TIMEOUT = 120_000;
 const OPTION_KEYS = [
@@ -39,12 +41,24 @@ const OPTION_KEYS = [
   ["preserveLinks", "optLinks"],
   ["preserveLists", "optLists"],
   ["preserveFootnotes", "optFootnotes"],
+  ["preserveImages", "optImages"],
   ["removeMargins", "optMargins"],
   ["restoreColumns", "optColumns"],
   ["joinPages", "optJoinPages"],
   ["keepLineBreaks", "optKeepLineBreaks"],
 ] as const;
-const markdownName = (file: File) => file.name.replace(/\.pdf$/i, "") + ".md";
+const baseName = (file: File) => safeEntryName(file.name.replace(/\.pdf$/i, "")) || "document";
+/** Words a reader would count: Markdown syntax, comments and image links left out. */
+function countWords(markdown: string, locale: string) {
+  const text = markdown
+    .replace(/<!--[\s\S]*?-->|!\[[^\]]*\]\([^)]*\)|<[^>]+>|\]\(<[^>]*>\)/g, " ")
+    .replace(/[#*_`|\\[\]>-]/g, " ");
+  if (typeof Intl.Segmenter !== "function") return text.split(/\s+/).filter(Boolean).length;
+  let count = 0;
+  for (const segment of new Intl.Segmenter(locale, { granularity: "word" }).segment(text))
+    if (segment.isWordLike) count++;
+  return count;
+}
 /** One PDF's text layer to Markdown, converted as soon as a file is chosen. */
 export default function MarkdownTool({ t, locale }: ToolProps) {
   const [file, setFile] = useState<File>();
@@ -66,6 +80,7 @@ export default function MarkdownTool({ t, locale }: ToolProps) {
       noText: t.mdNoTextPage,
       marginsOnly: t.mdMarginsOnly,
       column: t.mdColumn,
+      image: t.mdImage,
     }),
     [t],
   );
@@ -263,11 +278,39 @@ function MarkdownResult({
   const [comparing, setComparing] = useState(false);
   const [page, setPage] = useState(1);
   const [copy, setCopy] = useState<"idle" | "done" | "failed">("idle");
+  const [zip, setZip] = useState<Blob>();
   const source = useRef<HTMLTextAreaElement>(null);
-  const blob = useMemo(
+  const base = baseName(file);
+  const markdown = useMemo(
     () => new Blob([result.markdown], { type: "text/markdown;charset=utf-8" }),
     [result.markdown],
   );
+  // Images and tables travel with the Markdown in one archive.
+  const bundled = result.images.length > 0 || result.tables.length > 0;
+  useEffect(() => {
+    setZip(undefined);
+    if (!bundled) return;
+    let current = true;
+    void zipBlobs(
+      [
+        { name: `${base}.md`, blob: markdown },
+        ...result.images.map(({ path, blob }) => ({ name: path, blob })),
+        ...result.tables.map((table, index) => ({
+          name: `${base}-table-${index + 1}.csv`,
+          blob: new Blob([table.csv], { type: "text/csv;charset=utf-8" }),
+        })),
+      ],
+      { folders: true },
+    ).then((blob) => current && setZip(blob));
+    return () => {
+      current = false;
+    };
+  }, [bundled, base, markdown, result.images, result.tables]);
+  const imageUrls = useMemo(
+    () => new Map(result.images.map(({ path, blob }) => [path, URL.createObjectURL(blob)])),
+    [result.images],
+  );
+  useEffect(() => () => imageUrls.forEach((url) => URL.revokeObjectURL(url)), [imageUrls]);
   useEffect(() => setCopy("idle"), [result.markdown]);
   useEffect(() => {
     if (copy === "failed") {
@@ -285,51 +328,72 @@ function MarkdownResult({
     }
   }
   const pages = result.pageMarkdowns.length;
+  const number = new Intl.NumberFormat(locale);
   const stats = [
     [t.mdStatHeadings, result.headings],
     [t.mdStatTables, result.tables.length],
+    [t.mdStatImages, result.images.length],
     [t.mdStatLinks, result.linkCount],
     [t.mdStatLists, result.listCount],
     [t.mdStatNotes, result.noteCount],
   ]
     .filter(([, count]) => Number(count) > 0)
-    .map(([label, count]) => fill(String(label), { count }));
+    .map(([label, count]) => fill(String(label), { count: number.format(Number(count)) }));
   const notes = [
     result.emptyPages > 0 && fill(t.mdEmptyPages, { count: result.emptyPages }),
     result.removedLines > 0 && fill(t.mdRemovedLines, { count: result.removedLines }),
     options.restoreColumns && result.columnPages > 0 && fill(t.mdColumnPages, { count: result.columnPages }),
   ].filter(Boolean);
+  const changed = OPTION_KEYS.filter(([key]) => options[key] !== defaultOptions[key]).length;
+  // With images the archive is the complete result; the .md alone would miss them.
+  const withImages = result.images.length > 0;
+  const primary = withImages ? zip : markdown;
+  const shown = comparing ? result.pageMarkdowns[page - 1] : result.markdown;
   return (
     <div className="result md-result" aria-live="polite">
       <Outcome
         title={fill(t.mdDoneTitle, { pages })}
-        detail={`${formatSize(blob.size, locale)}${stats.length ? ` · ${stats.join(" · ")}` : ""}`}
+        detail={[fill(t.mdWords, { count: number.format(countWords(result.markdown, locale)) }), ...stats].join(" · ")}
       />
-      {notes.map((note) => (
-        <p className="result-note" key={String(note)}>
-          {note}
-        </p>
-      ))}
-      <ResultActions t={t} blob={blob} name={markdownName(file)} download={t.downloadMarkdown} preview={false}>
-        <button type="button" className="secondary" onClick={copyMarkdown}>
-          <Copy size={18} aria-hidden="true" />
-          {t.copyMarkdown}
-        </button>
-        <button
-          type="button"
-          className="secondary"
-          aria-expanded={comparing}
-          onClick={() => setComparing(!comparing)}
+      {primary && (
+        <ResultActions
+          t={t}
+          blob={primary}
+          name={withImages ? `${base}.zip` : `${base}.md`}
+          download={withImages ? t.downloadZip : t.downloadMarkdown}
+          preview={false}
         >
-          <Columns2 size={18} aria-hidden="true" />
-          {t.compareWithPdf}
-        </button>
-      </ResultActions>
+          <button type="button" className="secondary" onClick={copyMarkdown}>
+            <Copy size={18} aria-hidden="true" />
+            {t.copyMarkdown}
+          </button>
+          {withImages ? (
+            <DownloadLink blob={markdown} name={`${base}.md`} label={t.downloadMdOnly} />
+          ) : (
+            zip && <DownloadLink blob={zip} name={`${base}.zip`} label={t.downloadZip} />
+          )}
+          <button
+            type="button"
+            className="secondary"
+            aria-expanded={comparing}
+            onClick={() => setComparing(!comparing)}
+          >
+            <Columns2 size={18} aria-hidden="true" />
+            {t.compareWithPdf}
+          </button>
+        </ResultActions>
+      )}
       {copy !== "idle" && (
         <p className="result-note" role="status">
           {copy === "done" ? t.mdCopied : t.mdCopyFailed}
         </p>
       )}
+      {bundled && <p className="result-note">{t.mdZipNote}</p>}
+      {notes.map((note) => (
+        <p className="result-note" key={String(note)}>
+          {note}
+        </p>
+      ))}
       {result.tables.length > 0 && (
         <div className="md-tables">
           <strong>
@@ -338,12 +402,44 @@ function MarkdownResult({
           </strong>
           <div>
             {result.tables.map((table, index) => (
-              <CsvLink key={index} t={t} table={table} index={index + 1} base={file.name} />
+              <CsvLink key={index} t={t} table={table} index={index + 1} base={base} />
             ))}
           </div>
           {result.tables.some((table) => table.merged) && <small>{t.mdMergedNote}</small>}
         </div>
       )}
+      <details className="advanced md-options">
+        <summary>
+          {t.mdOptions}
+          {changed > 0 && <span className="md-changed">{fill(t.mdOptionsChanged, { count: changed })}</span>}
+        </summary>
+        <div className="md-option-grid">
+          {OPTION_KEYS.map(([key, label]) => (
+            <label className="check" key={key}>
+              <input
+                type="checkbox"
+                checked={options[key]}
+                disabled={updating}
+                onChange={(event) => onOptions({ ...options, [key]: event.target.checked })}
+              />
+              {t[label]}
+            </label>
+          ))}
+        </div>
+        <div className="md-options-foot">
+          <small className="hint">{t.mdOptionsNote}</small>
+          {changed > 0 && (
+            <button
+              type="button"
+              className="link-button"
+              disabled={updating}
+              onClick={() => onOptions({ ...defaultOptions })}
+            >
+              {t.mdOptionsReset}
+            </button>
+          )}
+        </div>
+      </details>
       <div className="md-toolbar">
         <div className="chips" role="group" aria-label={`${t.preview} / ${t.viewSource}`}>
           <button type="button" aria-pressed={view === "preview"} onClick={() => setView("preview")}>
@@ -389,41 +485,35 @@ function MarkdownResult({
           </Suspense>
         )}
         {view === "preview" ? (
-          <MarkdownPreview markdown={comparing ? result.pageMarkdowns[page - 1] : result.markdown} />
+          <ImageUrlsContext.Provider value={imageUrls}>
+            <MarkdownPreview markdown={shown} />
+          </ImageUrlsContext.Provider>
         ) : (
           <textarea
             ref={source}
             className="md-source"
             aria-label={t.mdSource}
-            value={comparing ? result.pageMarkdowns[page - 1] : result.markdown}
+            value={shown}
             readOnly
             spellCheck={false}
           />
         )}
       </div>
-      <details className="advanced md-options">
-        <summary>{t.mdOptions}</summary>
-        <div className="md-option-grid">
-          {OPTION_KEYS.map(([key, label]) => (
-            <label className="check" key={key}>
-              <input
-                type="checkbox"
-                checked={options[key]}
-                disabled={updating}
-                onChange={(event) => onOptions({ ...options, [key]: event.target.checked })}
-              />
-              {t[label]}
-            </label>
-          ))}
-        </div>
-        <small className="hint">{t.mdOptionsNote}</small>
-      </details>
       <button type="button" className="link-button" onClick={onReset}>
         <RotateCcw size={15} aria-hidden="true" />
         {t.mdAnother}
       </button>
     </div>
   );
+}
+function DownloadLink({ blob, name, label }: { blob: Blob; name: string; label: string }) {
+  const url = useObjectUrl(blob);
+  return url ? (
+    <a className="secondary" href={url} download={name}>
+      <FileDown size={18} aria-hidden="true" />
+      {label}
+    </a>
+  ) : null;
 }
 function CsvLink({
   t,
@@ -439,7 +529,7 @@ function CsvLink({
   const blob = useMemo(() => new Blob([table.csv], { type: "text/csv;charset=utf-8" }), [table.csv]);
   const url = useObjectUrl(blob);
   return url ? (
-    <a className="chip-button" href={url} download={`${base.replace(/\.pdf$/i, "")}-table-${index}.csv`}>
+    <a className="chip-button" href={url} download={`${base}-table-${index}.csv`}>
       {fill(t.mdTableCsv, { index, page: table.page })}
     </a>
   ) : null;

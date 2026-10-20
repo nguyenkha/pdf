@@ -34,7 +34,7 @@ describe("layout-aware Markdown", () => {
       line("Another paragraph.", 160),
     ]);
     expect(md).toContain(
-      "A paragraph wraps onto the next line\\.\n\nAnother paragraph\\.",
+      "A paragraph wraps onto the next line.\n\nAnother paragraph.",
     );
   });
   it("preserves extracted line breaks when requested", () => {
@@ -51,7 +51,7 @@ describe("layout-aware Markdown", () => {
     ).toContain("compression works");
     expect(
       convert([line("privacy-", 100), line("first tools.", 116)]),
-    ).toContain("privacy\\-first tools");
+    ).toContain("privacy-first tools");
   });
   it("does not add spaces between wrapped CJK text", () => {
     expect(convert([line("这是", 100), line("测试", 116)])).toContain(
@@ -67,8 +67,8 @@ describe("layout-aware Markdown", () => {
       ),
       line("Subheading", 200, 16),
     ]);
-    expect(md).toContain("### Main heading");
-    expect(md).toContain("#### Subheading");
+    expect(md).toContain("## Main heading");
+    expect(md).toContain("### Subheading");
   });
   it("uses bold family information only when provided and allows disabling headings", () => {
     const parts = [
@@ -78,10 +78,10 @@ describe("layout-aware Markdown", () => {
         130,
       ),
     ];
-    expect(convert(parts)).toContain("### Short heading");
+    expect(convert(parts)).toContain("## Short heading");
     expect(
       convert(parts, { ...defaultOptions, detectHeadings: false }),
-    ).not.toContain("### Short heading");
+    ).not.toContain("## Short heading");
   });
   it("does not classify complete sentences or very long lines as headings", () => {
     const md = convert([

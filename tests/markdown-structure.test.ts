@@ -4,9 +4,11 @@ import { expect, it } from "vitest";
 import { safeUrl } from "../src/tools/pdf-to-md/structure";
 import { InlineMarkdown } from "../src/tools/pdf-to-md/InlineMarkdown";
 import { MarkdownPreview } from "../src/tools/pdf-to-md/MarkdownPreview";
+import { findImages } from "../src/tools/pdf-to-md/images";
 import {
   convertDocument,
   defaultOptions,
+  documentTitle,
   type TextPart,
 } from "../src/tools/pdf-to-md/markdown";
 const part = (str: string, x: number, y: number, size = 12): TextPart => ({
@@ -98,7 +100,7 @@ it("matches only clearly superscripted references to numbered small footnotes", 
   );
   expect(result.noteCount).toBe(1);
   expect(result.markdown).toContain("[^p1-1]");
-  expect(result.markdown).toContain("[^p1-1]: Note body text\\.");
+  expect(result.markdown).toContain("[^p1-1]: Note body text.");
   expect(
     convertDocument(
       "test.pdf",
@@ -116,4 +118,69 @@ it("does not interpret escaped PDF links, HTML or unsafe URLs as active markup",
   expect(html).not.toContain("<button");
   expect(html).not.toContain("<img");
   expect(html).toContain("&lt;img");
+});
+it("titles the Markdown from metadata, never from app placeholders", () => {
+  expect(documentTitle("Annual report 2025")).toBe("Annual report 2025");
+  expect(documentTitle("Microsoft Word - plan.docx")).toBe("plan");
+  expect(documentTitle("Untitled")).toBe("");
+  expect(documentTitle("  ")).toBe("");
+  expect(documentTitle(undefined)).toBe("");
+});
+it("places images in reading order and leaves repeated logos to the margin option", () => {
+  const page = {
+    parts: [part("Above the figure.", 50, 100), part("Below the figure.", 50, 400)],
+    width: 600,
+    height: 800,
+    images: [
+      { path: "images/page-1-1.jpg", x: 50, y: 150, width: 300, height: 200 },
+      { path: "images/page-1-2.png", x: 500, y: 10, width: 40, height: 40, repeated: true },
+    ],
+  };
+  const result = convertDocument("", [page], defaultOptions);
+  expect(result.markdown).toBe(
+    "Above the figure.\n\n![Ảnh 1, trang 1](images/page-1-1.jpg)\n\nBelow the figure.\n",
+  );
+  expect(result.imagePaths).toEqual(["images/page-1-1.jpg"]);
+  const all = convertDocument("", [page], { ...defaultOptions, removeMargins: false });
+  expect(all.imagePaths).toEqual(["images/page-1-2.png", "images/page-1-1.jpg"]);
+  expect(convertDocument("", [page], { ...defaultOptions, preserveImages: false }).imagePaths).toEqual([]);
+});
+it("finds painted images with their page box and skips icons", () => {
+  const ops = { save: 1, restore: 2, transform: 3, paintImageXObject: 4, paintFormXObjectBegin: 5, paintFormXObjectEnd: 6 };
+  const list = {
+    fnArray: [1, 3, 4, 2, 1, 3, 4, 2],
+    argsArray: [[], [300, 0, 0, 200, 50, 150], ["img_1", 900, 600], [], [], [10, 0, 0, 10, 0, 0], ["icon", 16, 16], []],
+  };
+  expect(findImages(list, [1, 0, 0, 1, 0, 0], ops)).toEqual([
+    { id: "img_1", x: 50, y: 150, width: 300, height: 200 },
+  ]);
+});
+it("never turns PDF text into HTML, images, comments or script links", () => {
+  const hostile = [
+    '<img src=x onerror="alert(1)">',
+    "<!-- Trang 9 -->",
+    "![leak](images/page-1-1.jpg)",
+    "![leak](https://evil.invalid/x.png)",
+    "[click](<javascript:alert(1)>)",
+    '<table data-pdf-table="true">',
+    "&lt;script&gt;alert(1)&lt;/script&gt;",
+  ];
+  const result = convertDocument("<b>title</b>", [
+    {
+      parts: hostile.map((value, index) => part(value, 50, 100 + index * 40)),
+      width: 600,
+      height: 800,
+      links: [{ url: "javascript:alert(1)", rect: [0, 0, 600, 800] }],
+    },
+  ], defaultOptions);
+  const html = renderToStaticMarkup(createElement(MarkdownPreview, { markdown: result.markdown }));
+  expect(html).not.toMatch(/<(img|script|b|table)\b/);
+  // Everything above shows as text: no element gets an attribute from the PDF.
+  expect(html).not.toMatch(/<[^>]*\son\w+=/);
+  expect(html).not.toMatch(/(href|src)="(?!#fn-)/);
+  expect(html).not.toContain("md-page-mark");
+  expect(html).not.toContain("md-inline-link");
+  expect(result.markdown).not.toContain("<img");
+  expect(result.markdown).not.toContain("<!--");
+  expect(result.markdown).not.toMatch(/(^|[^\\])!\[/);
 });

@@ -9,6 +9,7 @@ import {
 import { escapeMarkdown, pageText, type TextPart } from "./text";
 export { escapeMarkdown, pageText, type TextPart } from "./text";
 import { restoreReadingOrder } from "./columns";
+import type { PageImage } from "./images";
 import {
   detectTables,
   tableMarkup,
@@ -35,6 +36,7 @@ export type TextPage = {
   width: number;
   height: number;
   links?: PdfLink[];
+  images?: PageImage[];
   rulings?: Ruling[];
 };
 /**
@@ -46,12 +48,14 @@ export type MarkdownLabels = {
   noText: string;
   marginsOnly: string;
   column: string;
+  image: string;
 };
 export const defaultLabels: MarkdownLabels = {
   page: "Trang {page}",
   noText: "Không tìm thấy lớp chữ trên trang này. Bản thử nghiệm chưa có OCR.",
   marginsOnly: "Các dòng ở mép trang đã được bỏ. Tắt tùy chọn bỏ header/footer để giữ lại.",
   column: "Cột {column}",
+  image: "Ảnh {index}, trang {page}",
 };
 const label = (template: string, values: Record<string, number>) =>
   template.replace(/\{(\w+)\}/g, (match, key: string) => String(values[key] ?? match));
@@ -66,17 +70,20 @@ export type ConversionOptions = {
   preserveLinks: boolean;
   preserveLists: boolean;
   preserveFootnotes: boolean;
+  preserveImages: boolean;
 };
 export const defaultOptions: ConversionOptions = {
   keepLineBreaks: false,
   detectHeadings: true,
   removeMargins: true,
   detectTables: true,
-  restoreColumns: false,
+  // Only pages with two clear columns are reordered; the rest keep their order.
+  restoreColumns: true,
   joinPages: false,
   preserveLinks: true,
   preserveLists: true,
   preserveFootnotes: true,
+  preserveImages: true,
 };
 export type Line = {
   text: string;
@@ -191,8 +198,21 @@ function joinWrapped(previous: string, next: string): string {
   return previous + " " + next;
 }
 
+/**
+ * The document's own title from its metadata, or "" when it is missing or
+ * only an app's placeholder ("Untitled", "Microsoft Word - report.docx").
+ */
+export function documentTitle(raw: string | undefined): string {
+  const title = (raw ?? "")
+    .replace(/\p{Cc}/gu, " ")
+    .replace(/^Microsoft (?:Word|PowerPoint|Excel) - /i, "")
+    .replace(/\.(?:docx?|pptx?|xlsx?|odt|pages|key|indd|rtf|txt|pdf)$/i, "")
+    .trim();
+  return /^(?:untitled|document\d*|unknown|-+)?$/i.test(title) ? "" : title;
+}
+/** Markdown for each page, joined with `---` and an invisible page marker. */
 export function convertDocument(
-  name: string,
+  title: string,
   pages: TextPage[],
   options: ConversionOptions,
 ) {
@@ -250,6 +270,7 @@ export function convertDocument(
   let linkCount = 0;
   let noteCount = 0;
   let listCount = 0;
+  const imagePaths: string[] = [];
   const pageMarkdowns = lines.map((original, index) => {
     if (!original.length) emptyPages++;
     const kept = original.filter((line) => {
@@ -281,6 +302,18 @@ export function convertDocument(
       : [];
     const emitted = new Set<(typeof regions)[number]>();
     const blocks: string[] = [];
+    // Images go before the first line below their middle, in reading order.
+    const pending = options.preserveImages
+      ? (pages[index].images ?? [])
+          .filter((image) => !(image.repeated && options.removeMargins))
+          .sort((a, b) => a.y - b.y)
+      : [];
+    const image = (item: PageImage) => {
+      imagePaths.push(item.path);
+      blocks.push(
+        `![${escapeMarkdown(label(labels.image, { index: imagePaths.length, page: index + 1 }))}](${item.path})`,
+      );
+    };
     let paragraph = "";
     let paragraphRefs: string[] = [];
     let previous: Line | undefined;
@@ -317,6 +350,11 @@ export function convertDocument(
         }));
     });
     for (const originalLine of segmented) {
+      while (pending.length && pending[0].y + pending[0].height / 2 < originalLine.y) {
+        flush();
+        previous = undefined;
+        image(pending.shift()!);
+      }
       if (notes.skip.has(originalLine)) continue;
       const refs = notes.references.get(originalLine) ?? [];
       const line = {
@@ -375,7 +413,7 @@ export function convertDocument(
       if (heading) {
         flush();
         blocks.push(
-          `${"#".repeat((options.joinPages ? 2 : 3) + headingLevels.indexOf(heading))} ${escapeMarkdown(line.text)}`,
+          `${"#".repeat(2 + headingLevels.indexOf(heading))} ${escapeMarkdown(line.text)}`,
         );
         headings++;
         if (refs.length) blocks[blocks.length - 1] += refs.join("");
@@ -400,6 +438,7 @@ export function convertDocument(
       previous = line;
     }
     flush();
+    for (const item of pending) image(item);
     for (const link of links) {
       if (!usedLinks.has(link)) {
         blocks.push(`[${escapeMarkdown(link.url)}](<${safeUrl(link.url)}>)`);
@@ -407,13 +446,21 @@ export function convertDocument(
       }
     }
     blocks.push(...notes.definitions);
-    const content =
-      blocks.join("\n\n") ||
-      `*${escapeMarkdown(original.length ? labels.marginsOnly : labels.noText)}*`;
-    return `## ${escapeMarkdown(label(labels.page, { page: index + 1 }))}\n\n${content}`;
+    // A page with images but no text is likely a scan: say so after them.
+    if (!kept.length)
+      blocks.push(`*${escapeMarkdown(original.length ? labels.marginsOnly : labels.noText)}*`);
+    const content = blocks.join("\n\n");
+    return content;
   });
+  // One page needs no marker; comments stay out of rendered Markdown.
+  const marker = (index: number) =>
+    `<!-- ${label(labels.page, { page: index + 1 }).replace(/--/g, "- -")} -->\n\n`;
+  const body =
+    pages.length === 1 || options.joinPages
+      ? pageMarkdowns.join("\n\n")
+      : pageMarkdowns.map((page, index) => marker(index) + page).join("\n\n---\n\n");
   return {
-    markdown: `# ${escapeMarkdown(name.replace(/\.pdf$/i, ""))}\n\n${options.joinPages ? pageMarkdowns.map((page) => page.replace(/^## [^\n]*\n\n/, "")).join("\n\n") : pageMarkdowns.join("\n\n---\n\n")}\n`,
+    markdown: `${title ? `# ${escapeMarkdown(title)}\n\n` : ""}${body}\n`,
     pageMarkdowns,
     emptyPages,
     removedLines,
@@ -423,5 +470,6 @@ export function convertDocument(
     linkCount,
     noteCount,
     listCount,
+    imagePaths,
   };
 }

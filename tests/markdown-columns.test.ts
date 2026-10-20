@@ -59,10 +59,16 @@ it("makes page markers optional without dropping page text", () => {
     ...defaultOptions,
     joinPages: true,
   });
-  expect(result.markdown).not.toContain("## Trang");
+  expect(result.markdown).not.toContain("<!--");
+  expect(result.markdown).not.toContain("---");
   expect(result.markdown).toContain("First page content");
   expect(result.markdown).toContain("Second page content");
-  expect(result.pageMarkdowns[1]).toContain("## Trang 2");
+  const marked = convertDocument("", pages, defaultOptions).markdown;
+  expect(marked).toBe(
+    "<!-- Trang 1 -->\n\nFirst page content.\n\n---\n\n<!-- Trang 2 -->\n\nSecond page content.\n",
+  );
+  // A single page needs no marker at all.
+  expect(convertDocument("", pages.slice(0, 1), defaultOptions).markdown).toBe("First page content.\n");
 });
 it("ignores PDF spacing items that bridge the gutter", () => {
   const spaced = parts.flatMap((p) =>

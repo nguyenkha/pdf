@@ -16,13 +16,19 @@ function header(size: number, write: (view: DataView) => void) {
   write(new DataView(buffer));
   return new Uint8Array(buffer) as Uint8Array<ArrayBuffer>;
 }
-export async function zipBlobs(entries: { name: string; blob: Blob }[]): Promise<Blob> {
+/** `folders` keeps "/" as a folder separator; each part is still made safe. */
+export async function zipBlobs(
+  entries: { name: string; blob: Blob }[],
+  { folders = false } = {},
+): Promise<Blob> {
   const encoder = new TextEncoder();
   const parts: BlobPart[] = [];
   const central: BlobPart[] = [];
   let offset = 0;
   for (const { name: requested, blob } of entries) {
-    const name = safeEntryName(requested);
+    const name = folders
+      ? requested.split("/").map(safeEntryName).join("/")
+      : safeEntryName(requested);
     // One file in memory at a time while its checksum is computed.
     const crc = crc32(new Uint8Array(await blob.arrayBuffer()));
     const path = encoder.encode(name) as Uint8Array<ArrayBuffer>;

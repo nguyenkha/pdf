@@ -24,8 +24,15 @@ describe("text-only Markdown", () => {
   });
   it("escapes raw HTML and Markdown syntax from PDF text", () => {
     expect(escapeMarkdown("<img src=x> [click](javascript:alert(1))")).toBe(
-      "&lt;img src=x&gt; \\[click\\]\\(javascript:alert\\(1\\)\\)",
+      "&lt;img src=x&gt; \\[click\\](javascript:alert(1))",
     );
+  });
+  it("escapes block syntax only where Markdown would read it", () => {
+    expect(escapeMarkdown("Version 1.2 - see (a) #5 & more")).toBe("Version 1.2 - see (a) #5 & more");
+    expect(escapeMarkdown("# not a heading\n- not a list\n12. not ordered\n---")).toBe(
+      "\\# not a heading\n\\- not a list\n12\\. not ordered\n\\---",
+    );
+    expect(escapeMarkdown("&copy; *bold* a|b")).toBe("&amp;copy; \\*bold\\* a\\|b");
   });
   it("keeps pages and marks image-only pages honestly", () => {
     const markdown = makeMarkdown("document.pdf", ["Text", ""]);

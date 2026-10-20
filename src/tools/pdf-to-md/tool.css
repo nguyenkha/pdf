@@ -192,3 +192,72 @@ a.chip-button:focus-visible {
     grid-template-columns: 1fr;
   }
 }
+.md-page-mark {
+  margin: 0 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.md-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 14px 0;
+  border-radius: 6px;
+}
+.md-changed {
+  margin-inline-start: 8px;
+  padding: 2px 8px;
+  border-radius: 100px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: 11px;
+}
+.md-options-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin-top: 8px;
+}
+.md-options-foot .link-button {
+  margin: 0;
+  min-height: 36px;
+  padding: 4px 0;
+  font-size: 13px;
+}
+/* On phones the page scrolls, not a box inside it. */
+@media (max-width: 700px) {
+  .md-preview,
+  .md-source {
+    max-height: none;
+  }
+  .md-source {
+    min-height: 60vh;
+    resize: none;
+  }
+}
+/* The preview is paper, like the PDF page beside it: light in both themes,
+   so transparent figures and the side-by-side comparison read the same. */
+.md-preview {
+  --surface: #ffffff;
+  --surface-2: #f6f6f4;
+  --border: #e4e7e3;
+  --text: #1f2623;
+  --text-strong: #14201a;
+  --muted: #55615a;
+  --accent-text: #a33c15;
+  --focus: #d26632;
+  color-scheme: light;
+  background: var(--surface);
+  color: var(--text);
+}
+.md-preview h1,
+.md-preview h2,
+.md-preview h3,
+.md-preview h4,
+.md-preview h5,
+.md-preview h6 {
+  color: var(--text-strong);
+}
