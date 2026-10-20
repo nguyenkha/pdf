@@ -1,6 +1,6 @@
 import type { Line, Paragraph, Worker as TesseractWorker } from "tesseract.js";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
-import workerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+import workerUrl from "pdfjs-dist/legacy/build/pdf.worker.min.mjs?url";
 import type { Locale } from "../../i18n/config";
 import { ocrLanguages } from "./ocr-data";
 import { findImages, type ImagePlacement } from "./images";
