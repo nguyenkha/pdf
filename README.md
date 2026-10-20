@@ -96,3 +96,8 @@ Build command: `pnpm install --frozen-lockfile && pnpm build`. Output: `dist`. N
 ## Roadmap and contributing
 
 Merge, split, rotate, extraction and images-to-PDF may be added as independent local tools. Privacy and correctness take priority over feature count. Contributions are welcome; see `CONTRIBUTING.md`.
+
+## Corpus and memory checks
+
+`pnpm test:corpus` builds a synthetic corpus with native Ghostscript (`scripts/make-corpus.mjs`: 300 dpi color and gray scans, a long text document, one with bookmarks and page links), compresses each file in WebKit with an iPhone profile and in desktop Chromium, and fails when a job's peak memory exceeds its budget (1.2 GB on the iPhone profile) or the output loses pages or bookmarks. CI writes the timings and peaks to the run summary.
+

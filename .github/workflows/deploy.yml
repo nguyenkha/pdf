@@ -27,6 +27,12 @@ jobs:
       - run: pnpm build
       - run: pnpm exec playwright install --with-deps chromium webkit
       - run: pnpm test:e2e --workers=2
+      - run: sudo apt-get update && sudo apt-get install -y ghostscript
+      - name: Corpus and memory budget
+        run: |
+          echo "| Browser | File | Time | Peak memory |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          pnpm test:corpus
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
