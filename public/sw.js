@@ -1,11 +1,11 @@
-const CACHE = "pdf-kha-do-assets-v3";
+const CACHE = "pdf-kha-do-assets-v4";
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
       .open(CACHE)
       .then((cache) =>
         cache.addAll([
-          "/en/",
+          "/en/compress/",
           "/icons/icon.svg",
           "/theme.js",
           "/redirect.js",

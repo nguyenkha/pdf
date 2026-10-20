@@ -19,7 +19,7 @@ for (const scheme of ["light", "dark"] as const)
     test.use({ colorScheme: scheme });
     test("landing, level choice, result and comparison", async ({ page }) => {
       test.setTimeout(300000);
-      await page.goto("/en/");
+      await page.goto("/en/compress/");
       await audit(page, "landing");
       await page.locator("input[type=file]").setInputFiles("tests/fixtures/gray-scan.pdf");
       await expect(page.locator(".suggestion")).toBeVisible({ timeout: 60000 });
@@ -36,7 +36,7 @@ for (const scheme of ["light", "dark"] as const)
     });
     test("password prompt, batch and privacy page", async ({ page }) => {
       test.setTimeout(180000);
-      await page.goto("/en/");
+      await page.goto("/en/compress/");
       await page.locator("input[type=file]").setInputFiles("tests/fixtures/password.pdf");
       await expect(page.getByLabel("PDF password")).toBeVisible({ timeout: 30000 });
       await audit(page, "password");
@@ -53,7 +53,7 @@ for (const scheme of ["light", "dark"] as const)
 test("a level can be chosen and the PDF compressed with the keyboard only", async ({ page, browserName }) => {
   test.skip(browserName === "webkit", "WebKit does not move focus to form controls with Tab by default");
   test.setTimeout(180000);
-  await page.goto("/en/");
+  await page.goto("/en/compress/");
   await page.locator("input[type=file]").setInputFiles("tests/fixtures/scan.pdf");
   const recommended = page.getByRole("radio", { name: /Recommended/ });
   await expect(recommended).toBeChecked({ timeout: 60000 });

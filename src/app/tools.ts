@@ -12,7 +12,7 @@ export type ToolProps = {
 };
 export type Tool = {
   id: string;
-  /** Path segment under /{locale}/; "" is the locale home page. */
+  /** Path segment under /{locale}/; the locale home redirects to compress. */
   slug: string;
   nameKey: keyof Messages;
   icon: LucideIcon;
@@ -26,7 +26,7 @@ export type Tool = {
 export const tools: Tool[] = [
   {
     id: "compress",
-    slug: "",
+    slug: "compress",
     nameKey: "compress",
     icon: FileArchive,
     load: () => import("../tools/compress/CompressTool"),

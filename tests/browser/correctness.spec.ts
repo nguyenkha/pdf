@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 async function process(page: Page, fixture: string) {
-  await page.goto('/en/');
+  await page.goto('/en/compress/');
   await page.locator('input[type=file]').setInputFiles(`tests/fixtures/${fixture}.pdf`);
   await page.getByRole('button', { name: 'Compress PDF', exact: true }).click();
   await expect(page.locator('.result, .error')).toBeVisible({ timeout: 90000 });
@@ -50,7 +50,7 @@ for (const fixture of ['already-optimized', 'text-vector']) {
 test('WASM is absent before a PDF is chosen and cancellation leaves the UI usable', async ({ page }) => {
   const requested: string[] = [];
   page.on('request', request => requested.push(request.url()));
-  await page.goto('/en/');
+  await page.goto('/en/compress/');
   await page.waitForLoadState('networkidle');
   expect(requested.some(url => url.endsWith('.wasm'))).toBe(false);
   await page.route('**/engine/**/core.wasm', route => route.abort());
@@ -66,7 +66,7 @@ test('WASM is absent before a PDF is chosen and cancellation leaves the UI usabl
 });
 
 test('processes offline once application and engine assets have been cached', async ({ page, context }) => {
-  await page.goto('/en/');
+  await page.goto('/en/compress/');
   await page.evaluate(async () => { await navigator.serviceWorker.ready; });
   await page.reload();
   await process(page, 'scan');
@@ -82,14 +82,14 @@ test('processes offline once application and engine assets have been cached', as
   expect(keys.every(url => !url.includes('scan.pdf') && !url.startsWith('blob:'))).toBe(true);
 });
 test('form: stops before compression without changing the document', async ({ page }) => {
-  await page.goto('/en/');
+  await page.goto('/en/compress/');
   await page.locator('input[type=file]').setInputFiles('tests/fixtures/form.pdf');
   await expect(page.getByRole('alert')).toHaveText('This document uses features that cannot be safely preserved during compression. Keep the original.', { timeout: 30000 });
   await expect(page.getByRole('button', { name: 'Compress PDF', exact: true })).toHaveCount(0);
 });
 test('password: unlocks with the right password and compresses', async ({ page }) => {
   test.setTimeout(180000);
-  await page.goto('/en/');
+  await page.goto('/en/compress/');
   await page.locator('input[type=file]').setInputFiles('tests/fixtures/password.pdf');
   const field = page.getByLabel('PDF password');
   await field.fill('wrong');
@@ -110,7 +110,7 @@ test('password: unlocks with the right password and compresses', async ({ page }
   try { expect((await task.promise).numPages).toBe(3); } finally { await task.destroy(); }
 });
 test('drag and drop works with a standard file',async({page})=>{
-  await page.goto('/en/');
+  await page.goto('/en/compress/');
   const bytes=Array.from(await readFile('tests/fixtures/text-vector.pdf'));
   await page.locator('.drop').evaluate((drop,data)=>{const transfer=new DataTransfer();transfer.items.add(new File([new Uint8Array(data)],'dropped.pdf',{type:'application/pdf'}));drop.dispatchEvent(new DragEvent('drop',{bubbles:true,dataTransfer:transfer}));},bytes);
   await expect(page.getByText('dropped.pdf',{exact:true})).toBeVisible();
@@ -118,7 +118,7 @@ test('drag and drop works with a standard file',async({page})=>{
 });
 test('share target opens the shared PDF and keeps no copy', async ({ page, browserName }) => {
   test.skip(browserName !== 'chromium', 'Web Share Target is a Chromium (Android) feature');
-  await page.goto('/en/');
+  await page.goto('/en/compress/');
   await page.evaluate(async () => { await navigator.serviceWorker.ready; });
   await page.reload();
   const bytes = Array.from(await readFile('tests/fixtures/scan.pdf'));
@@ -142,7 +142,7 @@ test('share target opens the shared PDF and keeps no copy', async ({ page, brows
     form.submit();
   }, { data: bytes, action: `${origin}/share-target` });
   await expect(page.getByText('shared scan.pdf', { exact: true })).toBeVisible({ timeout: 30000 });
-  await expect(page).toHaveURL(/\/en\/$/);
+  await expect(page).toHaveURL(/\/en\/compress\/$/);
   // Nothing of the PDF is written to Cache Storage on the way.
   const cached = await page.evaluate(async () => (await Promise.all((await caches.keys()).map(async key => (await (await caches.open(key)).keys()).map(request => request.url)))).flat());
   expect(cached.some(url => url.includes('shared'))).toBe(false);

@@ -2,9 +2,9 @@ import { metadata } from "../src/i18n/metadata.ts";
 import { SIZE_PAGES } from "../src/app/sizes.ts";
 
 // Mirrors the built tools in src/app/tools.ts (that file imports React
-// components); slug "" is the locale home page. MORE_PLANNED mirrors its
+// components); the locale home page redirects to compress. MORE_PLANNED mirrors its
 // unnamed "more tools coming" placeholder.
-const TOOLS = [{ slug: "", nameKey: "compress" }];
+const TOOLS = [{ slug: "compress", nameKey: "compress" }];
 const MORE_PLANNED = true;
 import fs from "node:fs";
 import path from "node:path";
@@ -80,9 +80,11 @@ const sizePath = (slug) => `compress-pdf-to-${slug}/`;
 // list the same family in each locale.
 // A tool beyond compress needs <id>Title, <id>Description, <id>Hero and
 // <id>Intro strings (prefix = its nameKey); the build fails without them.
-const toolPages = TOOLS.filter((tool) => tool.slug);
+// Compress keeps the original home-page content and strings.
+const COMPRESS = "compress/";
+const toolPages = TOOLS.filter((tool) => tool.nameKey !== "compress");
 const families = [
-  "",
+  COMPRESS,
   ...SIZE_PAGES.map(sizePath),
   ...toolPages.map((tool) => `${tool.slug}/`),
   "privacy/",
@@ -141,7 +143,7 @@ for (const locale of locales) {
       if (!t[key]) throw new Error(`seo: missing string ${key} for ${locale}`);
       return t[key];
     };
-    const slug = !tool && suffix && suffix.slice("compress-pdf-to-".length, -1);
+    const slug = !tool && suffix !== COMPRESS && suffix.slice("compress-pdf-to-".length, -1);
     const size = slug && sizeLabel(slug);
     const [title, description] = tool
       ? [text(`${tool.nameKey}Title`), text(`${tool.nameKey}Description`)]
@@ -189,7 +191,7 @@ for (const locale of locales) {
     writePage(locale, suffix, html);
   }
   const privacyUrl = `https://pdf.kha.do/${locale}/privacy/`;
-  const privacyContent = `${header}<main class="privacy-page"><a href="/${locale}/">pdf.kha.do</a><h1>${escape(t.privacyTitle)}</h1><p class="philosophy">${escape(t.philosophy)}</p><p>${escape(t.siteLoads)}</p><p>${escape(t.privacyBody)}</p>${credits(t)}<p>${escape(t.limitations)}</p><h2>${escape(t.how)}</h2><p>${escape(t.howText)}</p><p>${escape(t.support)}</p></main>`;
+  const privacyContent = `${header}<main class="privacy-page"><a href="/${locale}/compress/">pdf.kha.do</a><h1>${escape(t.privacyTitle)}</h1><p class="philosophy">${escape(t.philosophy)}</p><p>${escape(t.siteLoads)}</p><p>${escape(t.privacyBody)}</p>${credits(t)}<p>${escape(t.limitations)}</p><h2>${escape(t.how)}</h2><p>${escape(t.howText)}</p><p>${escape(t.support)}</p></main>`;
   const privacyHtml = base(
     locale,
     `${t.privacyTitle} | pdf.kha.do`,
@@ -199,10 +201,19 @@ for (const locale of locales) {
   )
     .replace('<div id="root"></div>', `<div id="root">${privacyContent}</div>`);
   writePage(locale, "privacy/", privacyHtml);
+  // The locale home forwards to compress. Static hosting has no 301, so a
+  // zero-second refresh plus canonical, which search engines treat as a
+  // permanent redirect (no noindex: it would contradict the canonical);
+  // redirect.js does it sooner and keeps ?shared=1.
+  writePage(
+    locale,
+    "",
+    `<!doctype html><html lang="${locale}"><head><meta charset="UTF-8"><meta http-equiv="refresh" content="0;url=/${locale}/${COMPRESS}"><link rel="canonical" href="https://pdf.kha.do/${locale}/${COMPRESS}"><title>${escape(metadata[locale][0])}</title><script src="/redirect.js"></script></head><body><a href="/${locale}/${COMPRESS}">${escape(t.compress)}</a></body></html>`,
+  );
 }
 fs.writeFileSync(
   "dist/index.html",
-  '<!doctype html><html><head><meta charset="UTF-8"><meta name="robots" content="noindex"><script src="/redirect.js"></script><noscript><meta http-equiv="refresh" content="0;url=/en/"></noscript></head><body><a href="/en/">English</a></body></html>',
+  '<!doctype html><html><head><meta charset="UTF-8"><meta name="robots" content="noindex"><script src="/redirect.js"></script><noscript><meta http-equiv="refresh" content="0;url=/en/compress/"></noscript></head><body><a href="/en/compress/">English</a></body></html>',
 );
 fs.copyFileSync("LICENSE", "dist/LICENSE");
 const lastmod = new Date().toISOString().slice(0, 10);

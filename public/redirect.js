@@ -32,8 +32,11 @@ try {
       });
   }
   match = match || "en";
-  // Keep ?shared=1 from the share target.
-  location.replace("/" + match + "/" + location.search);
+  // On /{locale}/ keep that locale; the root picks one. Either way go
+  // straight to compress, keeping ?shared=1 from the share target.
+  var route = location.pathname.split("/")[1];
+  if (supported.indexOf(route) !== -1) match = route;
+  location.replace("/" + match + "/compress/" + location.search);
 } catch {
-  location.replace("/en/");
+  location.replace("/en/compress/");
 }

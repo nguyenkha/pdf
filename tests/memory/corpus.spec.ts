@@ -34,7 +34,7 @@ for (const sample of corpus)
     const context = await browser.newContext({ ...info.project.use, baseURL: "http://127.0.0.1:4173" });
     const page = await context.newPage();
     try {
-    await page.goto("/en/");
+    await page.goto("/en/compress/");
     const idle = browserMemory();
     let peak = idle;
     const sampler = setInterval(() => (peak = Math.max(peak, browserMemory())), 200);

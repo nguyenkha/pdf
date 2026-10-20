@@ -121,13 +121,13 @@ function App({
   return (
     <>
       <header className="site-header">
-        <a className="brand" href={`/${locale}/`}>
+        <a className="brand" href={`/${locale}/compress/`}>
           <img className="brand-logo light-only" src="/icons/icon.svg" alt="" />
           <img className="brand-logo dark-only" src="/icons/icon-dark.svg" alt="" />
           pdf.kha.do
         </a>
         <nav aria-label={t.about}>
-          <a href={privacyPage ? `/${locale}/#about` : "#about"}>{t.about}</a>
+          <a href={privacyPage ? `/${locale}/compress/#about` : "#about"}>{t.about}</a>
           {config.githubUrl && (
             <a href={config.githubUrl} target="_blank" rel="noreferrer">
               {t.github}
@@ -295,7 +295,12 @@ function App({
   );
 }
 const firstLocale = initialLocale();
-messages(firstLocale)
+// The locale home forwards to compress (the static page does too, without
+// keeping the query); never render the app there.
+const atHome = /^\/[^/]+\/$/.test(location.pathname);
+if (atHome) location.replace(`/${firstLocale}/compress/${location.search}`);
+if (!atHome)
+  messages(firstLocale)
   .catch(() => en)
   .then((firstMessages) =>
     createRoot(document.getElementById("root")!).render(

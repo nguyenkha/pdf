@@ -6,7 +6,7 @@ async function expectSuccess(page: Page) {
   await expect(page.locator('.result')).toBeVisible();
 }
 test("upload and invalid file handling", async ({ page }) => {
-  await page.goto("/en/");
+  await page.goto("/en/compress/");
   await expect(
     page.getByText("Your files never leave your device.").filter({ visible: true }).first(),
   ).toBeVisible();
@@ -20,7 +20,7 @@ test("upload and invalid file handling", async ({ page }) => {
   await expect(page.getByRole("alert")).toContainText("valid PDF");
 });
 test("language switching and RTL", async ({ page }) => {
-  await page.goto("/en/");
+  await page.goto("/en/compress/");
   await page.getByLabel("Language").selectOption("ar");
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
   await expect(
@@ -32,7 +32,7 @@ test("language switching and RTL", async ({ page }) => {
   ).toBeVisible();
 });
 test("theme and mobile", async ({ page }) => {
-  await page.goto("/en/");
+  await page.goto("/en/compress/");
   await page.getByRole("button", { name: "System theme" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await page.setViewportSize({ width: 390, height: 844 });
@@ -43,7 +43,7 @@ test("theme and mobile", async ({ page }) => {
 });
 test("compresses a real scan and downloads a PDF", async ({ page }) => {
   test.setTimeout(180000);
-  await page.goto("/en/");
+  await page.goto("/en/compress/");
   await page
     .locator("input[type=file]")
     .setInputFiles("tests/fixtures/scan.pdf");
@@ -58,7 +58,7 @@ test("compresses a real scan and downloads a PDF", async ({ page }) => {
 });
 test("target size attempt reports its result", async ({ page }) => {
   test.setTimeout(180000);
-  await page.goto("/en/");
+  await page.goto("/en/compress/");
   await page
     .locator("input[type=file]")
     .setInputFiles("tests/fixtures/scan.pdf");
@@ -70,7 +70,7 @@ test("target size attempt reports its result", async ({ page }) => {
   await expect(page.getByText(/Target achieved|Target not achieved/)).toBeVisible();
 });
 test("corrupted PDF fails without a download", async ({ page }) => {
-  await page.goto("/en/");
+  await page.goto("/en/compress/");
   await page
     .locator("input[type=file]")
     .setInputFiles("tests/fixtures/corrupted.pdf");
@@ -88,7 +88,7 @@ test("worker initialization failure is explained", async ({ page }) => {
       },
     });
   });
-  await page.goto("/en/");
+  await page.goto("/en/compress/");
   await page
     .locator("input[type=file]")
     .setInputFiles("tests/fixtures/text-vector.pdf");
@@ -108,7 +108,7 @@ test("processing sends no PDF bytes or metadata over the network", async ({
         body: request.postData() ?? "",
       }),
     );
-  await page.goto("/en/");
+  await page.goto("/en/compress/");
   await page
     .locator("input[type=file]")
     .setInputFiles("tests/fixtures/scan.pdf");
@@ -135,7 +135,7 @@ test("size landing page preselects its limit and keeps its URL", async ({ page }
   await expect(page).toHaveURL(/\/vi\/compress-pdf-to-200kb\/$/);
 });
 test("explains a reload caused by running out of memory mid-job", async ({ page }) => {
-  await page.goto("/en/");
+  await page.goto("/en/compress/");
   // The app may mount after "load"; set the marker only once it has, or the
   // first page would consume it before the reload.
   await expect(page.locator(".drop")).toBeVisible();
@@ -156,7 +156,7 @@ test("privacy page keeps the site header, footer and credits", async ({ page }) 
 });
 test("estimates the result and compares before/after", async ({ page }) => {
   test.setTimeout(180000);
-  await page.goto("/en/");
+  await page.goto("/en/compress/");
   await page.locator("input[type=file]").setInputFiles("tests/fixtures/scan.pdf");
   await expect(page.locator(".estimate")).toContainText(/Expected result: about .* smaller/, { timeout: 60000 });
   await page.getByRole("button", { name: "Compress PDF", exact: true }).click();
@@ -167,7 +167,7 @@ test("estimates the result and compares before/after", async ({ page }) => {
 });
 test("compresses several PDFs and downloads them as one ZIP", async ({ page }) => {
   test.setTimeout(240000);
-  await page.goto("/en/");
+  await page.goto("/en/compress/");
   await page.locator("input[type=file]").setInputFiles([
     "tests/fixtures/scan.pdf",
     "tests/fixtures/text-vector.pdf",
@@ -189,7 +189,7 @@ test("compresses several PDFs and downloads them as one ZIP", async ({ page }) =
 });
 test("closing the comparison early leaves no pdf.js worker behind", async ({ page }) => {
   test.setTimeout(180000);
-  await page.goto("/en/");
+  await page.goto("/en/compress/");
   await page.locator("input[type=file]").setInputFiles("tests/fixtures/long.pdf");
   await page.getByRole("button", { name: "Compress PDF", exact: true }).click();
   await expectSuccess(page);
@@ -204,9 +204,17 @@ test("closing the comparison early leaves no pdf.js worker behind", async ({ pag
   await expect.poll(() => page.workers().length, { timeout: 15000 }).toBe(0);
 });
 test("tool switcher shows built tools and one unnamed placeholder", async ({ page }) => {
-  await page.goto("/en/");
+  await page.goto("/en/compress/");
   const switcher = page.locator(".tool-switcher");
   await expect(switcher.getByRole("link", { name: "Compress PDF" })).toHaveAttribute("aria-current", "page");
   await expect(switcher.locator(".soon")).toHaveText("More tools coming later");
   await expect(switcher.getByRole("link")).toHaveCount(1);
+});
+test("the site and locale homes go straight to compress", async ({ page }) => {
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/[a-zA-Z-]+\/compress\/$/);
+  await page.goto("/vi/");
+  await expect(page).toHaveURL(/\/vi\/compress\/$/);
+  await expect(page.locator(".drop")).toBeVisible();
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "https://pdf.kha.do/vi/compress/");
 });
