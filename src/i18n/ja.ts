@@ -321,4 +321,5 @@ export default {
   mergeWithOthers: "ほかの PDF と結合",
   moreTools: "ほかのツール {count} 件",
   organizeThis: "ページを整理",
+  restrictionsNote: "元のファイルは印刷やコピーを制限していましたが、新しいファイルにはその制限がありません。必要な場面では元のファイルを使ってください。",
 } satisfies Messages;

@@ -1823,3 +1823,7 @@ footer a:hover {
 .tool-more-button[hidden] {
   display: none;
 }
+/* Arrows point the way of reading. */
+[dir="rtl"] .next-steps svg {
+  transform: scaleX(-1);
+}

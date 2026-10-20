@@ -271,6 +271,7 @@ export default function CompressTool({ t, locale, preset, shared }: Props) {
         lossy: output.lossy,
         unlocked: Boolean(password),
         unsigned,
+        restricted: summary?.restricted,
       });
     } catch (failure) {
       if (id !== generation.current) return;

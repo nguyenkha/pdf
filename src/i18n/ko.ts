@@ -321,4 +321,5 @@ export default {
   mergeWithOthers: "다른 PDF와 합치기",
   moreTools: "다른 도구 {count}개",
   organizeThis: "페이지 정리",
+  restrictionsNote: "원본은 인쇄나 복사를 제한했지만 새 파일에는 그런 제한이 없습니다. 제한이 필요한 곳에는 원본을 사용하세요.",
 } satisfies Messages;

@@ -118,6 +118,8 @@ test("saves a PDF that is encrypted only to restrict printing", async ({ page })
   await page.getByRole("button", { name: "Delete page 1" }).click();
   await page.getByRole("button", { name: "Save PDF" }).click();
   await expect(page.getByRole("heading", { name: "PDF saved" })).toBeVisible({ timeout: 90000 });
+  // The person is told the copy no longer restricts printing or copying.
+  await expect(page.getByText(/new file has no such restrictions/)).toBeVisible();
 });
 test("sends nothing off the device and loads pdf-lib only to save", async ({ page }) => {
   test.setTimeout(120000);

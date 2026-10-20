@@ -35,6 +35,8 @@ export default function OrganizeTool({ t, locale, shared }: ToolProps) {
   const [unlocking, setUnlocking] = useState(false);
   const [unlockError, setUnlockError] = useState<string>();
   const [unlocked, setUnlocked] = useState(false);
+  // Opened without a password but encrypted to restrict printing or copying.
+  const [restricted, setRestricted] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<{ blob: Blob; pages: number; signed: boolean }>();
@@ -44,7 +46,10 @@ export default function OrganizeTool({ t, locale, shared }: ToolProps) {
   // Previews are object URLs; release them with the file or the tool.
   const urls = useRef<string[]>([]);
   urls.current = thumbnails;
+  // Previews still arriving from an older read are dropped, not kept.
+  const generation = useRef(0);
   const release = () => {
+    generation.current++;
     urls.current.forEach((url) => url && URL.revokeObjectURL(url));
     setThumbnails([]);
   };
@@ -69,6 +74,7 @@ export default function OrganizeTool({ t, locale, shared }: ToolProps) {
     setCards([]);
     setLocked(false);
     setError("");
+    const id = generation.current;
     const run = readPages(
       source,
       PREVIEWS,
@@ -81,12 +87,18 @@ export default function OrganizeTool({ t, locale, shared }: ToolProps) {
         setCount(pages);
         setCards(fresh(pages));
       },
-      (index, thumbnail) =>
+      (index, thumbnail) => {
+        // Made outside the state update, so a reset that empties the list
+        // cannot drop one unrevoked; the replaced one is revoked here.
+        const url = URL.createObjectURL(thumbnail);
+        if (id !== generation.current) return URL.revokeObjectURL(url);
         setThumbnails((current) => {
           const next = [...current];
-          next[index] = URL.createObjectURL(thumbnail);
+          if (next[index]) URL.revokeObjectURL(next[index]);
+          next[index] = url;
           return next;
-        }),
+        });
+      },
     );
     reading.current = run;
     run.promise
@@ -164,6 +176,7 @@ export default function OrganizeTool({ t, locale, shared }: ToolProps) {
           // Encrypted only to restrict printing or copying: it opens without a
           // password, so rewrite it without encryption (as compressing does).
           if (!(failure instanceof Error) || failure.message !== "password") throw failure;
+          setRestricted(true);
           const active = unlockFile(file, "");
           job.current = active;
           return run(new File([await active.promise], file.name, { type: "application/pdf" }));
@@ -212,6 +225,7 @@ export default function OrganizeTool({ t, locale, shared }: ToolProps) {
           name={organizedName(file)}
           pages={result.pages}
           unlocked={unlocked}
+          restricted={restricted}
           signed={result.signed}
           onReset={reset}
         />
@@ -331,12 +345,12 @@ export default function OrganizeTool({ t, locale, shared }: ToolProps) {
                 </div>
               </div>
             ) : (
-              <>
+              <div className="organize-save">
                 <button type="button" className="primary" disabled={!kept} onClick={save}>
                   {t.organizeSave}
                 </button>
                 <p className="hint merge-note">{kept ? t.organizeNote : t.organizeAllDeleted}</p>
-              </>
+              </div>
             )}
           </div>
         )
@@ -356,6 +370,7 @@ function OrganizeResult({
   name,
   pages,
   unlocked,
+  restricted,
   signed,
   onReset,
 }: {
@@ -365,6 +380,7 @@ function OrganizeResult({
   name: string;
   pages: number;
   unlocked: boolean;
+  restricted: boolean;
   signed: boolean;
   onReset: () => void;
 }) {
@@ -376,6 +392,7 @@ function OrganizeResult({
       />
       <ResultActions t={t} blob={blob} name={name} />
       {unlocked && <p className="result-note">{t.organizeUnlockedNote}</p>}
+      {restricted && !unlocked && <p className="result-note">{t.restrictionsNote}</p>}
       {signed && <p className="result-note">{t.organizeSignedNote}</p>}
       <NextSteps
         t={t}

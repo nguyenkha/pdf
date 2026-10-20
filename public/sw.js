@@ -34,12 +34,19 @@ self.addEventListener("activate", (event) => {
 // memory only until the page takes them (or the worker stops); they are
 // never written to storage.
 let shared = [];
+// Files nobody takes (the next page never opened) are dropped after a minute.
+let forget;
+const forgetSoon = () => {
+  clearTimeout(forget);
+  forget = setTimeout(() => (shared = []), 60_000);
+};
 self.addEventListener("message", (event) => {
   const port = event.ports[0];
   if (!port) return;
   // One tool hands its result to another, the same way as the share sheet.
   if (event.data?.type === "hand-over") {
     shared = event.data.files.filter((file) => file instanceof File);
+    forgetSoon();
     port.postMessage(true);
   }
   if (event.data?.type === "take-shared") {
@@ -55,6 +62,7 @@ self.addEventListener("fetch", (event) => {
       (async () => {
         const form = await request.formData();
         shared = form.getAll("file").filter((file) => file instanceof File);
+        forgetSoon();
         return Response.redirect("/?shared=1", 303);
       })(),
     );

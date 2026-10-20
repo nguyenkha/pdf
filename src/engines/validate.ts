@@ -70,6 +70,8 @@ export type PdfSummary = {
   hasImages: boolean;
   tagged: boolean;
   colorless?: boolean;
+  /** Owner restrictions (print, copy...): a rewrite drops them. */
+  restricted?: boolean;
 };
 // A pixel counts as colored when its channels differ by more than this;
 // yellowed paper and JPEG noise stay below it.
@@ -122,7 +124,8 @@ export async function probePdf(
       }
       page.cleanup();
     }
-    return { pages: doc.numPages, hasImages, tagged, colorless };
+    const restricted = Boolean(await doc.getPermissions().catch(() => null));
+    return { pages: doc.numPages, hasImages, tagged, colorless, restricted };
   } finally {
     await task.destroy();
   }

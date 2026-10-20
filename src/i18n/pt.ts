@@ -323,4 +323,5 @@ export default {
   mergeWithOthers: "Juntar com outros PDFs",
   moreTools: "Mais {count} ferramentas",
   organizeThis: "Organizar páginas",
+  restrictionsNote: "O original limitava a impressão ou a cópia; o novo arquivo não tem essas restrições. Guarde o original onde elas importarem.",
 } satisfies Messages;

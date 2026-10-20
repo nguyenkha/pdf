@@ -320,4 +320,5 @@ export default {
   mergeWithOthers: "دمج مع ملفات PDF أخرى",
   moreTools: "{count} أدوات أخرى",
   organizeThis: "ترتيب الصفحات",
+  restrictionsNote: "كان الملف الأصلي يقيّد الطباعة أو النسخ؛ ولا توجد هذه القيود في الملف الجديد. احتفظ بالأصل حيث تهمّ.",
 } satisfies Messages;

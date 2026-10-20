@@ -14,6 +14,8 @@ export type CompressionResult = {
   unlocked?: boolean;
   /** Digital signatures were flattened before compressing. */
   unsigned?: boolean;
+  /** The original restricted printing or copying; the copy does not. */
+  restricted?: boolean;
 };
 // pdf.js for the comparison loads only when someone opens it.
 const ComparePreview = lazy(() => import("./ComparePreview"));
@@ -90,6 +92,9 @@ export function ResultDownload({
         <p className="result-note">{t.unlockedNotice}</p>
       )}
       {reduced && result.unsigned && <p className="result-note">{t.signedNote}</p>}
+      {reduced && result.restricted && !result.unlocked && (
+        <p className="result-note">{t.restrictionsNote}</p>
+      )}
       {reduced && (
         <NextSteps
           t={t}

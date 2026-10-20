@@ -320,4 +320,5 @@ export default {
   mergeWithOthers: "Merge with other PDFs",
   moreTools: "{count} more tools",
   organizeThis: "Organize pages",
+  restrictionsNote: "The original limited printing or copying; the new file has no such restrictions. Keep the original where they matter.",
 };

@@ -322,4 +322,5 @@ export default {
   mergeWithOthers: "दूसरी PDF के साथ मर्ज करें",
   moreTools: "{count} और टूल",
   organizeThis: "पेज व्यवस्थित करें",
+  restrictionsNote: "मूल फ़ाइल में प्रिंट या कॉपी पर रोक थी; नई फ़ाइल में यह रोक नहीं है। जहाँ यह ज़रूरी हो, वहाँ मूल फ़ाइल रखें।",
 } satisfies Messages;

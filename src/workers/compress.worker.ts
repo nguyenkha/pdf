@@ -135,17 +135,18 @@ self.onmessage = async (event: MessageEvent<Request>) => {
     }
     if (request.type === "unlock") {
       // Check the password with pdf.js (a clear "incorrect" error), then
-      // rewrite losslessly without encryption, as compressing does.
-      await probePdf(new Uint8Array(await request.file.arrayBuffer()), request.password);
+      // rewrite losslessly without encryption, as compressing does. The copy
+      // goes through the same preservation check: a font rewrite can lose
+      // the text mapping, and the other tools copy this copy's pages as is.
+      const before = await inspect(request.file, request.password, () => {});
       const output = await runGhostscript(
         [{ path: "/input.pdf", blob: request.file }],
         ghostscriptArgs({ quality: 101, dpi: 0 }, request.password),
         () => {},
       );
-      self.postMessage({
-        type: "result",
-        result: new Blob([output.bytes as BlobPart], { type: "application/pdf" }),
-      });
+      const unlocked = new Blob([output.bytes as BlobPart], { type: "application/pdf" });
+      verifyShape(before, await inspect(unlocked, undefined, () => {}));
+      self.postMessage({ type: "result", result: unlocked });
       return;
     }
     if (request.type === "estimate") {

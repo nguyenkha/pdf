@@ -323,4 +323,5 @@ export default {
   mergeWithOthers: "Gộp với PDF khác",
   moreTools: "{count} công cụ khác",
   organizeThis: "Sắp xếp trang",
+  restrictionsNote: "File gốc giới hạn in hoặc copy; file mới không còn giới hạn đó. Hãy giữ file gốc ở nơi cần các giới hạn này.",
 } satisfies Messages;

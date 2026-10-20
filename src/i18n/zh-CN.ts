@@ -315,4 +315,5 @@ export default {
   mergeWithOthers: "与其他 PDF 合并",
   moreTools: "另外 {count} 个工具",
   organizeThis: "整理页面",
+  restrictionsNote: "原文件限制了打印或复制；新文件不再有这些限制。需要这些限制的场合请保留原文件。",
 } satisfies Messages;

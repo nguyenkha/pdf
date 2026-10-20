@@ -321,4 +321,5 @@ export default {
   mergeWithOthers: "Объединить с другими PDF",
   moreTools: "Ещё инструменты: {count}",
   organizeThis: "Упорядочить страницы",
+  restrictionsNote: "Оригинал ограничивал печать или копирование; в новом файле этих ограничений нет. Сохраните оригинал там, где они важны.",
 } satisfies Messages;

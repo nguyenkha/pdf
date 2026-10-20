@@ -92,7 +92,37 @@ export function unpredictPng(data: Uint8Array, rowBytes: number, pixelBytes: num
   }
   return output;
 }
+/** Inflates a stream, giving up past `limit` bytes instead of exhausting memory. */
+async function inflate(bytes: Uint8Array, limit: number): Promise<Uint8Array> {
+  const reader = new Blob([bytes as BlobPart]).stream().pipeThrough(new DecompressionStream("deflate")).getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.length;
+    if (total > limit) {
+      await reader.cancel();
+      throw new Error("image data too large");
+    }
+    chunks.push(value);
+  }
+  const output = new Uint8Array(total);
+  let at = 0;
+  for (const chunk of chunks) {
+    output.set(chunk, at);
+    at += chunk.length;
+  }
+  return output;
+}
 async function bitmapOf(object: PDFRawStream, kind: Source): Promise<ImageBitmap> {
+  const declaredWidth = object.dict.lookup(name("Width"));
+  const declaredHeight = object.dict.lookup(name("Height"));
+  const pixelCount =
+    declaredWidth instanceof PDFNumber && declaredHeight instanceof PDFNumber
+      ? declaredWidth.asNumber() * declaredHeight.asNumber()
+      : Infinity;
+  if (!(pixelCount > 0) || pixelCount > MAX_PIXELS) throw new Error("image too large");
   if (kind.kind === "jpeg")
     // Orientation tags inside the JPEG mean nothing in a PDF.
     return createImageBitmap(new Blob([object.contents as BlobPart], { type: "image/jpeg" }), {
@@ -101,12 +131,9 @@ async function bitmapOf(object: PDFRawStream, kind: Source): Promise<ImageBitmap
   const width = (object.dict.lookup(name("Width")) as PDFNumber).asNumber();
   const height = (object.dict.lookup(name("Height")) as PDFNumber).asNumber();
   if (!(width > 0 && height > 0) || width * height > MAX_PIXELS) throw new Error("image too large");
-  const inflated = new Uint8Array(
-    await new Response(
-      new Blob([object.contents as BlobPart]).stream().pipeThrough(new DecompressionStream("deflate")),
-    ).arrayBuffer(),
-  );
   const rowBytes = width * kind.components;
+  // At most the declared pixels plus one PNG filter byte per row.
+  const inflated = await inflate(object.contents, (rowBytes + 1) * height);
   const pixels = kind.predictor >= 10 ? unpredictPng(inflated, rowBytes, kind.components) : inflated;
   if (pixels.length < rowBytes * height) throw new Error("short image data");
   const rgba = new Uint8ClampedArray(width * height * 4);

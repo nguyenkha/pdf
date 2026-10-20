@@ -150,3 +150,16 @@
   flex: 0 0 auto;
   min-width: 0;
 }
+/* A long grid keeps Save in reach: it rests at the bottom of the screen
+   until the end of the grid scrolls into view. */
+.organize-save {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  margin: 0 -8px;
+  padding: 10px 8px calc(10px + env(safe-area-inset-bottom));
+  background: linear-gradient(to top, var(--surface) 75%, transparent);
+}
+.organize-save .primary {
+  margin-top: 0;
+}
