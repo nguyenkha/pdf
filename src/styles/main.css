@@ -1820,3 +1820,6 @@ footer a:hover {
     animation: none !important;
   }
 }
+.tool-more-button[hidden] {
+  display: none;
+}

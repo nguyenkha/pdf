@@ -24,22 +24,34 @@ export function ToolSwitcher({
   const button = useRef<HTMLButtonElement>(null);
   const leave = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const enter = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  // When hovering just unfolded it, the click that follows should not fold it again.
-  const hoveredOpen = useRef(0);
+  // Opened from the keyboard: focus goes into the list, and back to + on close.
+  const keyboard = useRef(false);
+  const list = useRef<HTMLUListElement>(null);
   const media = (query: string) => typeof matchMedia === "function" && matchMedia(query).matches;
   const hover = () => media("(hover: hover)");
   useEffect(() => {
     if (open) return setShown(true);
-    const fold = setTimeout(() => setShown(false), media("(prefers-reduced-motion: reduce)") ? 0 : 170);
+    const fold = setTimeout(
+      () => {
+        setShown(false);
+        if (keyboard.current) requestAnimationFrame(() => button.current?.focus());
+        keyboard.current = false;
+      },
+      media("(prefers-reduced-motion: reduce)") ? 0 : 170,
+    );
     return () => clearTimeout(fold);
   }, [open]);
+  // Once the list is drawn, a keyboard opening moves focus to its first tool.
+  useEffect(() => {
+    if (open && shown && keyboard.current) list.current?.querySelector("a")?.focus();
+  }, [open, shown]);
   useEffect(() => {
     if (!open) return;
     const close = (event: MouseEvent | KeyboardEvent) => {
       if (event instanceof KeyboardEvent) {
         if (event.key !== "Escape") return;
         clearTimeout(enter.current);
-        button.current?.focus();
+        keyboard.current = true;
       } else if (nav.current?.contains(event.target as Node)) return;
       setOpen(false);
     };
@@ -72,8 +84,13 @@ export function ToolSwitcher({
         clearTimeout(enter.current);
         if (hover()) leave.current = setTimeout(() => setOpen(false), 250);
       }}
-      onBlur={(event) => {
-        if (!nav.current?.contains(event.relatedTarget as Node)) setOpen(false);
+      // Close when focus moves elsewhere; hiding + drops focus to the body for
+      // a moment before it moves into the list, which is not leaving.
+      onBlur={() => {
+        setTimeout(() => {
+          const focused = document.activeElement;
+          if (focused && focused !== document.body && !nav.current?.contains(focused)) setOpen(false);
+        });
       }}
     >
       <a href={href(active)} aria-current="page">
@@ -85,26 +102,31 @@ export function ToolSwitcher({
         ref={button}
         className="tool-more-button"
         aria-expanded={open}
+        // Once the others are out, + has done its job: they take its place.
+        hidden={shown}
         // A brief pause, so a pointer just passing over does not unfold it.
         onMouseEnter={() => {
-          if (hover())
-            enter.current = setTimeout(() => {
-              hoveredOpen.current = Date.now();
-              setOpen(true);
-            }, 90);
+          if (hover()) enter.current = setTimeout(() => setOpen(true), 90);
         }}
         aria-controls="tool-more-list"
-        onClick={() => {
+        onClick={(event) => {
           clearTimeout(enter.current);
-          setOpen(!open || Date.now() - hoveredOpen.current < 700);
-          hoveredOpen.current = 0;
+          // detail is 0 for Enter or Space, which should move focus along.
+          keyboard.current = event.detail === 0;
+          setOpen(true);
         }}
       >
         <Plus size={16} aria-hidden="true" />
         {/* Says there is more, and how much, in the space of one chip. */}
         {fill(t.moreTools, { count: others.length })}
       </button>
-      <ul id="tool-more-list" className="tool-more-list" hidden={!shown} data-state={open ? "open" : "closing"}>
+      <ul
+        id="tool-more-list"
+        ref={list}
+        className="tool-more-list"
+        hidden={!shown}
+        data-state={open ? "open" : "closing"}
+      >
         {others.map((tool, index) => {
           const ToolIcon = tool.icon;
           return (

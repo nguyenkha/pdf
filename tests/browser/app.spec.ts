@@ -235,24 +235,25 @@ test("tool switcher shows the tool in use and the rest behind +", async ({ page 
   await expect(switcher.getByRole("link", { name: "Merge PDF" })).toBeHidden();
   // The "+" says how many other tools there are.
   const more = switcher.getByRole("button", { name: "2 more tools" });
-  // Tap or click unfolds the rest in the same row; Escape folds it again.
+  // Tap or click unfolds the rest, which take the place of +.
   await more.click();
-  await expect(more).toHaveAttribute("aria-expanded", "true");
   await expect(switcher.getByRole("link", { name: "Merge PDF" })).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(switcher.getByRole("link", { name: "Merge PDF" })).toBeHidden();
-  await expect(more).toBeFocused();
-  await more.click();
+  await expect(more).toBeHidden();
   await expect(switcher.locator(".tool-more-list a")).toHaveText(["Merge PDF", "PDF to Markdown"]);
   await page.keyboard.press("Escape");
+  await expect(switcher.getByRole("link", { name: "Merge PDF" })).toBeHidden();
+  await expect(more).toBeVisible();
+  // From the keyboard, focus moves into the list and back to + on Escape.
+  await more.focus();
+  await page.keyboard.press("Enter");
+  await expect(switcher.getByRole("link", { name: "Merge PDF" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(more).toBeFocused();
   // With a mouse, hovering is enough.
   if (await page.evaluate(() => matchMedia("(hover: hover)").matches)) {
     await page.mouse.move(5, 5);
     await more.hover();
     await expect(switcher.getByRole("link", { name: "Merge PDF" })).toBeVisible();
-    // A click right after hovering keeps it open rather than folding it.
-    await more.click();
-    await expect(more).toHaveAttribute("aria-expanded", "true");
     await page.mouse.move(5, 5);
     await expect(switcher.getByRole("link", { name: "Merge PDF" })).toBeHidden();
   }
