@@ -7,7 +7,12 @@ const packages = {
   pdfjs: 'node_modules/pdfjs-dist', react: 'node_modules/react',
   'react-dom': 'node_modules/react-dom', lucide: 'node_modules/lucide-react',
   scheduler: path.dirname(require.resolve('scheduler/package.json', { paths: [fs.realpathSync('node_modules/react-dom')] })),
+  'pdf-lib': 'node_modules/pdf-lib',
 };
+// pdf-lib's own dependencies are bundled with it; pnpm keeps them beside it.
+const pdfLibDeps = path.dirname(fs.realpathSync('node_modules/pdf-lib'));
+for (const dependency of ['@pdf-lib/standard-fonts', '@pdf-lib/upng', 'pako', 'tslib'])
+  packages[dependency.replace('/', '-').replace('@', '')] = path.join(pdfLibDeps, dependency);
 for (const [name, source] of Object.entries(packages)) {
   const destination = `dist/licenses/${name}`;
   fs.mkdirSync(destination, { recursive: true });

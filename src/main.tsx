@@ -193,7 +193,6 @@ function App({
           <p>{t.siteLoads}</p>
           <p>{t.privacyBody}</p>
           <Credits text={t.credits} />
-          <Credits text={t.creditsMerge} />
           <p>{t.limitations}</p>
           <h2>{t.how}</h2>
           <p>{t.howText}</p>

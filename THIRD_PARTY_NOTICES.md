@@ -7,6 +7,7 @@ Original pdf.kha.do code: Copyright (c) 2026 kha.do, AGPL-3.0-or-later. Third-pa
 | Ghostscript 10.08.0, distributed by `@wasm-zoo/ghostscript` 0.7.2 | PDF rewriting and image recompression | AGPL-3.0-or-later; supplied third-party notices also apply |
 | WASM Zoo distribution adapter/build recipes | Reproducible distribution | MIT; does not relicense the Ghostscript binary |
 | PDF.js (`pdfjs-dist`) | Parsing, text, annotations, validation previews; local CMaps and standard fonts | Apache-2.0; included font notices apply |
+| pdf-lib 1.17.1 with `@pdf-lib/standard-fonts`, `@pdf-lib/upng`, pako and tslib | Merging PDFs by copying pages | MIT (pako: MIT and Zlib; tslib: 0BSD) |
 | React, React DOM, scheduler | UI | MIT |
 | Lucide React | Icons | ISC |
 
@@ -17,6 +18,7 @@ Upstream sources:
 - https://github.com/ttomohisa/wasm-zoo/tree/ghostscript-v0.7.2 (manifest, provenance, corresponding source, recipes and supplied license collection)
 - https://github.com/ArtifexSoftware/ghostpdl
 - https://github.com/mozilla/pdf.js
+- https://github.com/Hopding/pdf-lib
 - https://github.com/facebook/react
 - https://github.com/lucide-icons/lucide
 

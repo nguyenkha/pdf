@@ -136,7 +136,8 @@ const header = '<header class="site-header"></header>';
 const credits = (t) =>
   `<p class="credits">${escape(t.credits)
     .replace("{gs}", '<a href="https://www.ghostscript.com/">Ghostscript</a>')
-    .replace("{pdfjs}", '<a href="https://mozilla.github.io/pdf.js/">pdf.js</a>')}</p><p class="credits">${escape(t.creditsMerge).replace("{pdflib}", '<a href="https://pdf-lib.js.org/">pdf-lib</a>')}</p>`;
+    .replace("{pdfjs}", '<a href="https://mozilla.github.io/pdf.js/">pdf.js</a>')
+    .replace("{pdflib}", '<a href="https://pdf-lib.js.org/">pdf-lib</a>')}</p>`;
 for (const locale of locales) {
   const t = (await import(`../src/i18n/${locale}.ts`)).default;
   const sizeLinks = `<nav class="sizes"><span>${escape(t.sizesTitle)}:</span>${SIZE_PAGES.map((slug) => `<a href="/${locale}/${sizePath(slug)}" title="${escape(fill(t.sizeLink, { size: sizeLabel(slug) }))}">${sizeLabel(slug)}</a>`).join("")}</nav>`;
