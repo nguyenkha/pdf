@@ -1,0 +1,10 @@
+node_modules/
+dist/
+playwright-report/
+test-results/
+.DS_Store
+*.log
+public/engine/
+.pnpm-store/
+*.tsbuildinfo
+public/pdfjs/
