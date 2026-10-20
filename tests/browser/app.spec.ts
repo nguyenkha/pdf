@@ -27,7 +27,7 @@ test("language switching and RTL", async ({ page }) => {
   ).toBeVisible();
   await page.locator(".language select").selectOption("vi");
   await expect(
-    page.getByText("Tệp của bạn không bao giờ rời thiết bị.").filter({ visible: true }).first(),
+    page.getByText("File của bạn không bao giờ rời thiết bị.").filter({ visible: true }).first(),
   ).toBeVisible();
 });
 test("theme and mobile", async ({ page }) => {

@@ -41,6 +41,6 @@ export const metadata = {
   ],
   vi: [
     "Nén PDF riêng tư | pdf.kha.do",
-    "Nén PDF miễn phí ngay trong trình duyệt. Không tải tệp lên máy chủ.",
+    "Nén PDF miễn phí ngay trong trình duyệt. Không tải file lên máy chủ.",
   ],
 };
