@@ -675,6 +675,29 @@ input[type="number"],
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.suggestion {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  margin: 0 0 12px;
+  border: 1px solid color-mix(in srgb, var(--teal) 35%, transparent);
+  background: var(--teal-soft);
+  border-radius: 10px;
+}
+.suggestion p {
+  margin: 0;
+  flex: 1;
+  font-size: 13px;
+  color: var(--text);
+}
+.suggestion .secondary {
+  width: auto;
+  margin: 0;
+  min-height: 36px;
+  padding: 6px 12px;
+  white-space: nowrap;
+}
 .estimate {
   margin: 12px 0 0;
   font-size: 13px;
@@ -1003,6 +1026,11 @@ input[type="number"],
   margin-inline-end: 8px;
 }
 .sizes a {
+  /* WCAG 2.2 target size: at least 24 x 24 px per link. */
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  min-width: 24px;
   color: var(--muted);
   text-decoration: underline;
   text-decoration-color: var(--border-strong);
@@ -1264,4 +1292,12 @@ footer a:hover {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }

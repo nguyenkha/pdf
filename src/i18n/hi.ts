@@ -139,4 +139,6 @@ export default {
   downloadAll: "सब डाउनलोड करें (ZIP)",
   preparingZip: "ZIP तैयार हो रहा है…",
   tooMany: "एक बार में अधिकतम 20 PDF चुनें।",
+  grayHint: "यह PDF ब्लैक-एंड-व्हाइट लगता है। ग्रेस्केल से यह आमतौर पर लगभग 30% और छोटा होता है, पर समय ज़्यादा लगता है।",
+  grayApply: "ग्रेस्केल इस्तेमाल करें",
 } satisfies Messages;

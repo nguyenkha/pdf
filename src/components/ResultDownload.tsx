@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Columns2, Download, Eye, RotateCcw, Share2 } from "lucide-react";
 import { formatSize, savings, outputName } from "../lib/pdf";
 import { useObjectUrl } from "../hooks/useObjectUrl";
@@ -33,6 +33,9 @@ export function ResultDownload({
   const url = useObjectUrl(result.blob);
   const reduced = result.blob.size < file.size;
   const [comparing, setComparing] = useState(false);
+  // Move focus to the outcome, so keyboard and screen reader users land on it.
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => heading.current?.focus(), []);
   // The system share sheet reaches Drive, Dropbox, OneDrive, Files, Mail...
   const shareFile = useMemo(
     () => new File([result.blob], outputName(file.name), { type: "application/pdf" }),
@@ -43,7 +46,9 @@ export function ResultDownload({
     navigator.canShare({ files: [shareFile] });
   return (
     <div className="result" aria-live="polite">
-      <h3 className="result-heading">{t.complete}</h3>
+      <h3 className="result-heading" ref={heading} tabIndex={-1}>
+        {t.complete}
+      </h3>
       <div className="result-grid">
         <span>
           {t.original}

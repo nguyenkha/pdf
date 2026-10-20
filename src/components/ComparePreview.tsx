@@ -173,7 +173,11 @@ export default function ComparePreview({
               ref={boxes[index]}
               onScroll={() => sync(index)}
             >
-              <canvas ref={canvases[index]} />
+              <canvas
+                ref={canvases[index]}
+                role="img"
+                aria-label={`${label}, ${fill(t.pageOf, { page, pages })}`}
+              />
             </div>
           </figure>
         ))}

@@ -140,4 +140,6 @@ export default {
   downloadAll: "Descargar todo (ZIP)",
   preparingZip: "Preparando ZIP…",
   tooMany: "Elige hasta 20 PDF a la vez.",
+  grayHint: "Este PDF parece en blanco y negro. La escala de grises suele reducirlo un 30 % más, pero tarda más.",
+  grayApply: "Usar escala de grises",
 } satisfies Messages;

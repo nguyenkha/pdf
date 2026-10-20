@@ -140,4 +140,6 @@ export default {
   downloadAll: "Alle herunterladen (ZIP)",
   preparingZip: "ZIP wird vorbereitet…",
   tooMany: "Wählen Sie bis zu 20 PDFs auf einmal.",
+  grayHint: "Dieses PDF wirkt schwarz-weiß. Graustufen machen es meist etwa 30 % kleiner, dauern aber länger.",
+  grayApply: "Graustufen verwenden",
 } satisfies Messages;

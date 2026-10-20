@@ -141,4 +141,6 @@ export default {
   downloadAll: "Tout télécharger (ZIP)",
   preparingZip: "Préparation du ZIP…",
   tooMany: "Choisissez jusqu’à 20 PDF à la fois.",
+  grayHint: "Ce PDF semble en noir et blanc. Les niveaux de gris le réduisent souvent d'environ 30 %, mais c'est plus long.",
+  grayApply: "Utiliser les niveaux de gris",
 } satisfies Messages;

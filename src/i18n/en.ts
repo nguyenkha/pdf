@@ -137,4 +137,6 @@ export default {
   downloadAll: "Download all (ZIP)",
   preparingZip: "Preparing ZIP…",
   tooMany: "Choose up to 20 PDFs at a time.",
+  grayHint: "This PDF looks black and white. Grayscale usually makes it about 30% smaller, but takes longer.",
+  grayApply: "Use grayscale",
 };

@@ -138,4 +138,6 @@ export default {
   downloadAll: "すべてダウンロード（ZIP）",
   preparingZip: "ZIP を準備中…",
   tooMany: "一度に選べる PDF は 20 個までです。",
+  grayHint: "この PDF は白黒のようです。グレースケールにすると通常さらに約 30% 小さくなりますが、時間がかかります。",
+  grayApply: "グレースケールにする",
 } satisfies Messages;

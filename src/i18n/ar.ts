@@ -137,4 +137,6 @@ export default {
   downloadAll: "تنزيل الكل (ZIP)",
   preparingZip: "جارٍ تجهيز ZIP…",
   tooMany: "اختر حتى 20 ملف PDF في كل مرة.",
+  grayHint: "يبدو ملف PDF هذا بالأبيض والأسود. التدرج الرمادي يصغّره عادةً بنحو 30٪ لكنه يستغرق وقتًا أطول.",
+  grayApply: "استخدام التدرج الرمادي",
 } satisfies Messages;

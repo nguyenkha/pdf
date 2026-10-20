@@ -42,6 +42,14 @@ export function CompressionPlan({
       <legend>{t.goal}</legend>
       {!summary.hasImages && <p className="hint">{t.textOnly}</p>}
       {summary.tagged && <p className="hint">{t.taggedNotice}</p>}
+      {summary.colorless && summary.hasImages && !value.gray && (
+        <div className="suggestion">
+          <p>{t.grayHint}</p>
+          <button type="button" className="secondary" onClick={() => set({ gray: true })}>
+            {t.grayApply}
+          </button>
+        </div>
+      )}
       <div className="goals">
         {goals.map(([goal, label, hint, Icon]) => (
           <label

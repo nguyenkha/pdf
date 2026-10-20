@@ -140,4 +140,6 @@ export default {
   downloadAll: "Baixar tudo (ZIP)",
   preparingZip: "Preparando ZIP…",
   tooMany: "Escolha até 20 PDFs por vez.",
+  grayHint: "Este PDF parece preto e branco. Tons de cinza costumam reduzi-lo cerca de 30%, mas demora mais.",
+  grayApply: "Usar tons de cinza",
 } satisfies Messages;

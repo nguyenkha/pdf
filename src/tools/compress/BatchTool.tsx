@@ -142,6 +142,11 @@ export function BatchTool({
                 {item.status === "error" && ` · ${item.message}`}
               </small>
               {item.status === "working" && (
+                <span className="sr-only" role="status">
+                  {t.compressing}
+                </span>
+              )}
+              {item.status === "working" && (
                 <span className="progress small" aria-hidden="true">
                   <span style={{ width: `${Math.floor((item.progress ?? 0) * 100)}%` }} />
                 </span>

@@ -132,4 +132,6 @@ export default {
   downloadAll: "全部下载（ZIP）",
   preparingZip: "正在生成 ZIP…",
   tooMany: "每次最多选择 20 个 PDF。",
+  grayHint: "此 PDF 看起来是黑白的。转为灰度通常可再缩小约 30%，但耗时更长。",
+  grayApply: "使用灰度",
 } satisfies Messages;

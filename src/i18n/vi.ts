@@ -140,4 +140,6 @@ export default {
   downloadAll: "Tải tất cả (ZIP)",
   preparingZip: "Đang tạo ZIP…",
   tooMany: "Mỗi lần chọn tối đa 20 PDF.",
+  grayHint: "PDF này có vẻ là trắng đen. Chuyển xám thường nhỏ hơn khoảng 30%, nhưng nén lâu hơn.",
+  grayApply: "Chuyển xám",
 } satisfies Messages;

@@ -138,4 +138,6 @@ export default {
   downloadAll: "Скачать всё (ZIP)",
   preparingZip: "Готовим ZIP…",
   tooMany: "Выберите не более 20 PDF за раз.",
+  grayHint: "Этот PDF выглядит чёрно-белым. Оттенки серого обычно уменьшают его ещё примерно на 30 %, но дольше.",
+  grayApply: "Использовать оттенки серого",
 } satisfies Messages;

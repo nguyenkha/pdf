@@ -57,8 +57,42 @@ async function rejectUnsupported(doc: Awaited<ReturnType<typeof load>>) {
   )
     throw new Error("unsupported");
 }
-/** tagged: has an accessibility structure tree, which rewriting drops. */
-export type PdfSummary = { pages: number; hasImages: boolean; tagged: boolean };
+/**
+ * tagged: has an accessibility structure tree, which rewriting drops.
+ * colorless: the sampled pages are (near) gray, e.g. a black-and-white scan.
+ */
+export type PdfSummary = {
+  pages: number;
+  hasImages: boolean;
+  tagged: boolean;
+  colorless?: boolean;
+};
+// A pixel counts as colored when its channels differ by more than this;
+// yellowed paper and JPEG noise stay below it.
+const CHROMA = 40;
+const COLORED_SHARE = 0.01;
+async function coloredShare(page: Awaited<ReturnType<Awaited<ReturnType<typeof load>>["getPage"]>>) {
+  if (typeof OffscreenCanvas === "undefined") return undefined;
+  const base = page.getViewport({ scale: 1 });
+  const viewport = page.getViewport({ scale: 64 / base.width });
+  const canvas = new OffscreenCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) return undefined;
+  await page.render({
+    canvasContext: context as unknown as CanvasRenderingContext2D,
+    viewport,
+    background: "white",
+  }).promise;
+  const data = context.getImageData(0, 0, canvas.width, canvas.height).data;
+  let colored = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    const high = Math.max(data[i], data[i + 1], data[i + 2]);
+    const low = Math.min(data[i], data[i + 1], data[i + 2]);
+    if (high - low > CHROMA) colored++;
+  }
+  canvas.width = canvas.height = 0;
+  return colored / (data.length / 4);
+}
 /** Cheap preflight: page count, document-level support, sampled image use. */
 export async function probePdf(
   data: Uint8Array,
@@ -71,13 +105,20 @@ export async function probePdf(
     await rejectUnsupported(doc);
     let hasImages = false;
     let tagged = false;
+    let colorless: boolean | undefined = true;
     for (let number = 1; number <= Math.min(doc.numPages, 3); number++) {
       const page = await doc.getPage(number);
       tagged ||= Boolean(await page.getStructTree());
       hasImages ||= (await page.getOperatorList()).fnArray.some((operator) => IMAGE_OPS.includes(operator));
+      // The images are decoded for the operator list already, so a tiny
+      // render to judge color costs little.
+      if (colorless) {
+        const share = await coloredShare(page);
+        colorless = share === undefined ? undefined : share < COLORED_SHARE;
+      }
       page.cleanup();
     }
-    return { pages: doc.numPages, hasImages, tagged };
+    return { pages: doc.numPages, hasImages, tagged, colorless };
   } finally {
     await task.destroy();
   }
