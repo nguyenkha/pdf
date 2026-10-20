@@ -153,7 +153,7 @@ export default {
   stepOrder: "Sắp xếp",
   mergeCount: "Số PDF: {count} · Số trang: {pages}",
   sortByName: "Xếp theo tên",
-  addFiles: "Thêm PDF",
+  mergeAddMore: "Thả thêm PDF vào đây hoặc bấm để chọn",
   moveUp: "Đưa {name} lên",
   moveDown: "Đưa {name} xuống",
   removeNamed: "Bỏ {name}",

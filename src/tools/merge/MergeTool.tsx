@@ -7,7 +7,6 @@ import {
   FileText,
   GripVertical,
   Lock,
-  Plus,
   RotateCcw,
   X,
 } from "lucide-react";
@@ -227,20 +226,6 @@ export default function MergeTool({ t, locale }: ToolProps) {
               <ArrowDownAZ size={15} aria-hidden="true" />
               {t.sortByName}
             </button>
-            <label className="chip-button">
-              <Plus size={15} aria-hidden="true" />
-              {t.addFiles}
-              <input
-                type="file"
-                accept=".pdf,application/pdf"
-                multiple
-                disabled={busy}
-                onChange={(event) => {
-                  add(Array.from(event.target.files ?? []));
-                  event.target.value = "";
-                }}
-              />
-            </label>
           </div>
           <ol className="merge-list" aria-label={t.stepOrder}>
             {items.map((item, index) => (
@@ -281,8 +266,10 @@ export default function MergeTool({ t, locale }: ToolProps) {
                       t.corrupt
                     ) : (
                       <>
-                        {formatSize(item.file.size, locale)}
-                        {item.summary && ` · ${fill(t.pagesCount, { pages: item.summary.pages })}`}
+                        <span>{formatSize(item.file.size, locale)}</span>
+                        {item.summary && (
+                          <span>{fill(t.pagesCount, { pages: item.summary.pages })}</span>
+                        )}
                       </>
                     )}
                   </small>
@@ -331,6 +318,7 @@ export default function MergeTool({ t, locale }: ToolProps) {
               </li>
             ))}
           </ol>
+          {!busy && <FileDropZone t={t} onSelect={add} title={t.mergeAddMore} compact />}
           {total > LARGE_TOTAL && <p className="warning">{t.large}</p>}
           {busy ? (
             <div className="processing">

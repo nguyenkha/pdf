@@ -150,7 +150,7 @@ export default {
   stepOrder: "Arrange",
   mergeCount: "PDFs: {count} · Pages: {pages}",
   sortByName: "Sort by name",
-  addFiles: "Add PDFs",
+  mergeAddMore: "Drop more PDFs here, or click to add them",
   moveUp: "Move {name} up",
   moveDown: "Move {name} down",
   removeNamed: "Remove {name}",

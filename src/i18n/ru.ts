@@ -151,7 +151,7 @@ export default {
   stepOrder: "Порядок",
   mergeCount: "PDF: {count} · Страниц: {pages}",
   sortByName: "Сортировать по имени",
-  addFiles: "Добавить PDF",
+  mergeAddMore: "Перетащите сюда ещё PDF или нажмите, чтобы добавить",
   moveUp: "Переместить {name} вверх",
   moveDown: "Переместить {name} вниз",
   removeNamed: "Удалить {name}",

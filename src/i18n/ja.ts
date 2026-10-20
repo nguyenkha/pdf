@@ -151,7 +151,7 @@ export default {
   stepOrder: "並べ替え",
   mergeCount: "PDF 数：{count} · ページ数：{pages}",
   sortByName: "名前順に並べ替え",
-  addFiles: "PDF を追加",
+  mergeAddMore: "さらに PDF をここにドロップ、またはクリックして追加",
   moveUp: "{name} を上へ移動",
   moveDown: "{name} を下へ移動",
   removeNamed: "{name} を削除",

@@ -10,7 +10,7 @@ test("merges PDFs in the arranged order", async ({ page }) => {
   const rows = page.locator(".merge-list li");
   await expect(rows).toHaveCount(2);
   // Add a third file from the toolbar, then a locked one that blocks merging.
-  await page.locator(".merge-toolbar input[type=file]").setInputFiles(["tests/fixtures/text-vector.pdf", "tests/fixtures/password.pdf"]);
+  await page.locator(".drop.compact input[type=file]").setInputFiles(["tests/fixtures/text-vector.pdf", "tests/fixtures/password.pdf"]);
   await expect(rows).toHaveCount(4);
   await expect(page.getByText("password.pdf is password-protected. Enter its password to merge it.")).toBeVisible({ timeout: 30000 });
   await expect(page.getByRole("button", { name: "Merge 4 PDFs" })).toBeDisabled();

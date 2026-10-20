@@ -152,7 +152,7 @@ export default {
   stepOrder: "क्रम तय करें",
   mergeCount: "PDF: {count} · पृष्ठ: {pages}",
   sortByName: "नाम से क्रमबद्ध करें",
-  addFiles: "PDF जोड़ें",
+  mergeAddMore: "और PDF यहाँ छोड़ें या जोड़ने के लिए क्लिक करें",
   moveUp: "{name} को ऊपर ले जाएँ",
   moveDown: "{name} को नीचे ले जाएँ",
   removeNamed: "{name} हटाएँ",

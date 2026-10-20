@@ -145,7 +145,7 @@ export default {
   stepOrder: "排序",
   mergeCount: "PDF 数：{count} · 页数：{pages}",
   sortByName: "按名称排序",
-  addFiles: "添加 PDF",
+  mergeAddMore: "将更多 PDF 拖到这里，或点击添加",
   moveUp: "将 {name} 上移",
   moveDown: "将 {name} 下移",
   removeNamed: "移除 {name}",

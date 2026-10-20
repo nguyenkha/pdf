@@ -6,17 +6,20 @@ export function FileDropZone({
   onSelect,
   title = t.drop,
   hint = t.hint,
+  compact = false,
 }: {
   t: Messages;
   onSelect: (files: File[]) => void;
   /** Tool-specific wording; defaults to the compress text. */
   title?: string;
   hint?: string;
+  /** A slim zone for adding more files under a list. */
+  compact?: boolean;
 }) {
   const [dragging, setDragging] = useState(false);
   return (
     <div
-      className={`drop ${dragging ? "drag" : ""}`}
+      className={`drop${compact ? " compact" : ""}${dragging ? " drag" : ""}`}
       onDragOver={(event) => {
         event.preventDefault();
         setDragging(true);
@@ -37,10 +40,14 @@ export function FileDropZone({
       />
       <UploadCloud size={31} strokeWidth={1.5} aria-hidden="true" />
       <strong>{title}</strong>
-      <small>{hint}</small>
-      <span className="browse" aria-hidden="true">
-        {t.browse}
-      </span>
+      {!compact && (
+        <>
+          <small>{hint}</small>
+          <span className="browse" aria-hidden="true">
+            {t.browse}
+          </span>
+        </>
+      )}
     </div>
   );
 }
