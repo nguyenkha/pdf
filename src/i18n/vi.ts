@@ -122,4 +122,5 @@ export default {
   sizePageDescription: "Giảm dung lượng PDF xuống {size} hoặc nhỏ hơn ngay trong trình duyệt. Miễn phí, riêng tư: không tải lên, không đăng ký, không watermark.",
   taggedNotice: "PDF này có tag hỗ trợ trình đọc màn hình. Bản nén giữ chữ, link và các trang, nhưng không giữ các tag đó.",
   crashed: "Lần nén trước bị dừng vì trình duyệt hết bộ nhớ. Hãy thử \"File nhỏ nhất\", tách bớt trang, hoặc dùng máy tính.",
+  grayscale: "Chuyển trắng đen (nhỏ hơn, chậm hơn)",
 } satisfies Messages;

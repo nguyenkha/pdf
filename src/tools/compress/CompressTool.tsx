@@ -62,6 +62,7 @@ export default function CompressTool({ t, locale, preset }: Props) {
   const [plan, setPlan] = useState<PlanChoice>({
     goal: preset ? "limit" : "recommended",
     imageQuality: "auto",
+    gray: false,
     custom: preset?.value ?? "",
     unit: preset?.unit ?? "MB",
   });
@@ -167,7 +168,7 @@ export default function CompressTool({ t, locale, preset }: Props) {
   }
   function options(): CompressOptions | undefined {
     if (!file || !summary) return;
-    const base = { imageQuality: plan.imageQuality, password };
+    const base = { imageQuality: plan.imageQuality, gray: plan.gray, password };
     if (plan.goal === "limit") {
       const target = plan.custom.trim()
         ? targetBytes(plan.custom, plan.unit)

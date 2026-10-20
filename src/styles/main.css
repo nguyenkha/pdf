@@ -681,6 +681,17 @@ input[type="number"],
   margin-top: 10px;
   max-width: 260px;
 }
+.advanced label.check {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+.advanced label.check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
 .primary,
 .secondary {
   width: 100%;

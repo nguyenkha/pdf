@@ -123,4 +123,5 @@ export default {
   sizePageDescription: "Réduisez un PDF à {size} ou moins dans votre navigateur. Gratuit et privé : sans envoi, sans inscription, sans filigrane.",
   taggedNotice: "Ce PDF contient des balises d'accessibilité pour les lecteurs d'écran. La copie compressée conserve le texte, les liens et les pages, mais pas ces balises.",
   crashed: "La dernière compression s'est arrêtée car le navigateur manquait de mémoire. Essayez « Fichier le plus petit », moins de pages ou un ordinateur.",
+  grayscale: "Niveaux de gris (plus petit, plus long)",
 } satisfies Messages;

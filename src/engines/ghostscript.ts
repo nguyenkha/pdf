@@ -7,6 +7,8 @@ export type CompressOptions = {
   imageQuality: ImageQuality;
   target?: number;
   password?: string;
+  /** Convert to grayscale: smaller, but ~10x slower in Ghostscript. */
+  gray?: boolean;
 };
 export type RunResult = {
   /** The released output; undefined when the original should be kept. */
@@ -16,7 +18,15 @@ export type RunResult = {
   heapBytes: number;
   lossy: boolean;
 };
-export type Profile = { quality: number; dpi: number; qfactor?: number };
+export type Profile = {
+  quality: number;
+  dpi: number;
+  qfactor?: number;
+  gray?: boolean;
+};
+// "Recommended" screen resolution: scans are usually 300 dpi, and 150 dpi
+// cut a 23-page passport scan from 33 MB to 7 MB with text still legible.
+const SCREEN_DPI = 150;
 
 const fullResolution: Profile[] = [
   { quality: 90, dpi: 0, qfactor: 0.25 },
@@ -56,6 +66,10 @@ export function attemptsFor(options: CompressOptions): Profile[] {
   // the most aggressive profiles; the middle of the ladder only costs time.
   if (options.preference === "smallest" && !options.target)
     rows = rows.slice(-2);
+  if (options.preference === "balanced" && !options.target)
+    rows = rows.map((row) => (row.dpi ? row : { ...row, dpi: SCREEN_DPI }));
+  // Grayscale is lossy for color content, so there is no lossless pass.
+  if (options.gray) return rows.map((row) => ({ ...row, gray: true }));
   return [{ quality: 101, dpi: 0 }, ...rows];
 }
 
@@ -84,7 +98,13 @@ export function ghostscriptArgs(profile: Profile, password?: string): string[] {
       "-dGrayImageDownsampleType=/Bicubic",
       `-dColorImageResolution=${profile.dpi}`,
       `-dGrayImageResolution=${profile.dpi}`,
+      // Downsample anything above ~1.1x the target, not gs's default 1.5x:
+      // a 300 dpi scan would otherwise be left alone at a 200 dpi target.
+      "-dColorImageDownsampleThreshold=1.1",
+      "-dGrayImageDownsampleThreshold=1.1",
     );
+  if (profile.gray)
+    args.push("-sColorConversionStrategy=Gray", "-dUseFastColor=true");
   if (profile.qfactor === undefined) {
     args.push(
       "-dPassThroughJPEGImages=true",
@@ -123,6 +143,7 @@ export type Progress = {
   page?: number;
 };
 const IMAGE_HEAVY_PER_PAGE = 200 * 1024;
+const WORTHWHILE = 0.1;
 // Share of the progress bar for the passes; the rest is the one
 // preservation check of the chosen result.
 const PASS_SHARE = 0.85;
@@ -176,8 +197,11 @@ export async function compressWithGhostscript(
         break;
       }
     } else if (options.preference === "quality") {
-      selected = candidate;
-      break;
+      // Stop at the gentlest pass that saves something worth having; a
+      // lossless rewrite that trims 0.1 MB off a 42 MB scan is not that.
+      if (!selected || candidate.bytes.length < selected.bytes.length)
+        selected = candidate;
+      if (candidate.bytes.length <= inputSize * (1 - WORTHWHILE)) break;
     } else if (!selected || candidate.bytes.length < selected.bytes.length) {
       selected = candidate;
     }

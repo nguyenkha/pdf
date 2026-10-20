@@ -92,8 +92,8 @@ describe("preservation checks", () => {
   it("rejects a severe visual regression", () => {
     expect(() =>
       verifyShape(
-        { pages: [{ ...page, thumbnail: new Uint8Array([0, 0, 0]) }] },
-        { pages: [{ ...page, thumbnail: new Uint8Array([255, 255, 255]) }] },
+        { pages: [{ ...page, thumbnail: new Uint8Array([0, 0, 0, 255]) }] },
+        { pages: [{ ...page, thumbnail: new Uint8Array([255, 255, 255, 255]) }] },
       ),
     ).toThrow("preservation");
   });
@@ -257,6 +257,43 @@ describe("lazy preservation check", () => {
       },
     );
     expect(checks).toBe(0);
+  });
+});
+
+describe("grayscale and screen resolution", () => {
+  it("accepts a grayscale copy of a colored page of equal brightness", () =>
+    expect(() =>
+      verifyShape(
+        { pages: [{ ...page, thumbnail: new Uint8Array([200, 100, 50, 255]) }] },
+        { pages: [{ ...page, thumbnail: new Uint8Array([124, 124, 124, 255]) }] },
+      ),
+    ).not.toThrow());
+  it("recommended downsamples to 150 dpi, quality keeps full resolution", () => {
+    const dpi = (preference: "balanced" | "quality") =>
+      attemptsFor({ preference, imageQuality: "auto" }).slice(1).map((p) => p.dpi);
+    expect(dpi("balanced").every((value) => value === 150)).toBe(true);
+    expect(dpi("quality").every((value) => value === 0)).toBe(true);
+  });
+  it("grayscale skips the lossless pass and converts every pass", () => {
+    const attempts = attemptsFor({ preference: "balanced", imageQuality: "auto", gray: true });
+    expect(attempts.every((p) => p.gray && p.quality <= 100)).toBe(true);
+    expect(ghostscriptArgs(attempts[0])).toContain("-sColorConversionStrategy=Gray");
+  });
+});
+
+describe("high quality", () => {
+  it("does not settle for a negligible lossless saving", async () => {
+    const sizes = [99, 80, 70];
+    let index = 0;
+    const result = await compressWithGhostscript(
+      100,
+      { preference: "quality", imageQuality: "auto" },
+      () => {},
+      async () => ({ bytes: new Uint8Array(sizes[index++]), heapBytes: 64 }),
+      async () => {},
+    );
+    expect(result.bytes?.length).toBe(80);
+    expect(result.attempts).toBe(2);
   });
 });
 

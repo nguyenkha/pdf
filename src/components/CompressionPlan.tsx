@@ -7,6 +7,7 @@ import { limitChoices, type Goal } from "../lib/plan";
 export type PlanChoice = {
   goal: Goal;
   imageQuality: ImageQuality;
+  gray: boolean;
   limit?: number;
   custom: string;
   unit: "KB" | "MB";
@@ -122,6 +123,14 @@ export function CompressionPlan({
               <option value="medium">{t.medium}</option>
               <option value="low">{t.low}</option>
             </select>
+          </label>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={value.gray}
+              onChange={(event) => set({ gray: event.target.checked })}
+            />
+            {t.grayscale}
           </label>
         </details>
       )}

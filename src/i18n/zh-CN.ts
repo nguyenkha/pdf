@@ -114,4 +114,5 @@ export default {
   sizePageDescription: "在浏览器中将 PDF 压缩到 {size} 以内。免费且私密：无需上传、无需注册、无水印。",
   taggedNotice: "此 PDF 含有供屏幕阅读器使用的无障碍标签。压缩后的副本会保留文字、链接和页面，但不保留这些标签。",
   crashed: "上次压缩因浏览器内存不足而中断。请尝试“最小文件”、减少页数或使用电脑。",
+  grayscale: "灰度（更小，耗时更长）",
 } satisfies Messages;

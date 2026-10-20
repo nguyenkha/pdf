@@ -122,4 +122,5 @@ export default {
   sizePageDescription: "PDF im Browser auf {size} oder weniger verkleinern. Kostenlos und privat: ohne Upload, Anmeldung oder Wasserzeichen.",
   taggedNotice: "Dieses PDF enthält Barrierefreiheits-Tags für Screenreader. Die komprimierte Kopie behält Text, Links und Seiten, aber nicht diese Tags.",
   crashed: "Die letzte Komprimierung wurde abgebrochen, weil dem Browser der Speicher ausging. Versuchen Sie „Kleinste Datei\", weniger Seiten oder einen Computer.",
+  grayscale: "Graustufen (kleiner, dauert länger)",
 } satisfies Messages;
