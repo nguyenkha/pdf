@@ -43,6 +43,7 @@ export function CompressionPlan({
     <fieldset className="plan">
       <legend>{t.goal}</legend>
       {!summary.hasImages && <p className="hint">{t.textOnly}</p>}
+      {summary.tagged && <p className="hint">{t.taggedNotice}</p>}
       <div className="goals">
         {goals.map(([goal, label, hint, Icon]) => (
           <label

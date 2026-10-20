@@ -2,8 +2,9 @@ import type { Preference } from "../engines/ghostscript";
 
 export type Goal = "recommended" | "quality" | "smallest" | "limit";
 const MB = 1048576;
-// Common upload ceilings: web forms and portals 1-5 MB, email 20-25 MB.
-export const LIMITS_MB = [0.5, 1, 2, 5, 10, 20] as const;
+// Common upload ceilings: ID/visa portals 100-500 KB, web forms 1-5 MB,
+// email 20-25 MB.
+export const LIMITS_MB = [0.1, 0.2, 0.5, 1, 2, 5, 10, 20] as const;
 // Above this many bytes per page, images dominate and recompression pays off.
 const IMAGE_HEAVY_PER_PAGE = 200 * 1024;
 // A rough floor for screen-resolution pages with images (~150 dpi JPEG).

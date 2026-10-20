@@ -21,8 +21,9 @@ import {
   type CompressionResult,
 } from "../../components/ResultDownload";
 import { Steps } from "../../components/Steps";
+import type { SizePreset } from "../../app/sizes";
 
-type Props = { t: Messages; locale: Locale };
+type Props = { t: Messages; locale: Locale; preset?: SizePreset };
 function errorMessage(t: Messages, failure: unknown) {
   const message = failure instanceof Error ? failure.message.toLowerCase() : "";
   if (message === "password-incorrect") return t.passwordWrong;
@@ -42,17 +43,18 @@ function warmEngine() {
   engineWarmed = true;
   fetch(`${ENGINE_BASE}core.wasm`).catch(() => (engineWarmed = false));
 }
-export default function CompressTool({ t, locale }: Props) {
+export default function CompressTool({ t, locale, preset }: Props) {
   const [file, setFile] = useState<File>();
   const [summary, setSummary] = useState<PdfSummary>();
   const [password, setPassword] = useState<string>();
   const [locked, setLocked] = useState(false);
   const [checking, setChecking] = useState(false);
+  // A size landing page starts on that limit; otherwise the recommendation.
   const [plan, setPlan] = useState<PlanChoice>({
-    goal: "recommended",
+    goal: preset ? "limit" : "recommended",
     imageQuality: "auto",
-    custom: "",
-    unit: "MB",
+    custom: preset?.value ?? "",
+    unit: preset?.unit ?? "MB",
   });
   const [progress, setProgress] = useState<JobProgress>();
   const [error, setError] = useState("");

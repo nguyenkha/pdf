@@ -51,7 +51,8 @@ async function rejectUnsupported(doc: Awaited<ReturnType<typeof load>>) {
   )
     throw new Error("unsupported");
 }
-export type PdfSummary = { pages: number; hasImages: boolean };
+/** tagged: has an accessibility structure tree, which rewriting drops. */
+export type PdfSummary = { pages: number; hasImages: boolean; tagged: boolean };
 /** Cheap preflight: page count, document-level support, sampled image use. */
 export async function probePdf(
   data: Uint8Array,
@@ -63,12 +64,14 @@ export async function probePdf(
     if (!doc.numPages) throw new Error("corrupt");
     await rejectUnsupported(doc);
     let hasImages = false;
-    for (let number = 1; number <= Math.min(doc.numPages, 3) && !hasImages; number++) {
+    let tagged = false;
+    for (let number = 1; number <= Math.min(doc.numPages, 3); number++) {
       const page = await doc.getPage(number);
-      hasImages = (await page.getOperatorList()).fnArray.some((operator) => IMAGE_OPS.includes(operator));
+      tagged ||= Boolean(await page.getStructTree());
+      hasImages ||= (await page.getOperatorList()).fnArray.some((operator) => IMAGE_OPS.includes(operator));
       page.cleanup();
     }
-    return { pages: doc.numPages, hasImages };
+    return { pages: doc.numPages, hasImages, tagged };
   } finally {
     await task.destroy();
   }
@@ -87,7 +90,6 @@ export async function inspectPdf(
     for (let number = 1; number <= doc.numPages; number++) {
       onPage(number, doc.numPages);
       const page = await doc.getPage(number);
-      if (await page.getStructTree()) throw new Error("unsupported");
       const text = await page.getTextContent();
       const operators = await page.getOperatorList();
       const annotations = await page.getAnnotations();

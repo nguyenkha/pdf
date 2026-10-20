@@ -203,14 +203,15 @@ describe("compression plan", () => {
     expect(recommendedPreference(1 * MB, 20, true)).toBe("quality");
   });
   it("offers only limits below the file size", () => {
-    expect(limitChoices(3 * MB)).toEqual([0.5 * MB, 1 * MB, 2 * MB]);
-    expect(limitChoices(0.4 * MB)).toEqual([]);
+    expect(limitChoices(3 * MB)).toEqual([0.1 * MB, 0.2 * MB, 0.5 * MB, 1 * MB, 2 * MB]);
+    expect(limitChoices(0.05 * MB)).toEqual([]);
   });
   it("suggests the tightest limit the page count can reach", () => {
     expect(suggestedLimit(30 * MB, 3)).toBe(0.5 * MB);
+    expect(suggestedLimit(30 * MB, 1)).toBe(0.1 * MB);
     expect(suggestedLimit(30 * MB, 40)).toBe(5 * MB);
     expect(suggestedLimit(3 * MB, 100)).toBe(2 * MB);
-    expect(suggestedLimit(0.3 * MB, 1)).toBeUndefined();
+    expect(suggestedLimit(0.05 * MB, 1)).toBeUndefined();
   });
 });
 

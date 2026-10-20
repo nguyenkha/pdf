@@ -16,8 +16,17 @@ import en from "./i18n/en";
 import { metadata } from "./i18n/metadata";
 import { tools } from "./app/tools";
 import { config } from "./app/config";
+import { SIZE_PAGES, sizeFromPath, sizeFromSlug, sizePath } from "./app/sizes";
+import { fill } from "./i18n/fill";
 import "./styles/main.css";
 const CompressTool = React.lazy(tools[0].load);
+const preset = sizeFromPath(location.pathname);
+// Keeps /privacy/ or a size page when the locale changes.
+const suffix = location.pathname.endsWith("/privacy/")
+  ? "privacy/"
+  : preset
+    ? sizePath(preset.slug)
+    : "";
 function App({
   firstLocale,
   firstMessages,
@@ -36,23 +45,30 @@ function App({
   });
   useEffect(() => {
     let active = true;
-    messages(locale).catch(()=>en).then((m) => {
-      if (active) setT(m);
-    });
+    messages(locale)
+      .catch(() => en)
+      .then((m) => {
+        if (!active) return;
+        setT(m);
+        const [title, description] = preset
+          ? [
+              fill(m.sizePageTitle, { size: preset.label }),
+              fill(m.sizePageDescription, { size: preset.label }),
+            ]
+          : metadata[locale];
+        const url = `${config.domain}/${locale}/${suffix}`;
+        document.title = title;
+        const set = (selector: string, attribute: string, value: string) =>
+          document.querySelector(selector)?.setAttribute(attribute, value);
+        set('meta[name="description"]', "content", description);
+        set('link[rel="canonical"]', "href", url);
+        set('meta[property="og:title"]', "content", title);
+        set('meta[property="og:description"]', "content", description);
+        set('meta[property="og:url"]', "content", url);
+      });
     document.documentElement.lang = locale;
-    const [title, description] = metadata[locale];
-    document.title = title;
-    document.querySelector('meta[name="description"]')?.setAttribute('content',description);
-    document.querySelector('link[rel="canonical"]')?.setAttribute('href',`${config.domain}/${locale}/`);
-    document.querySelector('meta[property="og:title"]')?.setAttribute('content',title);
-    document.querySelector('meta[property="og:description"]')?.setAttribute('content',description);
-    document.querySelector('meta[property="og:url"]')?.setAttribute('content',`${config.domain}/${locale}/`);
     document.documentElement.dir = locale === "ar" ? "rtl" : "ltr";
-    history.replaceState(
-      null,
-      "",
-      `/${locale}/${location.pathname.endsWith("/privacy/") ? "privacy/" : ""}`,
-    );
+    history.replaceState(null, "", `/${locale}/${suffix}`);
     return () => {
       active = false;
     };
@@ -157,15 +173,33 @@ function App({
             <ShieldCheck size={15} />
             {t.privacy}
           </div>
-          <h1>{t.hero}</h1>
-          <p>{t.sub}</p>
+          <h1>{preset ? fill(t.sizeHero, { size: preset.label }) : t.hero}</h1>
+          <p>{preset ? fill(t.sizeIntro, { size: preset.label }) : t.sub}</p>
           <p className="support">{t.support}</p>
         </div>
         <div id="tool">
           <Suspense fallback={<div className="tool-card">{t.loading}</div>}>
-            <CompressTool t={t} locale={locale} />
+            <CompressTool t={t} locale={locale} preset={preset} />
           </Suspense>
         </div>
+        <nav className="sizes" aria-label={t.sizesTitle}>
+          <h2>{t.sizesTitle}</h2>
+          <ul>
+            {SIZE_PAGES.map((slug) => {
+              const size = sizeFromSlug(slug)!;
+              return (
+                <li key={slug}>
+                  <a
+                    href={`/${locale}/${sizePath(slug)}`}
+                    aria-current={preset?.slug === slug ? "page" : undefined}
+                  >
+                    {fill(t.sizeLink, { size: size.label })}
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
         <div className="content" id="about">
           <div className="info-card how">
             <span>01</span>
@@ -186,6 +220,8 @@ function App({
               [t.q2, t.a2],
               [t.q3, t.a3],
               [t.q4, t.a4],
+              [t.q5, t.a5],
+              [t.q6, t.a6],
             ] as const
           ).map(([q, a]) => (
             <details key={q}>

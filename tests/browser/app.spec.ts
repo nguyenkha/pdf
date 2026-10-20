@@ -122,3 +122,14 @@ test("processing sends no PDF bytes or metadata over the network", async ({
     ),
   ).toBe(true);
 });
+test("size landing page preselects its limit and keeps its URL", async ({ page }) => {
+  await page.goto("/en/compress-pdf-to-200kb/");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Compress PDF to 200 KB");
+  await expect(page).toHaveURL(/\/en\/compress-pdf-to-200kb\/$/);
+  await page.locator("input[type=file]").setInputFiles("tests/fixtures/scan.pdf");
+  await expect(page.getByRole("radio", { name: /Size limit/ })).toBeChecked();
+  await expect(page.locator("input[type=number]")).toHaveValue("200");
+  await expect(page.locator(".target-row select")).toHaveValue("KB");
+  await page.getByLabel("Language").selectOption("vi");
+  await expect(page).toHaveURL(/\/vi\/compress-pdf-to-200kb\/$/);
+});

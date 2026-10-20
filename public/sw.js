@@ -33,7 +33,7 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin || url.pathname.endsWith(".pdf"))
     return;
-  const html = /^\/(en|zh-CN|es|ar|fr|pt|ru|hi|ja|de|vi)\/(?:privacy\/)?$/.test(
+  const html = /^\/(en|zh-CN|es|ar|fr|pt|ru|hi|ja|de|vi)\/(?:privacy\/|compress-pdf-to-[a-z0-9]+\/)?$/.test(
     url.pathname,
   );
   const asset =
