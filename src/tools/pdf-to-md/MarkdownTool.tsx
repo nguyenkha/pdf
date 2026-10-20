@@ -345,7 +345,7 @@ function MarkdownResult({
         </div>
       )}
       <div className="md-toolbar">
-        <div className="chips" role="group" aria-label={t.mdSource}>
+        <div className="chips" role="group" aria-label={`${t.preview} / ${t.viewSource}`}>
           <button type="button" aria-pressed={view === "preview"} onClick={() => setView("preview")}>
             {t.preview}
           </button>

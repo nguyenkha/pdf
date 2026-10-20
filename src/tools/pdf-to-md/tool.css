@@ -2,6 +2,7 @@
 .md-result {
   display: grid;
   gap: 14px;
+  margin-top: 18px;
 }
 .md-result > * {
   margin: 0;

@@ -208,7 +208,7 @@ test("tool switcher shows built tools and one unnamed placeholder", async ({ pag
   const switcher = page.locator(".tool-switcher");
   await expect(switcher.getByRole("link", { name: "Compress PDF" })).toHaveAttribute("aria-current", "page");
   await expect(switcher.locator(".soon")).toHaveText("More tools coming later");
-  await expect(switcher.getByRole("link")).toHaveText(["Compress PDF", "Merge PDF"]);
+  await expect(switcher.getByRole("link")).toHaveText(["Compress PDF", "Merge PDF", "PDF to Markdown"]);
 });
 test("the site and locale homes go straight to compress", async ({ page }) => {
   await page.goto("/");

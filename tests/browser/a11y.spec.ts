@@ -41,6 +41,16 @@ for (const scheme of ["light", "dark"] as const)
       await expect(page.getByText(/password-protected/)).toBeVisible({ timeout: 30000 });
       await audit(page, "merge list");
     });
+    test("markdown tool", async ({ page }) => {
+      await page.goto("/en/markdown/");
+      await audit(page, "markdown empty");
+      await page.locator("input[type=file]").setInputFiles("tests/fixtures/multipage.pdf");
+      await expect(page.locator(".md-preview")).toBeVisible({ timeout: 60000 });
+      await page.getByText("Options", { exact: true }).click();
+      await page.getByRole("button", { name: "Compare with PDF" }).click();
+      await expect(page.getByLabel("Original PDF, page 1")).toBeVisible({ timeout: 30000 });
+      await audit(page, "markdown result");
+    });
     test("password prompt, batch and privacy page", async ({ page }) => {
       test.setTimeout(180000);
       await page.goto("/en/compress/");

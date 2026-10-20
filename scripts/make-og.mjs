@@ -15,6 +15,7 @@ const page = await browser.newPage({ viewport: { width: 1200, height: 630 } });
 const tools = [
   { file: "", hero: "hero", name: "compress" },
   { file: "merge-", hero: "toolMergeHero", name: "toolMerge" },
+  { file: "markdown-", hero: "toolMarkdownHero", name: "toolMarkdown" },
 ];
 for (const locale of locales) for (const tool of tools) {
   const t = (await import(`../src/i18n/${locale}.ts`)).default;
