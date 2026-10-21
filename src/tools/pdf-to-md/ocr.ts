@@ -175,6 +175,7 @@ export async function recognizePages(
   let position = 0;
   const task = pdfjs.getDocument({
     ...PDF_IMAGE_LIMITS,
+    stopAtErrors: true,
     data: new Uint8Array(await file.arrayBuffer()),
     isEvalSupported: false,
     verbosity: 0,

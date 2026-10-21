@@ -10,19 +10,16 @@ export async function handOver(files: File[], path: string): Promise<boolean> {
   const worker = navigator.serviceWorker?.controller;
   if (!worker) return false;
   const channel = new MessageChannel();
-  const received = new Promise<string | false>((resolve) => {
-    const timer = setTimeout(() => { channel.port1.close(); resolve(false); }, 3000);
+  const received = new Promise<boolean>((resolve) => {
+    const timer = setTimeout(() => { channel.port1.close(); resolve(false); }, 10000);
     channel.port1.onmessage = ({ data }) => {
       clearTimeout(timer);
       channel.port1.close();
-      resolve(typeof data === "string" ? data : false);
+      resolve(data === true);
     };
   });
   worker.postMessage({ type: "hand-over", files, path }, [channel.port2]);
-  const token = await received;
-  if (!token) return false;
-  location.href = `${path}?shared=1#transfer=${encodeURIComponent(token)}`;
-  return true;
+  return received;
 }
 export const canHandOver = () => Boolean(navigator.serviceWorker?.controller);
 

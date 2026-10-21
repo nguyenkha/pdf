@@ -9,7 +9,7 @@ export type PdfImage = {
 };
 // Bound decoding in PDF.js as well as the buffers built from raw pixels.
 export const PDF_IMAGE_LIMITS = {
-  maxImageSize: 16_000_000,
+  maxImageSize: 50_000_000,
   canvasMaxAreaInBytes: 64_000_000,
 };
 type Page = {

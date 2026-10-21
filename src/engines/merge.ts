@@ -13,6 +13,7 @@ import {
 
 import { flattenSignatureFields } from "./signatures";
 import { pruneCopiedObjects } from "./prune";
+import { prunePageResources } from "./resources";
 
 export type MergeSource = { name: string; bytes: Uint8Array };
 const name = (key: string) => PDFName.of(key);
@@ -166,6 +167,7 @@ export async function organizePdf(
   });
   output.setProducer("pdf.kha.do");
   output.setCreator("pdf.kha.do");
+  if (new Set(plan.map(({ page }) => page)).size < count) await prunePageResources(output);
   pruneCopiedObjects(output);
   return { bytes: await output.save(), pages: output.getPageCount(), signed };
 }

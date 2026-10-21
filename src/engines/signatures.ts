@@ -1,4 +1,5 @@
 import { PDFArray, PDFDict, PDFDocument, PDFName, PDFNumber, PDFRef, PDFSignature, PDFStream, concatTransformationMatrix, drawObject, popGraphicsState, pushGraphicsState } from "pdf-lib";
+import { pruneCopiedObjects } from "./prune";
 
 /**
  * Draws each digital signature's visible appearance (stamp, signature image)
@@ -15,9 +16,13 @@ export function flattenSignatureFields(doc: PDFDocument): number {
       const ap = widget.dict.lookup(PDFName.of("AP"));
       let appearance = ap instanceof PDFDict ? ap.get(PDFName.of("N")) : undefined;
       if (!appearance) continue; // An invisible signature has no stamp to draw.
-      if (appearance instanceof PDFDict) {
+      const rectangle = widget.getRectangle();
+      const flags = widget.getFlags();
+      if (rectangle.width <= 0 || rectangle.height <= 0 || (flags & (2 | 32))) continue;
+      const normal = doc.context.lookup(appearance);
+      if (normal instanceof PDFDict) {
         const state = widget.dict.lookup(PDFName.of("AS"));
-        appearance = appearance.get(state instanceof PDFName ? state : PDFName.of("Off")) as PDFRef;
+        appearance = normal.get(state instanceof PDFName ? state : PDFName.of("Off"));
       }
       if (!(appearance instanceof PDFRef) || !(doc.context.lookup(appearance) instanceof PDFStream))
         throw new Error("signature appearance");
@@ -26,7 +31,6 @@ export function flattenSignatureFields(doc: PDFDocument): number {
         (widgetRef && doc.findPageForAnnotationRef(widgetRef));
       if (!page) throw new Error("signature page");
       const key = page.node.newXObject("Signature", appearance);
-      const rectangle = widget.getRectangle();
       const stream = doc.context.lookup(appearance, PDFStream);
       const numbers = (key: string, fallback: number[]) => {
         const value = stream.dict.lookup(PDFName.of(key));
@@ -45,7 +49,7 @@ export function flattenSignatureFields(doc: PDFDocument): number {
       const ys = corners.map(([x, y]) => b * x + d * y + f);
       const x = Math.min(...xs), y = Math.min(...ys);
       const width = Math.max(...xs) - x, height = Math.max(...ys) - y;
-      if (!(width > 0 && height > 0)) throw new Error("signature geometry");
+      if (!(width > 0 && height > 0)) continue;
       const sx = rectangle.width / width, sy = rectangle.height / height;
       page.pushOperators(pushGraphicsState(), concatTransformationMatrix(sx, 0, 0, sy, rectangle.x - x * sx, rectangle.y - y * sy), drawObject(key), popGraphicsState());
     }
@@ -70,5 +74,6 @@ export function flattenSignatureFields(doc: PDFDocument): number {
 export async function withoutSignatures(bytes: Uint8Array): Promise<Uint8Array> {
   const doc = await PDFDocument.load(bytes, { updateMetadata: false });
   flattenSignatureFields(doc);
+  pruneCopiedObjects(doc);
   return doc.save();
 }

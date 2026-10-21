@@ -26,4 +26,8 @@ describe("bounded PDF image buffers", () => {
     expect(imageSource({ width: 100, height: 100, kind: 3, data: new Uint8Array(4) }, canvas)).toBeUndefined();
     expect(canvas).not.toHaveBeenCalled();
   });
+  it("accepts high-resolution scans above sixteen megapixels", () => {
+    const bitmap = {} as ImageBitmap;
+    expect(imageSource({ width: 4000, height: 5000, bitmap }, vi.fn())).toBe(bitmap);
+  });
 });

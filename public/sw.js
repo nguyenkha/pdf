@@ -49,30 +49,46 @@ self.addEventListener("message", (event) => {
     if (typeof path !== "string" || !/^\/[a-zA-Z-]+\/[a-z0-9-]+\/$/.test(path) || !Array.isArray(event.data.files))
       return port.postMessage(false);
     const files = event.data.files.filter((file) => file instanceof File);
-    port.postMessage(remember(files, event.source.id, path));
+    const token = remember(files, event.source.id, path);
+    const transfer = transfers.get(token);
+    // navigate() identifies the resulting document even in browsers that do
+    // not expose FetchEvent.replacesClientId/resultingClientId.
+    transfer.navigation = event.source.navigate(`${path}?shared=1#transfer=${token}`)
+      .then((client) => {
+        transfer.client = client?.id;
+        port.postMessage(Boolean(client));
+      }).catch(() => { transfers.delete(token); clearTimeout(transfer.timer); port.postMessage(false); });
+    event.waitUntil(transfer.navigation);
   }
   if (event.data?.type === "take-shared") {
     const transfer = transfers.get(event.data.token);
-    if (!transfer || transfer.expires < Date.now() || transfer.client !== event.source.id ||
-        (transfer.path !== null && new URL(event.source.url).pathname !== transfer.path)) return port.postMessage([]);
-    transfers.delete(event.data.token);
-    clearTimeout(transfer.timer);
-    port.postMessage(transfer.files);
+    if (!transfer) return port.postMessage([]);
+    event.waitUntil((async () => {
+      await transfer.navigation;
+      const url = new URL(event.source.url);
+      // External share-target navigation has no sending WindowClient. The
+      // unguessable token must arrive on the recipient's original URL.
+      if (transfer.path === null && transfer.client === null &&
+          new URLSearchParams(url.hash.slice(1)).get("transfer") === event.data.token)
+        transfer.client = event.source.id;
+      if (transfer.expires < Date.now() || transfer.client !== event.source.id ||
+          (transfer.path !== null && url.pathname !== transfer.path) || !transfers.has(event.data.token))
+        return port.postMessage([]);
+      transfers.delete(event.data.token);
+      clearTimeout(transfer.timer);
+      port.postMessage(transfer.files);
+    })());
   }
 });
 self.addEventListener("fetch", (event) => {
   const request = event.request;
   const target = new URL(request.url);
-  // Follow this tab's new client id through navigation and locale redirects.
-  if (request.mode === "navigate" && event.replacesClientId && event.resultingClientId)
-    for (const transfer of transfers.values())
-      if (transfer.client === event.replacesClientId) transfer.client = event.resultingClientId;
   if (request.method === "POST" && target.pathname === "/share-target") {
     event.respondWith(
       (async () => {
         const form = await request.formData();
         const files = form.getAll("file").filter((file) => file instanceof File);
-        const token = remember(files, event.resultingClientId, null);
+        const token = remember(files, null, null);
         return Response.redirect(`/?shared=1#transfer=${token}`, 303);
       })(),
     );
