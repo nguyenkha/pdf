@@ -31,6 +31,19 @@ export const FAQ_BY_TOOL: Record<string, readonly (readonly [string, string])[]>
     ["organizeKeptQ", "organizeKeptA"],
     ["organizeLockedQ", "organizeLockedA"],
   ],
+  "images-to-pdf": [
+    ["fromImagesFormatsQ", "fromImagesFormatsA"],
+    ["fromImagesQualityQ", "fromImagesQualityA"],
+    ["fromImagesMetadataQ", "fromImagesMetadataA"],
+    ["fromImagesOrderQ", "fromImagesOrderA"],
+    ["fromImagesSizeQ", "fromImagesSizeA"],
+  ],
+  "pdf-to-images": [
+    ["toImagesQualityQ", "toImagesQualityA"],
+    ["toImagesPagesQ", "toImagesPagesA"],
+    ["toImagesPhoneQ", "toImagesPhoneA"],
+    ["toImagesLockedQ", "toImagesLockedA"],
+  ],
   // Landing pages lead with the question their search asks.
   "rotate-pdf": [
     ["organizeRotateQ", "organizeRotateA"],

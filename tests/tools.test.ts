@@ -7,8 +7,9 @@ describe("tool registry", () => {
     expect(toolFromPath("/en/compress-pdf-to-1mb/").id).toBe("compress");
     expect(toolFromPath("/en/privacy/").id).toBe("compress");
   });
-  it("never routes to a planned tool", () => {
-    expect(toolFromPath("/en/pdf-to-jpg/").id).toBe("compress");
+  it("routes every built tool by its slug", () => {
+    expect(toolFromPath("/en/pdf-to-jpg/").id).toBe("pdf-to-images");
+    expect(toolFromPath("/en/jpg-to-pdf/").id).toBe("images-to-pdf");
     expect(toolFromPath("/en/merge/").id).toBe("merge");
     expect(availableTools.every((tool) => tool.load)).toBe(true);
   });

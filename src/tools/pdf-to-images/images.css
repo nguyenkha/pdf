@@ -1,0 +1,126 @@
+/* PDF to images: the page grid is Organize's; pages are picked, not moved. */
+.pick-grid li {
+  padding: 0;
+  cursor: default;
+}
+.pick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 6px 8px;
+  border: 0;
+  border-radius: inherit;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.pick:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.pick-grid li:has(.pick[aria-pressed="true"]) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.pick-mark {
+  position: absolute;
+  top: 4px;
+  inset-inline-end: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--on-accent);
+}
+.pick[aria-pressed="true"] .pick-mark {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.image-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 4px 0 6px;
+}
+.image-options .chips {
+  align-items: center;
+}
+.option-label {
+  min-width: 96px;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--muted);
+}
+.image-options .hint {
+  margin: 0;
+}
+.image-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  gap: 8px;
+  margin: 14px 0 4px;
+  padding: 0;
+  list-style: none;
+}
+.image-results a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.image-results a span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.image-results a:hover {
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+.image-results img,
+.image-results .page-placeholder {
+  height: 96px;
+  max-width: 100%;
+  object-fit: contain;
+  border-radius: 3px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.18);
+}
+.image-results .page-placeholder {
+  width: 68px;
+}
+.image-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Phones: each option's label sits above its chips. */
+@media (max-width: 480px) {
+  .image-options .chips {
+    gap: 6px 8px;
+  }
+  .option-label {
+    flex-basis: 100%;
+    min-width: 0;
+  }
+}
+.from-images .page-badge {
+  max-width: 92%;
+  text-align: center;
+}

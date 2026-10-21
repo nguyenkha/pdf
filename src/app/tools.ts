@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { FileArchive, FileCode, LayoutGrid, Merge, type LucideIcon } from "lucide-react";
+import { FileArchive, FileCode, FileImage, Images, LayoutGrid, Merge, type LucideIcon } from "lucide-react";
 import type { Messages } from "../i18n";
 import type { Locale } from "../i18n/config";
 import type { SizePreset } from "./sizes";
@@ -63,9 +63,20 @@ export const tools: Tool[] = [
       { id: "delete-pdf-pages", slug: "delete-pdf-pages", nameKey: "toolDeletePages" },
     ],
   },
-  // Planned, in this order; names stay out of the interface until built.
-  { id: "images-to-pdf", slug: "jpg-to-pdf", nameKey: "compress", icon: FileArchive },
-  { id: "pdf-to-images", slug: "pdf-to-jpg", nameKey: "compress", icon: FileArchive },
+  {
+    id: "images-to-pdf",
+    slug: "jpg-to-pdf",
+    nameKey: "toolFromImages",
+    icon: Images,
+    load: () => import("../tools/images-to-pdf/ImagesToPdfTool"),
+  },
+  {
+    id: "pdf-to-images",
+    slug: "pdf-to-jpg",
+    nameKey: "toolToImages",
+    icon: FileImage,
+    load: () => import("../tools/pdf-to-images/PdfToImagesTool"),
+  },
 ];
 export const availableTools = tools.filter((tool) => tool.load);
 /** The tool a URL path points at; size pages belong to compress. */

@@ -252,7 +252,7 @@ test("tool switcher shows the tool in use and the rest behind +", async ({ page 
   await expect(switcher.locator("> a")).toHaveAttribute("aria-current", "page");
   await expect(switcher.getByRole("link", { name: "Merge PDF" })).toBeHidden();
   // The "+" says how many other tools there are.
-  const more = switcher.getByRole("button", { name: "3 more tools" });
+  const more = switcher.getByRole("button", { name: "5 more tools" });
   // Tap or click unfolds the rest, which take the place of +.
   await more.click();
   await expect(switcher.getByRole("link", { name: "Merge PDF" })).toBeVisible();
@@ -260,7 +260,7 @@ test("tool switcher shows the tool in use and the rest behind +", async ({ page 
   const phone = await page.evaluate(() => matchMedia("(max-width: 680px)").matches);
   if (phone) await expect(more).toBeVisible();
   else await expect(more).toBeHidden();
-  await expect(switcher.locator(".tool-more-list a")).toHaveText(["Merge PDF", "PDF to Markdown", "Organize PDF pages"]);
+  await expect(switcher.locator(".tool-more-list a")).toHaveText(["Merge PDF", "PDF to Markdown", "Organize PDF pages", "JPG to PDF", "PDF to JPG"]);
   await page.keyboard.press("Escape");
   await expect(switcher.getByRole("link", { name: "Merge PDF" })).toBeHidden();
   await expect(more).toBeVisible();
@@ -288,7 +288,7 @@ test("tool switcher shows the tool in use and the rest behind +", async ({ page 
 test("tool switcher opens from the keyboard without navigating and survives rapid reopening", async ({ page }) => {
   await page.goto("/en/compress/");
   const switcher = page.locator(".tool-switcher");
-  const more = switcher.getByRole("button", { name: "3 more tools" });
+  const more = switcher.getByRole("button", { name: "5 more tools" });
   const merge = switcher.getByRole("link", { name: "Merge PDF" });
   const url = page.url();
   await more.focus();

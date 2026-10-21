@@ -7,6 +7,7 @@ export function FileDropZone({
   title = t.drop,
   hint = t.hint,
   compact = false,
+  accept = ".pdf,application/pdf",
 }: {
   t: Messages;
   onSelect: (files: File[]) => void;
@@ -15,6 +16,8 @@ export function FileDropZone({
   hint?: string;
   /** A slim zone for adding more files under a list. */
   compact?: boolean;
+  /** The file picker's filter; PDFs unless a tool takes other files. */
+  accept?: string;
 }) {
   const [dragging, setDragging] = useState(false);
   return (
@@ -33,7 +36,7 @@ export function FileDropZone({
     >
       <input
         type="file"
-        accept=".pdf,application/pdf"
+        accept={accept}
         multiple
         onChange={(event) => onSelect(Array.from(event.target.files ?? []))}
         aria-label={title}

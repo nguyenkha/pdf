@@ -9,6 +9,8 @@ const TOOLS = [
   { id: "merge", slug: "merge", nameKey: "toolMerge" },
   { id: "markdown", slug: "markdown", nameKey: "toolMarkdown" },
   { id: "organize", slug: "organize", nameKey: "toolOrganize" },
+  { id: "images-to-pdf", slug: "jpg-to-pdf", nameKey: "toolFromImages" },
+  { id: "pdf-to-images", slug: "pdf-to-jpg", nameKey: "toolToImages" },
 ];
 // Mirrors the tools' landing pages: own texts and FAQ, the tool's app.
 const LANDINGS = [

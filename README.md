@@ -10,6 +10,10 @@ Source: https://github.com/nguyenkha/pdf · Website: https://pdf.kha.do
 
 - Compress PDFs (one or a batch) with a recommended level, a size limit, or high quality/smallest presets
 - Merge PDFs: arrange files with previews, unlock password-protected ones on the device, merge, then download, share or hand the result to Compress
+- Organize pages: reorder, rotate and delete pages in one grid
+- PDF to Markdown, with on-device OCR for scans
+- JPG to PDF: photos, scans and screenshots (JPG, PNG, WebP, GIF, BMP, AVIF; HEIC in Safari) into one PDF; JPG goes in byte for byte and phone photos are turned upright from their EXIF orientation
+- PDF to JPG: picked pages as JPG or PNG at 150 or 300 dpi, as one ZIP or shared straight to a phone's photos
 - Best quality by default; balanced/smallest preferences and optional image-quality controls
 - Optional target size with bounded quality attempts, keeping dimensions before trying downsampling
 - Selectable text and vectors preserved in ordinary PDFs; no whole-page rasterization
@@ -18,7 +22,7 @@ Source: https://github.com/nguyenkha/pdf · Website: https://pdf.kha.do
 - Static localized SEO and privacy pages; GitHub Pages and Cloudflare Pages support
 - Works offline after the required application and engine assets have been cached
 
-Compress and Merge are implemented; planned tools are never shown by name. Each tool loads only on its own page: the merge code on /merge/, pdf.js when files are added (previews) and pdf-lib when merging.
+Each tool loads only on its own page: the merge code on /merge/, pdf.js when files are added (previews) and pdf-lib when merging. Planned tools are never shown by name.
 
 ## Development and verification
 
