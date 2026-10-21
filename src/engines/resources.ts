@@ -168,7 +168,7 @@ export async function prunePageResources(doc: PDFDocument, overlap: boolean[]): 
     const fonts = resources.lookup(name("Font"));
     if (fonts instanceof PDFDict && fonts.values().some((value) => {
       const font = doc.context.lookup(value);
-      return font instanceof PDFDict && font.get(name("Subtype")) === name("Type3") && !font.has(name("Resources"));
+      return font instanceof PDFDict && font.get(name("Subtype")) === name("Type3") && !(font.lookup(name("Resources")) instanceof PDFDict);
     })) throw new Error("unsupported");
     // Patterns and soft-mask forms without their own resources draw with the
     // inherited XObjects, which the content scanner does not follow either.
@@ -178,7 +178,7 @@ export async function prunePageResources(doc: PDFDocument, overlap: boolean[]): 
     };
     const bare = (value: PDFObject | undefined) => {
       const stream = value && doc.context.lookup(value);
-      return stream instanceof PDFStream && !stream.dict.has(name("Resources"));
+      return stream instanceof PDFStream && !(stream.dict.lookup(name("Resources")) instanceof PDFDict);
     };
     if (group("Pattern").some(bare) || group("ExtGState").some((state) => {
       const mask = state instanceof PDFDict ? state.lookup(name("SMask")) : undefined;
@@ -196,7 +196,7 @@ export async function prunePageResources(doc: PDFDocument, overlap: boolean[]): 
       for (const [key] of objects.entries()) {
         if (!used.has(String.fromCharCode(...key.asBytes()))) continue;
         const child = objects.lookup(key);
-        if (child instanceof PDFStream && child.dict.get(name("Subtype")) === name("Form") && !child.dict.has(name("Resources")))
+        if (child instanceof PDFStream && child.dict.get(name("Subtype")) === name("Form") && !(child.dict.lookup(name("Resources")) instanceof PDFDict))
           pending.push(child);
       }
     }

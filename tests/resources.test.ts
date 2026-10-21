@@ -111,6 +111,28 @@ describe("resources after page deletion", () => {
     expect(result.getPageCount()).toBe(1);
     expect(imageCount(result)).toBe(1);
   });
+  it("treats a null Resources entry as missing: inherited forms keep their image", async () => {
+    const bytes = await twoPages((doc, kept, removed, image) => {
+      const form = doc.context.register(doc.context.flateStream("/Used Do", { Type: "XObject", Subtype: "Form", BBox: [0, 0, 1, 1], Resources: null }));
+      const resources = doc.context.obj({ XObject: { Used: image(), Secret: image() } });
+      resources.lookup(PDFName.of("XObject"), PDFDict).set(PDFName.of("F"), form);
+      kept.node.set(PDFName.of("Resources"), resources);
+      removed.node.set(PDFName.of("Resources"), resources);
+      kept.node.set(PDFName.of("Contents"), doc.context.register(doc.context.flateStream("/F Do")));
+    });
+    expect(imageCount(await PDFDocument.load((await organizePdf(bytes, [{ page: 0, rotate: 0 }])).bytes))).toBe(1);
+  });
+  it("treats a null Resources entry as missing: inherited patterns are refused", async () => {
+    const bytes = await twoPages((doc, kept, removed, image) => {
+      const pattern = doc.context.register(doc.context.flateStream("/Img Do", {
+        PatternType: 1, PaintType: 1, TilingType: 1, BBox: [0, 0, 1, 1], XStep: 1, YStep: 1, Resources: null,
+      }));
+      const resources = doc.context.obj({ Pattern: { P: pattern }, XObject: { Img: image() } });
+      kept.node.set(PDFName.of("Resources"), resources);
+      removed.node.set(PDFName.of("Resources"), resources);
+    });
+    await expect(organizePdf(bytes, [{ page: 0, rotate: 0 }])).rejects.toThrow("unsupported");
+  });
   it("reads Flate content with default decode parameters", async () => {
     const bytes = await twoPages((doc, kept, removed, image) => {
       const resources = doc.context.obj({ XObject: { Used: image(), Secret: image() } });
