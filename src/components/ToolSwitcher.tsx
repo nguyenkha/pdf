@@ -27,10 +27,9 @@ export function ToolSwitcher({
   // Opened from the keyboard: focus goes into the list, and back to + on close.
   const keyboard = useRef(false);
   // Pending return of focus to + after a close; must not outlive a reopening.
-  const refocus = useRef<number | undefined>(undefined);
+  const refocus = useRef(false);
   const cancelRefocus = () => {
-    if (refocus.current !== undefined) cancelAnimationFrame(refocus.current);
-    refocus.current = undefined;
+    refocus.current = false;
   };
   const list = useRef<HTMLUListElement>(null);
   const media = (query: string) => typeof matchMedia === "function" && matchMedia(query).matches;
@@ -45,12 +44,7 @@ export function ToolSwitcher({
         setShown(false);
         // Stays set until focus has moved back, so a pointer resting where +
         // reappears does not reopen the list in between.
-        if (keyboard.current)
-          refocus.current = requestAnimationFrame(() => {
-            refocus.current = undefined;
-            button.current?.focus();
-            keyboard.current = false;
-          });
+        if (keyboard.current) refocus.current = true;
       },
       media("(prefers-reduced-motion: reduce)") ? 0 : 170,
     );
@@ -59,6 +53,14 @@ export function ToolSwitcher({
   // Once the list is drawn, a keyboard opening moves focus to its first tool.
   useEffect(() => {
     if (open && shown && keyboard.current) list.current?.querySelector("a")?.focus();
+  }, [open, shown]);
+  // + is only focusable once the commit that un-hides it has landed, so the
+  // return of focus follows the DOM rather than a timer.
+  useEffect(() => {
+    if (open || shown || !refocus.current) return;
+    refocus.current = false;
+    button.current?.focus();
+    keyboard.current = false;
   }, [open, shown]);
   useEffect(() => {
     if (!open) return;
