@@ -1,6 +1,6 @@
 import { extractRulings, type Ruling } from "./rulings";
 import { findImages, type PageImage } from "./images";
-import { imageObject, imageSource, type PdfImage } from "./pdf-image";
+import { imageObject, imageSource, PDF_IMAGE_LIMITS, type PdfImage } from "./pdf-image";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import { safeUrl } from "./structure";
 import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.min.mjs?url";
@@ -28,7 +28,7 @@ async function encode(image: PdfImage): Promise<Blob | undefined> {
   const scale = Math.min(1, MAX_SIDE / Math.max(image.width, image.height));
   const width = Math.max(1, Math.round(image.width * scale));
   const height = Math.max(1, Math.round(image.height * scale));
-  const source = imageSource(image, (w, h) => new OffscreenCanvas(w, h));
+  const source = imageSource(image, (w, h) => new OffscreenCanvas(w, h), MAX_SIDE);
   if (!source) return;
   const canvas = new OffscreenCanvas(width, height);
   const context = canvas.getContext("2d");
@@ -64,6 +64,7 @@ self.onmessage = async (event: MessageEvent<Request>) => {
       if (String.fromCharCode(...data.subarray(0, 5)) !== "%PDF-")
         throw new Error("invalid");
       task = pdfjs.getDocument({
+        ...PDF_IMAGE_LIMITS,
         data,
         isEvalSupported: false,
         enableXfa: false,

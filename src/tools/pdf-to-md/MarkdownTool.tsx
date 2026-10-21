@@ -88,6 +88,8 @@ export default function MarkdownTool({ t, locale }: ToolProps) {
   const ocrAbort = useRef<AbortController | undefined>(undefined);
   const worker = useRef<Worker | undefined>(undefined);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const generation = useRef(0);
+  const unlockingJob = useRef<{ cancel: () => void } | undefined>(undefined);
   // Words written into the Markdown follow the interface language.
   const labels = useMemo(
     () => ({
@@ -100,6 +102,9 @@ export default function MarkdownTool({ t, locale }: ToolProps) {
     [t],
   );
   const stop = () => {
+    generation.current++;
+    unlockingJob.current?.cancel();
+    unlockingJob.current = undefined;
     ocrAbort.current?.abort();
     ocrAbort.current = undefined;
     worker.current?.terminate();
@@ -154,6 +159,9 @@ export default function MarkdownTool({ t, locale }: ToolProps) {
   }
   function select(files: File[]) {
     stop();
+    setFile(undefined);
+    setBusy(false);
+    setUnlocking(false);
     setResult(undefined);
     setError("");
     setLocked(false);
@@ -203,19 +211,29 @@ export default function MarkdownTool({ t, locale }: ToolProps) {
   // Same check and rewrite as the compress tool's password step.
   async function unlock(password: string) {
     if (!file) return;
+    const id = generation.current;
     setUnlocking(true);
     setUnlockError(undefined);
     try {
-      const blob = await unlockFile(file, password).promise;
+      const active = unlockFile(file, password);
+      unlockingJob.current = active;
+      const blob = await active.promise;
+      if (id !== generation.current) return;
+      unlockingJob.current = undefined;
+      setUnlocking(false);
       const unlocked = new File([blob], file.name, { type: "application/pdf" });
       setLocked(false);
       setFile(unlocked);
       convert(unlocked, options);
     } catch (failure) {
+      if (id !== generation.current) return;
       const message = failure instanceof Error ? failure.message : "";
       setUnlockError(message === "password-incorrect" ? t.passwordWrong : t.failed);
     } finally {
-      setUnlocking(false);
+      if (id === generation.current) {
+        unlockingJob.current = undefined;
+        setUnlocking(false);
+      }
     }
   }
   function reset() {
@@ -224,6 +242,7 @@ export default function MarkdownTool({ t, locale }: ToolProps) {
     setResult(undefined);
     setError("");
     setLocked(false);
+    setUnlocking(false);
     setBusy(false);
     setScan(0);
     setOcr(undefined);

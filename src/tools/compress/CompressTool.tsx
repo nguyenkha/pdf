@@ -129,6 +129,7 @@ export default function CompressTool({ t, locale, preset, shared }: Props) {
     setLocked(false);
     setSigned(false);
     setUnsigned(false);
+    setUnsigning(false);
     setChecking(false);
     setResult(undefined);
     setError("");
@@ -138,19 +139,29 @@ export default function CompressTool({ t, locale, preset, shared }: Props) {
   // checks the copy like any other file.
   async function unsign() {
     if (!file) return;
+    const id = ++generation.current;
     setUnsigning(true);
     try {
-      const blob = await removeSignatures(file).promise;
+      const active = removeSignatures(file);
+      job.current = active;
+      const blob = await active.promise;
+      if (id !== generation.current) return;
       const copy = new File([blob], file.name, { type: "application/pdf" });
       setSigned(false);
       setUnsigned(true);
       setFile(copy);
+      setUnsigning(false);
+      job.current = undefined;
       await probe(copy, password);
     } catch (failure) {
+      if (id !== generation.current) return;
       setSigned(false);
       setError(errorMessage(t, failure));
     } finally {
-      setUnsigning(false);
+      if (id === generation.current) {
+        job.current = undefined;
+        setUnsigning(false);
+      }
     }
   }
   async function probe(next: File, secret?: string) {

@@ -49,6 +49,7 @@ export default function MergeTool({ t, locale, shared }: ToolProps) {
   const [descending, setDescending] = useState(false);
   const job = useRef<{ cancel: () => void } | undefined>(undefined);
   const summaries = useRef(new Map<number, { cancel: () => void }>());
+  const unlocks = useRef(new Map<number, { cancel: () => void }>());
   // Thumbnails are object URLs; release them with their row or the tool.
   const live = useRef(items);
   live.current = items;
@@ -62,6 +63,7 @@ export default function MergeTool({ t, locale, shared }: ToolProps) {
     () => () => {
       job.current?.cancel();
       summaries.current.forEach((run) => run.cancel());
+      unlocks.current.forEach((run) => run.cancel());
       live.current.forEach((item) => item.thumbnail && URL.revokeObjectURL(item.thumbnail));
     },
     [],
@@ -105,6 +107,8 @@ export default function MergeTool({ t, locale, shared }: ToolProps) {
     setItems((current) => [...current, ...added]);
   }
   function remove(id: number) {
+    unlocks.current.get(id)?.cancel();
+    unlocks.current.delete(id);
     summaries.current.get(id)?.cancel();
     summaries.current.delete(id);
     setItems((current) => {
@@ -120,8 +124,11 @@ export default function MergeTool({ t, locale, shared }: ToolProps) {
     const patch = (change: Partial<Item>) =>
       setItems((current) => current.map((item) => (item.id === id ? { ...item, ...change } : item)));
     patch({ unlocking: true, unlockError: undefined });
+    const active = unlockFile(target.file, password);
+    unlocks.current.set(id, active);
     try {
-      const blob = await unlockFile(target.file, password).promise;
+      const blob = await active.promise;
+      if (unlocks.current.get(id) !== active) return;
       if (target.thumbnail) URL.revokeObjectURL(target.thumbnail);
       // A fresh summary (preview, page count) runs for the unlocked copy.
       patch({
@@ -132,11 +139,14 @@ export default function MergeTool({ t, locale, shared }: ToolProps) {
         unlocking: false,
       });
     } catch (failure) {
+      if (unlocks.current.get(id) !== active) return;
       const message = failure instanceof Error ? failure.message : "";
       patch({
         unlocking: false,
         unlockError: message === "password-incorrect" ? t.passwordWrong : t.mergeFailed,
       });
+    } finally {
+      if (unlocks.current.get(id) === active) unlocks.current.delete(id);
     }
   }
   function move(from: number, to: number) {
@@ -160,6 +170,8 @@ export default function MergeTool({ t, locale, shared }: ToolProps) {
     job.current?.cancel();
     summaries.current.forEach((run) => run.cancel());
     summaries.current.clear();
+    unlocks.current.forEach((run) => run.cancel());
+    unlocks.current.clear();
     items.forEach((item) => item.thumbnail && URL.revokeObjectURL(item.thumbnail));
     setItems([]);
     setResult(undefined);

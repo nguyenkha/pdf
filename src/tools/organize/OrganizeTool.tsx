@@ -61,6 +61,7 @@ export default function OrganizeTool({ t, locale, shared }: ToolProps) {
   }, [shared]);
   useEffect(
     () => () => {
+      generation.current++;
       reading.current?.cancel();
       job.current?.cancel();
       urls.current.forEach((url) => url && URL.revokeObjectURL(url));
@@ -79,6 +80,7 @@ export default function OrganizeTool({ t, locale, shared }: ToolProps) {
       source,
       PREVIEWS,
       (pages) => {
+        if (id !== generation.current) return;
         if (pages > MAX_PAGES) {
           run.cancel();
           setError(fill(t.organizeTooMany, { count: MAX_PAGES }));
@@ -103,6 +105,7 @@ export default function OrganizeTool({ t, locale, shared }: ToolProps) {
     reading.current = run;
     run.promise
       .catch((failure) => {
+        if (id !== generation.current) return;
         const message = failure instanceof Error ? failure.message : "";
         if (message.startsWith("password")) setLocked(true);
         else setError(t.corrupt);
@@ -121,19 +124,29 @@ export default function OrganizeTool({ t, locale, shared }: ToolProps) {
   // Same check and rewrite as the compress tool's password step.
   async function unlock(password: string) {
     if (!file) return;
+    const id = generation.current;
     setUnlocking(true);
     setUnlockError(undefined);
     try {
-      const blob = await unlockFile(file, password).promise;
+      const active = unlockFile(file, password);
+      job.current = active;
+      const blob = await active.promise;
+      if (id !== generation.current) return;
       const copy = new File([blob], file.name, { type: "application/pdf" });
+      job.current = undefined;
+      setUnlocking(false);
       setUnlocked(true);
       setFile(copy);
       read(copy);
     } catch (failure) {
+      if (id !== generation.current) return;
       const message = failure instanceof Error ? failure.message : "";
       setUnlockError(message === "password-incorrect" ? t.passwordWrong : t.failed);
     } finally {
-      setUnlocking(false);
+      if (id === generation.current) {
+        job.current = undefined;
+        setUnlocking(false);
+      }
     }
   }
   function reset() {
@@ -145,6 +158,8 @@ export default function OrganizeTool({ t, locale, shared }: ToolProps) {
     setCards([]);
     setLocked(false);
     setUnlocked(false);
+    setUnlocking(false);
+    setRestricted(false);
     setUnlockError(undefined);
     setBusy(false);
     setResult(undefined);
@@ -162,31 +177,36 @@ export default function OrganizeTool({ t, locale, shared }: ToolProps) {
   }
   async function save() {
     if (!file) return;
+    const id = generation.current;
     setError("");
     setBusy(true);
     const plan = cards.filter((card) => !card.deleted).map(({ page, rotate }) => ({ page, rotate }));
     const run = async (source: File) => {
+      if (id !== generation.current) throw new Error("cancelled");
       const active = organizeFile(source, plan);
       job.current = active;
       return active.promise;
     };
     try {
-      setResult(
-        await run(file).catch(async (failure) => {
+      const result = await run(file).catch(async (failure) => {
           // Encrypted only to restrict printing or copying: it opens without a
           // password, so rewrite it without encryption (as compressing does).
           if (!(failure instanceof Error) || failure.message !== "password") throw failure;
+          if (id !== generation.current) throw new Error("cancelled");
           setRestricted(true);
           const active = unlockFile(file, "");
           job.current = active;
           return run(new File([await active.promise], file.name, { type: "application/pdf" }));
-        }),
-      );
+        });
+      if (id === generation.current) setResult(result);
     } catch (failure) {
+      if (id !== generation.current) return;
       if (!(failure instanceof Error && failure.message === "cancelled")) setError(t.organizeFailed);
     } finally {
-      job.current = undefined;
-      setBusy(false);
+      if (id === generation.current) {
+        job.current = undefined;
+        setBusy(false);
+      }
     }
   }
   const kept = cards.filter((card) => !card.deleted).length;
