@@ -4,16 +4,15 @@ import {
   isPng,
   jpegOrientation,
   stripJpegMetadata,
-  TURNS,
   type ImageSource,
   type PageSize,
 } from "../engines/images";
 
 type Item = { file: File; rotate: number };
 // Photos in other formats (WebP, HEIC where the browser reads it, GIF, BMP,
-// AVIF) and mirrored JPEGs are redrawn upright; JPEG and PNG go in as they
-// are. Neither path carries camera metadata (EXIF, GPS) into the PDF: JPEG
-// metadata segments are dropped, PNG and redrawn images are decoded pixels.
+// AVIF) and JPEGs that cannot be followed are redrawn upright; JPEG and PNG
+// go in as they are. Neither path carries camera metadata (EXIF, GPS) into
+// the PDF: JPEG metadata is cut out, PNG and redrawn images are pixels.
 async function redraw(file: File, index: number): Promise<ImageSource> {
   const bitmap = await createImageBitmap(file).catch(() => {
     throw new Error(`unsupported:${index}`);
@@ -31,15 +30,19 @@ async function redraw(file: File, index: number): Promise<ImageSource> {
   bitmap.close();
   const blob = await canvas.convertToBlob(flat ? { type: "image/png" } : { type: "image/jpeg", quality: 0.92 });
   canvas.width = canvas.height = 0;
-  return { bytes: new Uint8Array(await blob.arrayBuffer()), kind: flat ? "png" : "jpg", turn: 0, rotate: 0 };
+  return { bytes: new Uint8Array(await blob.arrayBuffer()), kind: flat ? "png" : "jpg", orientation: 1, rotate: 0 };
 }
 async function prepare({ file, rotate }: Item, index: number): Promise<ImageSource> {
   const bytes = new Uint8Array(await file.arrayBuffer());
-  if (isPng(bytes)) return { bytes, kind: "png", turn: 0, rotate };
+  if (isPng(bytes)) return { bytes, kind: "png", orientation: 1, rotate };
   if (isJpeg(bytes)) {
-    const turn = TURNS[jpegOrientation(bytes)];
-    // Read the turn first: it lives in the EXIF segment that is dropped.
-    if (turn !== undefined) return { bytes: stripJpegMetadata(bytes), kind: "jpg", turn, rotate };
+    try {
+      // Read the orientation first: it lives in the EXIF segment that is cut.
+      const orientation = jpegOrientation(bytes);
+      return { bytes: stripJpegMetadata(bytes), kind: "jpg", orientation, rotate };
+    } catch {
+      // Not a JPEG this parser can follow: redrawn below, without metadata.
+    }
   }
   return { ...(await redraw(file, index)), rotate };
 }

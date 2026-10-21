@@ -1,12 +1,20 @@
-import { degrees, PDFDocument, type PDFImage } from "pdf-lib";
+import {
+  concatTransformationMatrix,
+  degrees,
+  drawObject,
+  PDFDocument,
+  popGraphicsState,
+  pushGraphicsState,
+  type PDFImage,
+} from "pdf-lib";
 
 export type PageSize = "a4" | "letter" | "fit";
 /** An image ready for pdf-lib: JPEG bytes go in as they are, PNG is decoded. */
 export type ImageSource = {
   bytes: Uint8Array;
   kind: "jpg" | "png";
-  /** EXIF turn of a JPEG, in degrees clockwise (0, 90, 180, 270). */
-  turn: number;
+  /** EXIF orientation of a JPEG (1-8): how to turn or mirror it upright. */
+  orientation: number;
   /** The person's extra turn, stored as the page's rotation. */
   rotate: number;
 };
@@ -51,28 +59,73 @@ export function jpegOrientation(bytes: Uint8Array): number {
   }
   return 1;
 }
-// Kept: JFIF (APP0), the color profile (APP2) and Adobe's color transform
-// (APP14), which decoding needs. Dropped: EXIF and XMP (APP1: GPS position,
-// camera, time), IPTC (APP13), maker notes (other APPn) and comments.
-const KEEP_APP = new Set([0xe0, 0xe2, 0xee]);
+const startsWith = (bytes: Uint8Array, at: number, text: string) =>
+  Array.from(text).every((char, i) => bytes[at + i] === char.charCodeAt(0));
 /**
- * The JPEG without its metadata segments. The compressed image data is
- * untouched, so nothing is recompressed.
+ * The JPEG without metadata, its compressed image data untouched. Kept: the
+ * color profile (APP2 ICC_PROFILE) and Adobe's color transform (APP14),
+ * which decoding needs, and a bare JFIF header. Dropped: EXIF and XMP (GPS
+ * position, camera, time), IPTC, maker notes, MPF and FlashPix (pointers to
+ * extra images), comments, the JFIF thumbnail, and everything after the end
+ * of the image (motion-photo video, HDR gain maps). Throws on anything it
+ * cannot follow, so the caller redraws the image instead.
  */
 export function stripJpegMetadata(bytes: Uint8Array): Uint8Array {
   const parts: Uint8Array[] = [bytes.subarray(0, 2)];
   let offset = 2;
-  while (offset + 4 <= bytes.length && bytes[offset] === 0xff) {
+  for (;;) {
+    if (offset + 2 > bytes.length || bytes[offset] !== 0xff) throw new Error("jpeg");
     const marker = bytes[offset + 1];
-    // Start of scan: the rest is image data.
-    if (marker === 0xda) break;
+    // Fill bytes before a marker.
+    if (marker === 0xff) {
+      offset++;
+      continue;
+    }
+    if (marker === 0xd9) {
+      parts.push(bytes.subarray(offset, offset + 2));
+      break;
+    }
+    if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) {
+      parts.push(bytes.subarray(offset, offset + 2));
+      offset += 2;
+      continue;
+    }
+    if (offset + 4 > bytes.length) throw new Error("jpeg");
     const end = offset + 2 + ((bytes[offset + 2] << 8) | bytes[offset + 3]);
-    if (end > bytes.length) return bytes;
-    const metadata = marker === 0xfe || (marker >= 0xe0 && marker <= 0xef && !KEEP_APP.has(marker));
-    if (!metadata) parts.push(bytes.subarray(offset, end));
+    if (end > bytes.length || end < offset + 4) throw new Error("jpeg");
+    const body = offset + 4;
+    if (marker === 0xe0 && startsWith(bytes, body, "JFIF\0") && end - body >= 14) {
+      // The JFIF header alone: length 16, no thumbnail.
+      const header = bytes.slice(offset, offset + 18);
+      header[2] = 0;
+      header[3] = 16;
+      header[16] = header[17] = 0;
+      parts.push(header);
+    } else if (
+      (marker === 0xe2 && startsWith(bytes, body, "ICC_PROFILE\0")) ||
+      (marker === 0xee && startsWith(bytes, body, "Adobe")) ||
+      !(marker === 0xfe || (marker >= 0xe0 && marker <= 0xef))
+    )
+      parts.push(bytes.subarray(offset, end));
     offset = end;
+    if (marker !== 0xda) continue;
+    // Entropy-coded data runs to the next marker; FF00 and restarts are data.
+    let at = offset;
+    while (at + 1 < bytes.length) {
+      if (bytes[at] === 0xff) {
+        const next = bytes[at + 1];
+        if (next === 0 || (next >= 0xd0 && next <= 0xd7)) {
+          at += 2;
+          continue;
+        }
+        if (next !== 0xff) break;
+      }
+      at++;
+    }
+    if (at + 1 >= bytes.length) throw new Error("jpeg");
+    parts.push(bytes.subarray(offset, at));
+    offset = at;
   }
-  parts.push(bytes.subarray(offset));
   const out = new Uint8Array(parts.reduce((sum, part) => sum + part.length, 0));
   let at = 0;
   for (const part of parts) {
@@ -81,8 +134,18 @@ export function stripJpegMetadata(bytes: Uint8Array): Uint8Array {
   }
   return out;
 }
-/** Orientations that only turn the photo; 2, 4, 5 and 7 also mirror it. */
-export const TURNS: Record<number, number> = { 1: 0, 3: 180, 6: 90, 8: 270 };
+// Where each EXIF orientation puts a stored point (s across, t down, 0..1)
+// in the upright picture (x across, y down).
+const UPRIGHT: Record<number, (s: number, t: number) => [number, number]> = {
+  1: (s, t) => [s, t],
+  2: (s, t) => [1 - s, t],
+  3: (s, t) => [1 - s, 1 - t],
+  4: (s, t) => [s, 1 - t],
+  5: (s, t) => [t, s],
+  6: (s, t) => [1 - t, s],
+  7: (s, t) => [1 - t, 1 - s],
+  8: (s, t) => [t, 1 - s],
+};
 
 /** One page per image, in order, each image as large as its page allows. */
 export async function imagesToPdf(
@@ -100,8 +163,9 @@ export async function imagesToPdf(
     } catch {
       throw new Error(`image:${index}`);
     }
-    // The upright size, after the EXIF turn.
-    const sideways = source.turn === 90 || source.turn === 270;
+    // The upright size, after the EXIF orientation.
+    const upright = UPRIGHT[source.orientation] ?? UPRIGHT[1];
+    const sideways = source.orientation >= 5 && source.orientation <= 8;
     const [width, height] = sideways ? [image.height, image.width] : [image.width, image.height];
     let pageWidth: number;
     let pageHeight: number;
@@ -118,21 +182,22 @@ export async function imagesToPdf(
     const x = (pageWidth - drawnWidth) / 2;
     const y = (pageHeight - drawnHeight) / 2;
     const page = doc.addPage([pageWidth, pageHeight]);
-    // pdf-lib turns an image counterclockwise around its lower-left corner;
-    // the offsets put the turned image back on the drawn area.
-    const placement =
-      source.turn === 90
-        ? { x, y: y + drawnHeight, rotate: degrees(-90) }
-        : source.turn === 180
-          ? { x: x + drawnWidth, y: y + drawnHeight, rotate: degrees(180) }
-          : source.turn === 270
-            ? { x: x + drawnWidth, y, rotate: degrees(90) }
-            : { x, y, rotate: degrees(0) };
-    page.drawImage(image, {
-      ...placement,
-      width: sideways ? drawnHeight : drawnWidth,
-      height: sideways ? drawnWidth : drawnHeight,
-    });
+    // The image's unit square (u right, v up; its first row is at v = 1)
+    // mapped onto the drawn area, turned and mirrored as EXIF says.
+    const point = (u: number, v: number) => {
+      const [across, down] = upright(u, 1 - v);
+      return [x + across * drawnWidth, y + (1 - down) * drawnHeight];
+    };
+    const [e, f] = point(0, 0);
+    const [ux, uy] = point(1, 0);
+    const [vx, vy] = point(0, 1);
+    const name = page.node.newXObject("Image", image.ref);
+    page.pushOperators(
+      pushGraphicsState(),
+      concatTransformationMatrix(ux - e, uy - f, vx - e, vy - f, e, f),
+      drawObject(name),
+      popGraphicsState(),
+    );
     if (source.rotate % 360) page.setRotation(degrees(source.rotate % 360));
   }
   doc.setProducer("pdf.kha.do");

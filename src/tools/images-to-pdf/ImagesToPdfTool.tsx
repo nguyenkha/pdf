@@ -42,6 +42,7 @@ export default function ImagesToPdfTool({ t, locale, shared }: ToolProps) {
   const [descending, setDescending] = useState(false);
   const job = useRef<{ cancel: () => void } | undefined>(undefined);
   const previewing = useRef<number | undefined>(undefined);
+  const mounted = useRef(true);
   const live = useRef(items);
   live.current = items;
   useEffect(() => {
@@ -51,6 +52,7 @@ export default function ImagesToPdfTool({ t, locale, shared }: ToolProps) {
   }, [shared]);
   useEffect(
     () => () => {
+      mounted.current = false;
       job.current?.cancel();
       live.current.forEach((item) => item.preview && URL.revokeObjectURL(item.preview));
     },
@@ -65,6 +67,8 @@ export default function ImagesToPdfTool({ t, locale, shared }: ToolProps) {
     imagePreview(next.file)
       .then(
         (blob) => {
+          // A preview finishing after the tool closed gets no URL to leak.
+          if (!mounted.current) return;
           const url = URL.createObjectURL(blob);
           setItems((current) => {
             if (!current.some((item) => item.id === next.id)) {

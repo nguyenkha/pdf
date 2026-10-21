@@ -25,10 +25,10 @@ function jpegSize(bytes: Buffer) {
     offset += 2 + bytes.readUInt16BE(offset + 2);
   }
 }
-/** A photo drawn in the page: wider than tall, red on the left half. */
-async function photo(page: Page, type: "image/jpeg" | "image/png", width: number, height: number) {
+/** A photo drawn in the page: blue, red on the left half (or only the top-left quarter). */
+async function photo(page: Page, type: "image/jpeg" | "image/png", width: number, height: number, corner = false) {
   const data = await page.evaluate(
-    async ({ type, width, height }) => {
+    async ({ type, width, height, corner }) => {
       const canvas = document.createElement("canvas");
       canvas.width = width;
       canvas.height = height;
@@ -36,11 +36,11 @@ async function photo(page: Page, type: "image/jpeg" | "image/png", width: number
       context.fillStyle = "#1d4ed8";
       context.fillRect(0, 0, width, height);
       context.fillStyle = "#dc2626";
-      context.fillRect(0, 0, width / 2, height);
+      context.fillRect(0, 0, width / 2, corner ? height / 2 : height);
       const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), type, 0.9));
       return Array.from(new Uint8Array(await blob.arrayBuffer()));
     },
-    { type, width, height },
+    { type, width, height, corner },
   );
   return Buffer.from(data);
 }
@@ -163,30 +163,34 @@ test.describe("JPG to PDF", () => {
     expect(requests.filter(({ url }) => !url.startsWith(origin) && !url.startsWith("blob:") && !url.startsWith("data:"))).toEqual([]);
     await expect(page.getByRole("button", { name: "Compress this PDF" })).toBeVisible();
   });
-  test("every EXIF turn lands upright on the page", async ({ page }) => {
+  test("every EXIF orientation lands upright on the page, without redrawing", async ({ page }) => {
     test.setTimeout(120000);
     await page.goto("/en/jpg-to-pdf/");
-    // Red is the stored left half; upright it is top (6), right (3) or bottom (8).
-    const jpeg = await photo(page, "image/jpeg", 200, 100);
+    // Red is the stored top-left quarter of a wide photo; each orientation
+    // moves it to its own corner and shape.
+    const jpeg = await photo(page, "image/jpeg", 200, 100, true);
+    const orientations = [1, 2, 3, 4, 5, 6, 7, 8];
     await page.locator("input[type=file]").setInputFiles(
-      [6, 3, 8].map((orientation) => ({
+      orientations.map((orientation) => ({
         name: `turn-${orientation}.jpg`,
         mimeType: "image/jpeg",
         buffer: withOrientation(jpeg, orientation),
       })),
     );
-    await expect(page.locator(".page-grid img")).toHaveCount(3, { timeout: 30000 });
+    await expect(page.locator(".page-grid img")).toHaveCount(8, { timeout: 30000 });
     await page.getByRole("button", { name: "Same as image" }).click();
-    await page.getByRole("button", { name: "Create PDF from 3 images" }).click();
+    await page.getByRole("button", { name: "Create PDF from 8 images" }).click();
     const download = page.waitForEvent("download");
     await page.getByRole("link", { name: "Download PDF" }).click();
     const pdf = await readFile((await (await download).path())!);
+    // Mirrored ones too: the image data is the original, not a redrawn copy.
+    expect(pdf.includes(jpeg.subarray(jpeg.indexOf(Buffer.from([0xff, 0xda]))))).toBe(true);
     // Drawn back with the PDF to JPG tool, then sampled.
     await page.goto("/en/pdf-to-jpg/");
     await page.locator("input[type=file]").setInputFiles({ name: "turned.pdf", mimeType: "application/pdf", buffer: pdf });
     await page.getByRole("button", { name: "PNG" }).click();
-    await page.getByRole("button", { name: "Convert 3 pages to PNG" }).click();
-    await expect(page.locator(".image-results a")).toHaveCount(3, { timeout: 60000 });
+    await page.getByRole("button", { name: "Convert 8 pages to PNG" }).click();
+    await expect(page.locator(".image-results a")).toHaveCount(8, { timeout: 60000 });
     const red = await page.locator(".image-results a").evaluateAll(async (links) =>
       Promise.all(
         links.map(async (link) => {
@@ -204,11 +208,35 @@ test.describe("JPG to PDF", () => {
         }),
       ),
     );
+    // [top-left, top-right, bottom-left, bottom-right, wide] per orientation 1-8.
     expect(red).toEqual([
-      [true, true, false, false, false],
-      [false, true, false, true, true],
-      [false, false, true, true, false],
+      [true, false, false, false, true],
+      [false, true, false, false, true],
+      [false, false, false, true, true],
+      [false, false, true, false, true],
+      [true, false, false, false, false],
+      [false, true, false, false, false],
+      [false, false, false, true, false],
+      [false, false, true, false, false],
     ]);
+  });
+  test("leaves a motion photo's video and HDR extras out of the PDF", async ({ page }) => {
+    test.setTimeout(60000);
+    await page.goto("/en/jpg-to-pdf/");
+    const jpeg = await photo(page, "image/jpeg", 120, 80);
+    const trailer = Buffer.from("....ftypmp42 motion photo video with Exif GPS 1.2903N", "latin1");
+    await page.locator("input[type=file]").setInputFiles({
+      name: "PXL_motion.jpg",
+      mimeType: "image/jpeg",
+      buffer: Buffer.concat([withOrientation(jpeg, 1), trailer]),
+    });
+    await expect(page.locator(".page-grid img")).toHaveCount(1, { timeout: 30000 });
+    await page.getByRole("button", { name: "Create PDF", exact: true }).click();
+    const download = page.waitForEvent("download");
+    await page.getByRole("link", { name: "Download PDF" }).click();
+    const pdf = await readFile((await (await download).path())!);
+    expect(pdf.includes(Buffer.from("ftypmp42", "latin1"))).toBe(false);
+    expect(pdf.includes(Buffer.from("Exif", "latin1"))).toBe(false);
   });
   test("leaves out images the browser cannot open", async ({ page }) => {
     test.setTimeout(60000);
