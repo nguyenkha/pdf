@@ -243,9 +243,9 @@ export async function compressWithGhostscript(
     ? ladder.length + (tryLossless ? 1 : 0)
     : profiles.length;
   let smallest: Candidate | undefined;
-  const tried = new Map<Profile, Candidate | undefined>();
+  // Only sizes are cached: bytes stay held through `selected` and `smallest`.
+  const tried = new Map<Profile, number>();
   const pass = async (profile: Profile): Promise<Candidate | undefined> => {
-    if (tried.has(profile)) return tried.get(profile);
     const slot = Math.min(attempts, planned - 1);
     const span = (share: number) => (PASS_SHARE * (slot + share)) / planned;
     report(attempts ? "optimizing" : "loading", span(0));
@@ -255,12 +255,12 @@ export async function compressWithGhostscript(
     attempts++;
     heapBytes = Math.max(heapBytes, output.heapBytes);
     if (output.bytes.length >= inputSize) {
-      tried.set(profile, undefined);
+      tried.set(profile, Infinity);
       return undefined;
     }
     const candidate = { bytes: output.bytes, quality: profile.quality, dpi: profile.dpi, lossless: profile.quality > 100 };
     if (!smallest || candidate.bytes.length < smallest.bytes.length) smallest = candidate;
-    tried.set(profile, candidate);
+    tried.set(profile, candidate.bytes.length);
     return candidate;
   };
   if (search) {
@@ -283,6 +283,12 @@ export async function compressWithGhostscript(
     }
     if (!selected?.lossless) {
       for (const profile of ladder) {
+        const known = tried.get(profile);
+        if (known !== undefined) {
+          // The earliest cached hit is the best one already held in `selected`.
+          if (known <= target) break;
+          continue;
+        }
         const candidate = await pass(profile);
         if (candidate && candidate.bytes.length <= target) {
           selected = candidate;

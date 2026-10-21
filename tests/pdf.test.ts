@@ -155,6 +155,26 @@ describe("quality-first pipeline", () => {
     expect(new Set(tried).size).toBe(tried.length);
     expect(tried).not.toContain(-1);
   });
+  it("keeps the best hit when only untried earlier profiles are left to check", async () => {
+    const options = { preference: "quality", imageQuality: "auto", target: 50 } as const;
+    const ladder = attemptsFor(options).slice(1);
+    const sizes = [90, 90, 90, 40, 30, 30, 30, 30];
+    const tried: number[] = [];
+    const result = await compressWithGhostscript(
+      100, options, () => {},
+      async (profile) => {
+        const row = ladder.findIndex((p) => p.quality === profile.quality && p.dpi === profile.dpi);
+        tried.push(row);
+        return { bytes: new Uint8Array(sizes[row]), heapBytes: 0 };
+      },
+      async () => {},
+    );
+    expect(result.bytes?.length).toBe(40);
+    expect(result.achieved).toBe(true);
+    expect(tried).toContain(0);
+    expect(new Set(tried).size).toBe(tried.length);
+    expect(result.attempts).toBe(tried.length);
+  });
   it("checks skipped profiles when output sizes are not monotonic", async () => {
     const result = await compressWithGhostscript(
       1000, { preference: "smallest", imageQuality: "auto", target: 500 }, () => {},
