@@ -1,4 +1,4 @@
-import { PDFArray, PDFContentStream, PDFDict, PDFDocument, PDFName, PDFRawStream, PDFStream } from "pdf-lib";
+import { PDFArray, PDFContentStream, PDFDict, PDFDocument, PDFName, PDFNull, PDFNumber, PDFObject, PDFRawStream, PDFStream } from "pdf-lib";
 
 const name = PDFName.of;
 const MAX_CONTENT_BYTES = 8 * 1024 * 1024;
@@ -12,7 +12,7 @@ async function decoded(stream: PDFStream): Promise<Uint8Array> {
     return stream.contents;
   }
   // Reject unfamiliar filter chains rather than perform an unbounded decode.
-  if (filters.length !== 1 || filters[0] !== name("FlateDecode") || stream.dict.has(name("DecodeParms")))
+  if (filters.length !== 1 || filters[0] !== name("FlateDecode") || !defaultParms(stream.dict.lookup(name("DecodeParms"))))
     throw new Error("unsupported");
   const reader = new Blob([stream.contents as BlobPart]).stream().pipeThrough(new DecompressionStream("deflate")).getReader();
   const chunks: Uint8Array[] = [];
@@ -30,6 +30,16 @@ async function decoded(stream: PDFStream): Promise<Uint8Array> {
   let at = 0;
   for (const chunk of chunks) { bytes.set(chunk, at); at += chunk.length; }
   return bytes;
+}
+/** Absent, null or an explicit Predictor 1 change nothing about a Flate decode. */
+function defaultParms(parms: PDFObject | undefined): boolean {
+  if (parms === undefined || parms === PDFNull) return true;
+  if (parms instanceof PDFArray) return parms.size() === 1 && defaultParms(parms.lookup(0));
+  if (!(parms instanceof PDFDict)) return false;
+  return parms.entries().every(([key]) => {
+    const value = parms.lookup(key);
+    return key === name("Predictor") && value instanceof PDFNumber && value.asNumber() === 1;
+  });
 }
 /** Resource names outside comments, strings and hex strings. Keeping every
  * name is conservative: only definitely unused XObjects are removed.
@@ -71,16 +81,95 @@ function resourceNames(bytes: Uint8Array): Set<string> {
   return names;
 }
 
-/** Isolate shared resource dictionaries and remove unused image/form streams
- * before dropping pages, including resources of nested Form XObjects.
+/** Objects that can draw images, reachable from a resource dictionary: XObjects,
+ * patterns, soft-mask graphics states and Type3 fonts, and their own resources.
+ * The flag records whether the object sits inside a pattern, soft mask or
+ * Type3 font, whose resource use the content scanner below does not follow.
  */
-export async function prunePageResources(doc: PDFDocument): Promise<void> {
+function imageGraph(doc: PDFDocument, resources: PDFDict | undefined): Map<PDFObject, boolean> {
+  const reached = new Map<PDFObject, boolean>();
+  const pending: [PDFObject | undefined, boolean][] = [[resources, false]];
+  const visit = (value: PDFObject | undefined, opaque: boolean) => {
+    const object = value && doc.context.lookup(value);
+    if (!object || object instanceof PDFName || (reached.has(object) && (reached.get(object) || !opaque))) return;
+    reached.set(object, opaque);
+    const dict = object instanceof PDFStream ? object.dict : object instanceof PDFDict ? object : undefined;
+    pending.push([dict?.get(name("Resources")), opaque]);
+    if (object instanceof PDFStream && dict?.get(name("Subtype")) === name("Image")) {
+      visit(dict.get(name("SMask")), opaque);
+      visit(dict.get(name("Mask")), opaque);
+    }
+  };
+  for (let guard = 0; pending.length; guard++) {
+    if (guard > 100_000) throw new Error("unsupported");
+    const [value, opaque] = pending.pop()!;
+    const dict = value && doc.context.lookup(value);
+    if (!(dict instanceof PDFDict)) continue;
+    const entries = (key: string) => {
+      const group = dict.lookup(name(key));
+      return group instanceof PDFDict ? group.values() : [];
+    };
+    for (const value of entries("XObject")) visit(value, opaque);
+    for (const value of entries("Pattern")) visit(value, true);
+    for (const value of entries("ExtGState")) {
+      const state = doc.context.lookup(value);
+      const mask = state instanceof PDFDict ? state.lookup(name("SMask")) : undefined;
+      if (mask instanceof PDFDict) { visit(state, true); visit(mask.get(name("G")), true); }
+    }
+    for (const value of entries("Font")) {
+      const font = doc.context.lookup(value);
+      if (!(font instanceof PDFDict) || font.get(name("Subtype")) !== name("Type3")) continue;
+      visit(font, true);
+      const procs = font.lookup(name("CharProcs"));
+      if (procs instanceof PDFDict) for (const proc of procs.values()) visit(proc, true);
+    }
+  }
+  return reached;
+}
+
+/** Which selected pages, in plan order, share image-capable resources with a
+ * page that is left out. Only those need their resources trimmed. Sharing
+ * through patterns, soft masks or Type3 fonts is refused rather than trimmed.
+ */
+export function sharedResourcePages(doc: PDFDocument, selected: number[]): boolean[] {
+  const pages = doc.getPages();
+  if (new Set(selected).size === pages.length) return selected.map(() => false);
+  const graphs = new Map<number, Map<PDFObject, boolean>>();
+  const graph = (index: number) => {
+    if (!graphs.has(index)) graphs.set(index, imageGraph(doc, pages[index].node.Resources()));
+    return graphs.get(index)!;
+  };
+  const keep = new Set(selected);
+  const omitted = new Set<PDFObject>();
+  pages.forEach((_, index) => { if (!keep.has(index)) for (const object of graph(index).keys()) omitted.add(object); });
+  return selected.map((index) => {
+    let shared = false;
+    for (const [object, opaque] of graph(index)) {
+      if (!omitted.has(object)) continue;
+      if (opaque) throw new Error("unsupported");
+      shared = true;
+    }
+    return shared;
+  });
+}
+
+/** Isolate shared resource dictionaries and remove unused image/form streams
+ * on the given output pages, including resources of nested Form XObjects.
+ */
+export async function prunePageResources(doc: PDFDocument, overlap: boolean[]): Promise<void> {
   const processed = new Set<PDFStream>();
   const trim = async (resources: PDFDict, streams: PDFStream[], depth = 0): Promise<PDFDict> => {
     if (depth > 64) throw new Error("unsupported");
     const local = resources.clone(doc.context);
     const objects = resources.lookup(name("XObject"));
     if (!(objects instanceof PDFDict)) return local;
+    // Type3 glyphs without their own resources draw with these XObjects, which
+    // the page's content stream does not name.
+    const fonts = resources.lookup(name("Font"));
+    if (fonts instanceof PDFDict && fonts.values().some((value) => {
+      const font = doc.context.lookup(value);
+      return font instanceof PDFDict && font.get(name("Subtype")) === name("Type3") && !font.has(name("Resources"));
+    })) throw new Error("unsupported");
     const used = new Set<string>();
     const pending = [...streams];
     const seen = new Set<PDFStream>();
@@ -111,7 +200,8 @@ export async function prunePageResources(doc: PDFDocument): Promise<void> {
     local.set(name("XObject"), kept);
     return local;
   };
-  for (const page of doc.getPages()) {
+  for (const [index, page] of doc.getPages().entries()) {
+    if (!overlap[index]) continue;
     const resources = page.node.Resources();
     if (!resources) continue;
     const contents = page.node.Contents();

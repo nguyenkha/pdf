@@ -201,7 +201,9 @@ export default function OrganizeTool({ t, locale, shared }: ToolProps) {
       if (id === generation.current) setResult(result);
     } catch (failure) {
       if (id !== generation.current) return;
-      if (!(failure instanceof Error && failure.message === "cancelled")) setError(t.organizeFailed);
+      const message = failure instanceof Error ? failure.message : "";
+      if (message !== "cancelled")
+        setError(message === "unsupported" ? t.organizeUnsupported : message === "memory" ? t.memory : t.organizeFailed);
     } finally {
       if (id === generation.current) {
         job.current = undefined;

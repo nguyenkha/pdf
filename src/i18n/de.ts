@@ -305,6 +305,7 @@ export default {
   organizeDoneTitle: "PDF gespeichert",
   organizeAnother: "Anderes PDF ordnen",
   organizeFailed: "Dieses PDF konnte nicht gespeichert werden. Es ist eventuell beschädigt.",
+  organizeUnsupported: "Aus diesem PDF lassen sich Seiten nicht sicher entfernen, weil sie Inhalte mit den behaltenen Seiten teilen. Ihre Originaldatei bleibt unverändert.",
   organizeNote: "Lesezeichen und Formularfelder werden in der neuen Datei nicht übernommen.",
   organizeUnlockedNote: "Das neue PDF hat kein Passwort. Schütze es vor dem Teilen bei Bedarf erneut.",
   organizeSignedNote: "Die digitalen Signaturen sind im neuen PDF nicht gültig; Stempel und Unterschriftsbilder sind weiter auf der Seite.",

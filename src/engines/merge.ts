@@ -13,7 +13,7 @@ import {
 
 import { flattenSignatureFields } from "./signatures";
 import { pruneCopiedObjects } from "./prune";
-import { prunePageResources } from "./resources";
+import { prunePageResources, sharedResourcePages } from "./resources";
 
 export type MergeSource = { name: string; bytes: Uint8Array };
 const name = (key: string) => PDFName.of(key);
@@ -159,6 +159,7 @@ export async function organizePdf(
   if (!plan.length || plan.some(({ page }) => !Number.isInteger(page) || page < 0 || page >= count))
     throw new Error("plan");
   const signed = flattenSignatureFields(input) > 0;
+  const overlap = sharedResourcePages(input, plan.map(({ page }) => page));
   const output = await PDFDocument.create();
   const pages = await copyLinkedPages(output, input, plan.map(({ page }) => page));
   plan.forEach(({ rotate }, at) => {
@@ -167,7 +168,7 @@ export async function organizePdf(
   });
   output.setProducer("pdf.kha.do");
   output.setCreator("pdf.kha.do");
-  if (new Set(plan.map(({ page }) => page)).size < count) await prunePageResources(output);
+  if (overlap.some(Boolean)) await prunePageResources(output, overlap);
   pruneCopiedObjects(output);
   return { bytes: await output.save(), pages: output.getPageCount(), signed };
 }

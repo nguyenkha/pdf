@@ -297,6 +297,7 @@ export default {
   organizeDoneTitle: "PDF 已保存",
   organizeAnother: "整理另一个 PDF",
   organizeFailed: "无法保存此 PDF，文件可能已损坏。",
+  organizeUnsupported: "无法安全地从此 PDF 删除页面，因为它们与保留的页面共用内容。原文件未做任何更改。",
   organizeNote: "新文件不保留书签和表单字段。",
   organizeUnlockedNote: "新的 PDF 没有密码。如有需要，请在分享前重新加密。",
   organizeSignedNote: "数字签名在新的 PDF 中不再有效；印章和签名图像仍在页面上。",

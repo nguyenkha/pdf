@@ -305,6 +305,7 @@ export default {
   organizeDoneTitle: "Đã lưu PDF",
   organizeAnother: "Sắp xếp PDF khác",
   organizeFailed: "Không lưu được PDF này. File có thể bị lỗi.",
+  organizeUnsupported: "Không thể xoá trang khỏi PDF này một cách an toàn, vì chúng dùng chung nội dung với các trang bạn giữ lại. File gốc không bị thay đổi.",
   organizeNote: "Bookmark và trường biểu mẫu không được giữ trong file mới.",
   organizeUnlockedNote: "File PDF mới không có mật khẩu. Nếu cần, hãy đặt lại mật khẩu trước khi chia sẻ.",
   organizeSignedNote: "Chữ ký số không còn hiệu lực trong file mới; con dấu và hình chữ ký vẫn còn trên trang.",

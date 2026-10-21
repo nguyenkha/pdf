@@ -305,6 +305,7 @@ export default {
   organizeDoneTitle: "PDF salvo",
   organizeAnother: "Organizar outro PDF",
   organizeFailed: "Não foi possível salvar este PDF. Ele pode estar danificado.",
+  organizeUnsupported: "Não é possível remover páginas deste PDF com segurança, porque elas compartilham conteúdo com as páginas mantidas. Seu arquivo original não foi alterado.",
   organizeNote: "Marcadores e campos de formulário não são mantidos no novo arquivo.",
   organizeUnlockedNote: "O novo PDF não tem senha. Proteja-o de novo antes de compartilhar, se precisar.",
   organizeSignedNote: "As assinaturas digitais não são válidas no novo PDF; carimbos e imagens continuam na página.",
