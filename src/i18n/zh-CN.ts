@@ -1,7 +1,6 @@
 import type { Messages } from "./index";
 export default {
   language: "语言",
-  systemTheme: "跟随系统主题",
   lightTheme: "浅色主题",
   darkTheme: "深色主题",
   support: "不上传。不注册。不收费。无广告。",

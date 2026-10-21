@@ -1,7 +1,6 @@
 import type { Messages } from "./index";
 export default {
   language: "भाषा",
-  systemTheme: "सिस्टम थीम",
   lightTheme: "हल्की थीम",
   darkTheme: "गहरी थीम",
   support: "न अपलोड। न खाते। न भुगतान। न विज्ञापन।",

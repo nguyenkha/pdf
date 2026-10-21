@@ -32,10 +32,28 @@ test("language switching and RTL", async ({ page }) => {
     page.getByText("File của bạn không bao giờ rời thiết bị.").filter({ visible: true }).first(),
   ).toBeVisible();
 });
+test.describe("theme follows the system until chosen", () => {
+  test.use({ colorScheme: "dark" });
+  test("two states, remembered once picked", async ({ page }) => {
+    await page.goto("/en/compress/");
+    const toggle = page.getByRole("button", { name: "Dark theme" });
+    // First visit: the system's dark theme, nothing stored or forced.
+    await expect(toggle).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator("html")).not.toHaveAttribute("data-theme", /.*/);
+    expect(await page.evaluate(() => localStorage.getItem("theme"))).toBeNull();
+    await toggle.click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await expect(toggle).toHaveAttribute("aria-pressed", "false");
+    await page.reload();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await toggle.click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  });
+});
 test("theme and mobile", async ({ page }) => {
   await page.goto("/en/compress/");
-  await page.getByRole("button", { name: "System theme" }).click();
-  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await page.getByRole("button", { name: "Dark theme" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator(".drop")).toBeVisible();
   // The drop zone must start above the fold on a phone.

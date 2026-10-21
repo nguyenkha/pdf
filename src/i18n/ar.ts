@@ -1,7 +1,6 @@
 import type { Messages } from "./index";
 export default {
   language: "اللغة",
-  systemTheme: "سمة النظام",
   lightTheme: "السمة الفاتحة",
   darkTheme: "السمة الداكنة",
   support: "لا رفع ملفات. لا حسابات. لا رسوم. لا إعلانات.",

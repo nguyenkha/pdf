@@ -1,7 +1,6 @@
 import type { Messages } from "./index";
 export default {
   language: "언어",
-  systemTheme: "시스템 테마",
   lightTheme: "라이트 테마",
   darkTheme: "다크 테마",
   support: "업로드 없음. 계정 없음. 유료 결제 없음. 광고 없음.",

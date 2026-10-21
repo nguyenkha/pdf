@@ -1,6 +1,5 @@
 export default {
   language: "Language",
-  systemTheme: "System theme",
   lightTheme: "Light theme",
   darkTheme: "Dark theme",
   support: "No uploads. No accounts. No paywalls. No ads.",

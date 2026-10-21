@@ -5,7 +5,6 @@ import {
   ShieldCheck,
   Sun,
   Moon,
-  Monitor,
   Heart,
   Github,
 } from "lucide-react";
@@ -24,6 +23,17 @@ import { config } from "./app/config";
 import { SIZE_PAGES, sizeFromPath, sizeFromSlug, sizePath } from "./app/sizes";
 import { fill } from "./i18n/fill";
 import "./styles/main.css";
+/** Whether a media query matches, kept current as the system changes. */
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(() => matchMedia(query).matches);
+  useEffect(() => {
+    const list = matchMedia(query);
+    const update = () => setMatches(list.matches);
+    list.addEventListener("change", update);
+    return () => list.removeEventListener("change", update);
+  }, [query]);
+  return matches;
+}
 // The engines this site is built on, linked inside the translated sentence.
 function Credits({ text }: { text: string }) {
   const links: Record<string, [string, string]> = {
@@ -90,13 +100,22 @@ function App({
 }) {
   const [locale, setLocale] = useState<Locale>(firstLocale);
   const [t, setT] = useState<Messages>(firstMessages);
-  const [theme, setTheme] = useState(() => {
+  // Two themes. Until the person picks one, the page follows the system
+  // (no data-theme, so CSS keeps tracking it) and nothing is stored.
+  const dark = useMediaQuery("(prefers-color-scheme: dark)");
+  const [chosen, setChosen] = useState<"light" | "dark" | undefined>(() => {
     try {
-      return localStorage.getItem("theme") || "system";
+      const stored = localStorage.getItem("theme");
+      return stored === "light" || stored === "dark" ? stored : undefined;
     } catch {
-      return "system";
+      return undefined;
     }
   });
+  const theme = chosen ?? (dark ? "dark" : "light");
+  useEffect(() => {
+    if (chosen) document.documentElement.dataset.theme = chosen;
+    else delete document.documentElement.dataset.theme;
+  }, [chosen]);
   useEffect(() => {
     let active = true;
     messages(locale)
@@ -129,16 +148,14 @@ function App({
       active = false;
     };
   }, [locale]);
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-  }, [theme]);
   function selectLocale(l: Locale) {
     try { localStorage.setItem("locale", l); } catch { /* Storage is optional. */ }
     setLocale(l);
   }
-  function selectTheme(v: string) {
-    try { localStorage.setItem("theme", v); } catch { /* Storage is optional. */ }
-    setTheme(v);
+  function toggleTheme() {
+    const next = theme === "dark" ? "light" : "dark";
+    try { localStorage.setItem("theme", next); } catch { /* Storage is optional. */ }
+    setChosen(next);
   }
   const privacyPage = location.pathname.endsWith("/privacy/");
   return (
@@ -168,37 +185,12 @@ function App({
           </label>
           <button
             className="theme-toggle"
-            aria-label={
-              theme === "system"
-                ? t.systemTheme
-                : theme === "dark"
-                  ? t.darkTheme
-                  : t.lightTheme
-            }
-            title={
-              theme === "system"
-                ? t.systemTheme
-                : theme === "dark"
-                  ? t.darkTheme
-                  : t.lightTheme
-            }
-            onClick={() =>
-              selectTheme(
-                theme === "system"
-                  ? "light"
-                  : theme === "light"
-                    ? "dark"
-                    : "system",
-              )
-            }
+            aria-label={t.darkTheme}
+            aria-pressed={theme === "dark"}
+            title={theme === "dark" ? t.darkTheme : t.lightTheme}
+            onClick={toggleTheme}
           >
-            {theme === "system" ? (
-              <Monitor size={17} />
-            ) : theme === "light" ? (
-              <Sun size={17} />
-            ) : (
-              <Moon size={17} />
-            )}
+            {theme === "dark" ? <Moon size={17} /> : <Sun size={17} />}
           </button>
         </div>
       </header>

@@ -1,7 +1,6 @@
 import type { Messages } from "./index";
 export default {
   language: "Idioma",
-  systemTheme: "Tema del sistema",
   lightTheme: "Tema claro",
   darkTheme: "Tema oscuro",
   support: "Sin subidas. Sin cuentas. Sin pagos. Sin anuncios.",

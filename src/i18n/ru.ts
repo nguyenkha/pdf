@@ -1,7 +1,6 @@
 import type { Messages } from "./index";
 export default {
   language: "Язык",
-  systemTheme: "Системная тема",
   lightTheme: "Светлая тема",
   darkTheme: "Тёмная тема",
   support:

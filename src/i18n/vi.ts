@@ -1,7 +1,6 @@
 import type { Messages } from "./index";
 export default {
   language: "Ngôn ngữ",
-  systemTheme: "Giao diện theo hệ thống",
   lightTheme: "Giao diện sáng",
   darkTheme: "Giao diện tối",
   support:
