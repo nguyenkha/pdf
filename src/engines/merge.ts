@@ -12,6 +12,7 @@ import {
 } from "pdf-lib";
 
 import { flattenSignatureFields } from "./signatures";
+import { pruneCopiedObjects } from "./prune";
 
 export type MergeSource = { name: string; bytes: Uint8Array };
 const name = (key: string) => PDFName.of(key);
@@ -137,6 +138,7 @@ export async function mergePdfs(
   }
   output.setProducer("pdf.kha.do");
   output.setCreator("pdf.kha.do");
+  pruneCopiedObjects(output);
   return { bytes: await output.save(), pages: output.getPageCount(), signed };
 }
 /** One page of the result: which source page, and how much more to turn it. */
@@ -164,5 +166,6 @@ export async function organizePdf(
   });
   output.setProducer("pdf.kha.do");
   output.setCreator("pdf.kha.do");
+  pruneCopiedObjects(output);
   return { bytes: await output.save(), pages: output.getPageCount(), signed };
 }

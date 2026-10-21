@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { readFile } from "node:fs/promises";
-import { degrees, PDFArray, PDFDict, PDFDocument, PDFName } from "pdf-lib";
+import { degrees, PDFArray, PDFDict, PDFDocument, PDFName, PDFRawStream, decodePDFRawStream } from "pdf-lib";
 import { organizePdf } from "../src/engines/merge";
+import { flattenSignatureFields } from "../src/engines/signatures";
 
 async function make(widths: number[], rotations: number[] = []) {
   const doc = await PDFDocument.create();
@@ -9,6 +10,27 @@ async function make(widths: number[], rotations: number[] = []) {
   return doc.save();
 }
 describe("organize", () => {
+  it("does not serialize the contents of a deleted link destination", async () => {
+    const doc = await PDFDocument.create();
+    const kept = doc.addPage();
+    const removed = doc.addPage();
+    removed.drawText("PRIVATE_DELETED_PAGE");
+    const link = doc.context.register(doc.context.obj({
+      Type: "Annot", Subtype: "Link", Rect: [0, 0, 10, 10],
+      Dest: [removed.ref, PDFName.of("Fit")],
+    }));
+    kept.node.set(PDFName.of("Annots"), doc.context.obj([link]));
+    const result = await PDFDocument.load((await organizePdf(await doc.save(), [{ page: 0, rotate: 0 }])).bytes);
+    expect(result.getPageCount()).toBe(1);
+    const streams = result.context.enumerateIndirectObjects().flatMap(([, object]) =>
+      object instanceof PDFRawStream ? [Buffer.from(decodePDFRawStream(object).decode()).toString()] : [],
+    );
+    expect(streams.join("\n")).not.toContain(Buffer.from("PRIVATE_DELETED_PAGE").toString("hex").toUpperCase());
+    const pages = result.context.enumerateIndirectObjects().filter(([, object]) =>
+      object instanceof PDFDict && object.get(PDFName.of("Type")) === PDFName.of("Page"),
+    );
+    expect(pages).toHaveLength(1);
+  });
   it("reorders, turns and leaves out pages as planned", async () => {
     const source = await make([100, 200, 300], [0, 90, 0]);
     const result = await organizePdf(source, [
@@ -47,6 +69,23 @@ describe("organize", () => {
     const doc = await PDFDocument.load(result.bytes);
     expect(doc.getPage(0).getRotation().angle).toBe(180);
     expect(doc.catalog.has(PDFName.of("AcroForm"))).toBe(false);
+  });
+  it("draws signatures even when ordinary form fields remain", async () => {
+    const doc = await PDFDocument.load(await readFile("tests/fixtures/signed.pdf"));
+    doc.getForm().createTextField("name").addToPage(doc.getPage(0));
+    const before = doc.getPage(0).node.Contents()?.toString();
+    expect(flattenSignatureFields(doc)).toBe(1);
+    expect(doc.getPage(0).node.Contents()?.toString()).not.toBe(before);
+    expect(doc.getForm().getFields().map((field) => field.getName())).toEqual(["name"]);
+    expect(flattenSignatureFields(doc)).toBe(0);
+  });
+  it("keeps other stamps when one signature has no appearance", async () => {
+    const doc = await PDFDocument.load(await readFile("tests/fixtures/signed.pdf"));
+    const signature = doc.getForm().getFields()[0];
+    signature.acroField.getWidgets()[0].dict.delete(PDFName.of("AP"));
+    expect(flattenSignatureFields(doc)).toBe(1);
+    expect(doc.getForm().getFields()).toHaveLength(0);
+    expect(doc.getPage(0).node.Annots()?.size() ?? 0).toBe(0);
   });
   it("names a locked file", async () => {
     await expect(

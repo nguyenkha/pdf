@@ -132,7 +132,7 @@ describe("quality-first pipeline", () => {
     expect(result.bytes).toBeUndefined();
     expect(result.lossy).toBe(false);
   });
-  it("finds the best-looking result under a limit by binary search", async () => {
+  it("finds the best-looking result under a limit with bounded unique attempts", async () => {
     // Ladder (after lossless) has 8 rows; sizes fall with each row.
     const sizes = [95, 90, 80, 70, 55, 45, 30, 20];
     const tried: number[] = [];
@@ -151,8 +151,18 @@ describe("quality-first pipeline", () => {
     );
     expect(result.bytes?.length).toBe(45);
     expect(result.achieved).toBe(true);
-    expect(tried.length).toBeLessThanOrEqual(4);
+    expect(tried.length).toBeLessThanOrEqual(8);
+    expect(new Set(tried).size).toBe(tried.length);
     expect(tried).not.toContain(-1);
+  });
+  it("checks skipped profiles when output sizes are not monotonic", async () => {
+    const result = await compressWithGhostscript(
+      1000, { preference: "smallest", imageQuality: "auto", target: 500 }, () => {},
+      async (profile) => ({ bytes: new Uint8Array(profile.quality === 72 ? 400 : 700), heapBytes: 0 }),
+      async () => {},
+    );
+    expect(result.achieved).toBe(true);
+    expect(result.bytes?.length).toBe(400);
   });
   it("tries lossless first only when the limit is near the original size", async () => {
     const qualities: number[] = [];
