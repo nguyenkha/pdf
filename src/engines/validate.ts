@@ -1,6 +1,7 @@
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.min.mjs?url";
 import type { PdfShape, PageShape } from "../lib/shape";
+import { cleanCanvasImage } from "./metadata";
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 const IMAGE_OPS: number[] = [pdfjs.OPS.paintImageXObject, pdfjs.OPS.paintInlineImageXObject, pdfjs.OPS.paintImageMaskXObject];
 
@@ -330,8 +331,11 @@ export async function renderPages(
         background: "white",
         annotationMode: pdfjs.AnnotationMode.ENABLE,
       }).promise;
-      const blob = await canvas.convertToBlob(
-        options.type === "image/jpeg" ? { type: options.type, quality: 0.92 } : { type: options.type },
+      // Safari writes a small EXIF block into canvas images; it is cut.
+      const blob = await cleanCanvasImage(
+        await canvas.convertToBlob(
+          options.type === "image/jpeg" ? { type: options.type, quality: 0.92 } : { type: options.type },
+        ),
       );
       onPage({ page: number, blob, width: canvas.width, height: canvas.height }, index);
       canvas.width = canvas.height = 0;

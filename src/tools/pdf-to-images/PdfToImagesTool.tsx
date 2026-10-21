@@ -12,6 +12,8 @@ import { Outcome } from "../../components/Outcome";
 import { ResultActions } from "../../components/ResultActions";
 import { PasswordPrompt } from "../../components/PasswordPrompt";
 import { takeSharedFiles } from "../../lib/handOver";
+import { OtherToolOffer } from "../../components/OtherToolOffer";
+import { isImage } from "../images-to-pdf/run";
 import { unlockFile } from "../compress/run";
 import { readPages } from "../organize/run";
 import { imageName, renderImages, type ImageFormat } from "./run";
@@ -47,6 +49,12 @@ export default function PdfToImagesTool({ t, locale, shared, page }: ToolProps) 
   const images = useRef<Image[]>([]);
   images.current = result?.images ?? [];
   const generation = useRef(0);
+  // Images chosen here: offered to Image to PDF instead.
+  const [offer, setOffer] = useState<File[]>();
+  const convertButton = useRef<HTMLButtonElement>(null);
+  const selectButton = useRef<HTMLButtonElement>(null);
+  // After unlocking, keyboard focus moves to the pages once they are read.
+  const focusPages = useRef(false);
   const releaseImages = () => images.current.forEach((image) => URL.revokeObjectURL(image.url));
   const release = () => {
     generation.current++;
@@ -88,6 +96,10 @@ export default function PdfToImagesTool({ t, locale, shared, page }: ToolProps) 
         }
         setCount(pages);
         setSelected(Array(pages).fill(true));
+        if (focusPages.current) {
+          focusPages.current = false;
+          requestAnimationFrame(() => selectButton.current?.focus());
+        }
       },
       (index, thumbnail) => {
         const url = URL.createObjectURL(thumbnail);
@@ -114,6 +126,7 @@ export default function PdfToImagesTool({ t, locale, shared, page }: ToolProps) 
   }
   function select(files: File[]) {
     reset();
+    if (files.length && files.every(isImage)) return setOffer(files);
     if (files.length !== 1) return setError(t.oneFile);
     if (validateFile(files[0])) return setError(t.invalid);
     setFile(files[0]);
@@ -133,6 +146,7 @@ export default function PdfToImagesTool({ t, locale, shared, page }: ToolProps) 
       job.current = undefined;
       setUnlocking(false);
       setFile(copy);
+      focusPages.current = true;
       read(copy);
     } catch (failure) {
       if (id !== generation.current) return;
@@ -159,10 +173,12 @@ export default function PdfToImagesTool({ t, locale, shared, page }: ToolProps) 
     setProgress(undefined);
     setResult(undefined);
     setError("");
+    setOffer(undefined);
   }
   function back() {
     releaseImages();
     setResult(undefined);
+    requestAnimationFrame(() => convertButton.current?.focus());
   }
   async function convert() {
     if (!file || !count) return;
@@ -251,6 +267,7 @@ export default function PdfToImagesTool({ t, locale, shared, page }: ToolProps) 
               <span>{fill(t.imagesSelected, { count: chosen, pages: count })}</span>
               <span className="organize-tools">
                 <button
+                  ref={selectButton}
                   type="button"
                   className="chip-button"
                   disabled={busy}
@@ -260,35 +277,6 @@ export default function PdfToImagesTool({ t, locale, shared, page }: ToolProps) 
                 </button>
               </span>
             </div>
-            {count > PREVIEWS && <p className="hint">{fill(t.imagesManyPages, { count: PREVIEWS })}</p>}
-            <ol className="page-grid pick-grid" aria-label={t.stepPages}>
-              {selected.map((on, index) => (
-                <li key={index} className={on ? "" : "deleted"}>
-                  <button
-                    type="button"
-                    className="pick"
-                    aria-pressed={on}
-                    aria-label={fill(t.pageLabel, { page: index + 1 })}
-                    disabled={busy}
-                    onClick={() =>
-                      setSelected((current) => current.map((value, at) => (at === index ? !value : value)))
-                    }
-                  >
-                    <span className="page-thumb" aria-hidden="true">
-                      {thumbnails[index] ? (
-                        <img src={thumbnails[index]} alt="" />
-                      ) : (
-                        <span className="page-placeholder">{index + 1}</span>
-                      )}
-                      <span className="pick-mark">{on && <Check size={14} strokeWidth={3} />}</span>
-                    </span>
-                    <span className="page-number" aria-hidden="true">
-                      {fill(t.pageLabel, { page: index + 1 })}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ol>
             <div className="image-options">
               <div className="chips" role="group" aria-label={t.imageFormat}>
                 <span className="option-label" aria-hidden="true">{t.imageFormat}</span>
@@ -322,6 +310,35 @@ export default function PdfToImagesTool({ t, locale, shared, page }: ToolProps) 
               </div>
               <p className="hint">{format === "jpg" ? t.jpgHint : t.pngHint}</p>
             </div>
+            {count > PREVIEWS && <p className="hint">{fill(t.imagesManyPages, { count: PREVIEWS })}</p>}
+            <ol className="page-grid pick-grid" aria-label={t.stepPages}>
+              {selected.map((on, index) => (
+                <li key={index} className={on ? "" : "deleted"}>
+                  <button
+                    type="button"
+                    className="pick"
+                    aria-pressed={on}
+                    aria-label={fill(t.pageLabel, { page: index + 1 })}
+                    disabled={busy}
+                    onClick={() =>
+                      setSelected((current) => current.map((value, at) => (at === index ? !value : value)))
+                    }
+                  >
+                    <span className="page-thumb" aria-hidden="true">
+                      {thumbnails[index] ? (
+                        <img src={thumbnails[index]} alt="" />
+                      ) : (
+                        <span className="page-placeholder">{index + 1}</span>
+                      )}
+                      <span className="pick-mark">{on && <Check size={14} strokeWidth={3} />}</span>
+                    </span>
+                    <span className="page-number" aria-hidden="true">
+                      {fill(t.pageLabel, { page: index + 1 })}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ol>
             {busy ? (
               <div className="processing">
                 <div className="progress-head">
@@ -344,7 +361,7 @@ export default function PdfToImagesTool({ t, locale, shared, page }: ToolProps) 
               </div>
             ) : (
               <div className="organize-save">
-                <button type="button" className="primary" disabled={!chosen} onClick={convert}>
+                <button ref={convertButton} type="button" className="primary" disabled={!chosen} onClick={convert}>
                   {chosen === 1
                     ? fill(t.imagesStartOne, { format: label })
                     : fill(t.imagesStart, { count: chosen, format: label })}
@@ -354,6 +371,9 @@ export default function PdfToImagesTool({ t, locale, shared, page }: ToolProps) 
             )}
           </div>
         )
+      )}
+      {offer && (
+        <OtherToolOffer t={t} locale={locale} files={offer} tool="images-to-pdf" text={t.offerImagesToPdf} />
       )}
       {error && (
         <p className="error" role="alert">
@@ -414,7 +434,12 @@ function ImagesResult({
         <ol className="image-results" aria-label={t.imagesEach}>
           {images.map((image) => (
             <li key={image.page}>
-              <a href={image.url} download={image.name} title={image.name}>
+              <a
+                href={image.url}
+                download={image.name}
+                title={image.name}
+                aria-label={fill(t.imageLinkLabel, { format, page: image.page })}
+              >
                 {thumbnails[image.page - 1] ? (
                   <img src={thumbnails[image.page - 1]} alt="" />
                 ) : (

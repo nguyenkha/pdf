@@ -20,10 +20,18 @@ export function imagesToPdf(
 const IMAGE_NAME = /\.(jpe?g|png|webp|gif|bmp|avif|heic|heif|tiff?)$/i;
 export const isImage = (file: File) => file.type.startsWith("image/") || IMAGE_NAME.test(file.name);
 /**
- * A small upright preview (EXIF orientation applied by the browser), and
- * whether this browser can read the image at all: HEIC only opens in Safari.
+ * A small upright preview (EXIF orientation applied by the browser), which
+ * also tells whether this browser can read the image at all: HEIC only
+ * opens in Safari. Drawn in a worker where OffscreenCanvas exists.
  */
-export async function imagePreview(file: File): Promise<Blob> {
+export function imagePreview(file: File): { promise: Promise<Blob>; cancel: () => void } {
+  if (typeof OffscreenCanvas !== "undefined")
+    return startJob<Blob>({ file, side: 240 }, 60_000, undefined, () =>
+      new Worker(new URL("../../workers/preview.worker.ts", import.meta.url), { type: "module" }),
+    );
+  return { promise: previewHere(file), cancel: () => {} };
+}
+async function previewHere(file: File): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, 240 / Math.max(bitmap.width, bitmap.height));
   const canvas = document.createElement("canvas");
@@ -35,6 +43,17 @@ export async function imagePreview(file: File): Promise<Blob> {
   canvas.width = canvas.height = 0;
   if (!blob) throw new Error("preview");
   return blob;
+}
+/**
+ * Phones and tablets: the photos and the PDF are held in memory together,
+ * about twice their size, which a phone's browser tab may not have.
+ */
+export function smallMemory() {
+  const nav = navigator as Navigator & { userAgentData?: { mobile?: boolean } };
+  return (
+    nav.userAgentData?.mobile ??
+    (/Mobi|Android|iPhone|iPad/i.test(nav.userAgent) || (/Macintosh/.test(nav.userAgent) && nav.maxTouchPoints > 1))
+  );
 }
 // Letter is the paper size in these regions; A4 everywhere else. The time
 // zone has to agree: many people abroad keep an en-US browser.

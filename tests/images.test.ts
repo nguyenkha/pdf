@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { deflateSync } from "node:zlib";
 import { PDFDocument } from "pdf-lib";
 import { crc32 } from "../src/lib/zip";
-import { imagesToPdf, jpegOrientation, stripJpegMetadata } from "../src/engines/images";
+import { imagesToPdf } from "../src/engines/images";
+import { jpegOrientation, stripJpegMetadata, stripPngMetadata } from "../src/engines/metadata";
 import { renderScale } from "../src/engines/validate";
 import { imageName } from "../src/tools/pdf-to-images/run";
 
@@ -78,7 +79,7 @@ describe("JPEG metadata", () => {
       ...segment(0xe2, "ICC_PROFILE\0sRGB"),
       ...segment(0xe2, "MPF\0extra image"),
       ...segment(0xed, "IPTC"),
-      ...segment(0xee, "Adobe"),
+      ...segment(0xee, "Adobe\0d\0\0\0\0\x01"),
       ...segment(0xfe, "comment"),
       ...segment(0xdb, "quant"),
       ...scan,
@@ -111,10 +112,49 @@ describe("JPEG metadata", () => {
     expect(Array.from(out.slice(2, 20))).toEqual([...jfif.slice(0, 2), 0, 16, ...jfif.slice(4, 16), 0, 0]);
     expect(out.length).toBe(2 + 18 + scan.length + 2);
   });
+  it("keeps only image segments: reserved markers and padded Adobe data are dropped", () => {
+    const adobe = [...new TextEncoder().encode("Adobe"), 0, 100, 0, 0, 0, 0, 1];
+    const out = stripJpegMetadata(new Uint8Array([
+      0xff, 0xd8,
+      ...segment(0xf1, "SECRET jpg1"),
+      ...segment(0x02, "SECRET reserved"),
+      0xff, 0xee, 0, 2 + adobe.length + 6, ...adobe, ...new TextEncoder().encode("SECRET"),
+      ...segment(0xc4, "huffman"),
+      ...scan,
+      0xff, 0xd9,
+    ]));
+    expect(latin(out)).not.toContain("SECRET");
+    expect(latin(out)).toContain("huffman");
+    expect(Array.from(out.slice(2, 18))).toEqual([0xff, 0xee, 0, 14, ...adobe]);
+  });
   it("throws on files it cannot follow, so they are redrawn", () => {
     expect(() => stripJpegMetadata(new Uint8Array([0xff, 0xd8, 0xff, 0xe1, 0x10, 0x00, 1, 2]))).toThrow();
     expect(() => stripJpegMetadata(new Uint8Array([0xff, 0xd8, ...scan]))).toThrow();
     expect(() => stripJpegMetadata(new Uint8Array([0xff, 0xd8, 0x00, 0x01]))).toThrow();
+  });
+});
+describe("PNG metadata", () => {
+  it("drops text, EXIF and time chunks but keeps the picture", () => {
+    const source = png(4, 4);
+    const chunk = (type: string, text: string) => {
+      const data = new TextEncoder().encode(text);
+      const out = new Uint8Array(12 + data.length);
+      new DataView(out.buffer).setUint32(0, data.length);
+      out.set(new TextEncoder().encode(type), 4);
+      out.set(data, 8);
+      return out;
+    };
+    // After the 8-byte signature and the 25-byte IHDR chunk.
+    const withText = new Uint8Array([
+      ...source.subarray(0, 33),
+      ...chunk("tEXt", "Author SECRET"),
+      ...chunk("eXIf", "GPS SECRET"),
+      ...chunk("tIME", "SECRET"),
+      ...source.subarray(33),
+    ]);
+    const out = stripPngMetadata(withText);
+    expect(new TextDecoder("latin1").decode(out)).not.toContain("SECRET");
+    expect(Array.from(out)).toEqual(Array.from(source));
   });
 });
 describe("images to PDF", () => {

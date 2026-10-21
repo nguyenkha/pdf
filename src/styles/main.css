@@ -508,6 +508,18 @@ main {
   background: var(--track);
   font-size: 11px;
 }
+/* Longer step names ("Choose images") wrap instead of running into the next. */
+@media (max-width: 420px) {
+  .steps {
+    gap: 6px;
+    font-size: 11.5px;
+    line-height: 1.25;
+  }
+  .steps li {
+    gap: 5px;
+    overflow-wrap: anywhere;
+  }
+}
 .steps .current span,
 .steps .done span {
   background: var(--accent);
@@ -852,6 +864,9 @@ input[type="number"],
   flex: 1;
   font-size: 13px;
   color: var(--text);
+}
+.other-tool {
+  margin: 12px 0 0;
 }
 .suggestion .secondary {
   width: auto;

@@ -1,12 +1,5 @@
-import {
-  imagesToPdf,
-  isJpeg,
-  isPng,
-  jpegOrientation,
-  stripJpegMetadata,
-  type ImageSource,
-  type PageSize,
-} from "../engines/images";
+import { imagesToPdf, type ImageSource, type PageSize } from "../engines/images";
+import { cleanCanvasImage, isJpeg, isPng, jpegOrientation, stripJpegMetadata } from "../engines/metadata";
 
 type Item = { file: File; rotate: number };
 // Photos in other formats (WebP, HEIC where the browser reads it, GIF, BMP,
@@ -28,7 +21,10 @@ async function redraw(file: File, index: number): Promise<ImageSource> {
   }
   context.drawImage(bitmap, 0, 0);
   bitmap.close();
-  const blob = await canvas.convertToBlob(flat ? { type: "image/png" } : { type: "image/jpeg", quality: 0.92 });
+  // Safari writes a small EXIF block into canvas JPEGs; it is cut like any other.
+  const blob = await cleanCanvasImage(
+    await canvas.convertToBlob(flat ? { type: "image/png" } : { type: "image/jpeg", quality: 0.92 }),
+  );
   canvas.width = canvas.height = 0;
   return { bytes: new Uint8Array(await blob.arrayBuffer()), kind: flat ? "png" : "jpg", orientation: 1, rotate: 0 };
 }

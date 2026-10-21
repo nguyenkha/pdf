@@ -3,15 +3,16 @@ import { ArrowDownAZ, ChevronLeft, ChevronRight, ImageOff, RotateCcw, RotateCw, 
 import type { ToolProps } from "../../app/tools";
 import type { Messages } from "../../i18n";
 import { fill } from "../../i18n/fill";
-import { formatSize } from "../../lib/pdf";
+import { formatSize, validateFile } from "../../lib/pdf";
 import type { PageSize } from "../../engines/images";
 import { FileDropZone } from "../../components/FileDropZone";
 import { Steps } from "../../components/Steps";
 import { Outcome } from "../../components/Outcome";
 import { ResultActions } from "../../components/ResultActions";
 import { NextSteps } from "../../components/NextSteps";
+import { OtherToolOffer } from "../../components/OtherToolOffer";
 import { takeSharedFiles } from "../../lib/handOver";
-import { defaultPageSize, imagePreview, imagesToPdf, isImage } from "./run";
+import { defaultPageSize, imagePreview, imagesToPdf, isImage, smallMemory } from "./run";
 import "../organize/organize.css";
 import "../pdf-to-images/images.css";
 
@@ -24,13 +25,20 @@ type Item = {
   unreadable?: boolean;
 };
 const MAX_IMAGES = 100;
-// Above this the images and the PDF may not fit a phone's memory together.
+// Above this the images and the PDF may not fit a phone's memory together:
+// a warning on computers, a limit on phones and tablets.
 const LARGE_TOTAL = 150 * 1024 * 1024;
+const PHONE_LIMIT = 250 * 1024 * 1024;
 // Plain image/*: iPhones then hand over HEIC photos as JPG, which every browser reads.
 const ACCEPT = "image/*";
 const SIZES: PageSize[] = ["a4", "letter", "fit"];
 let nextId = 0;
-const pdfName = (first: File) => first.name.replace(/\.[^.]+$/, "") + ".pdf";
+// Camera names (IMG_20261021_143002, PXL_...) carry the time the photo was
+// taken, which the PDF otherwise leaves out.
+const pdfName = (first: File) => {
+  const stem = first.name.replace(/\.[^.]+$/, "");
+  return (/(19|20)\d{6}/.test(stem) ? "images" : stem) + ".pdf";
+};
 /** Photos and scans into one PDF, a page per image, in the order arranged. */
 export default function ImagesToPdfTool({ t, locale, shared }: ToolProps) {
   const [items, setItems] = useState<Item[]>([]);
@@ -40,8 +48,11 @@ export default function ImagesToPdfTool({ t, locale, shared }: ToolProps) {
   const [result, setResult] = useState<{ blob: Blob; pages: number }>();
   const [dragging, setDragging] = useState<number>();
   const [descending, setDescending] = useState(false);
+  // PDFs dropped here: offered to PDF to image instead.
+  const [offer, setOffer] = useState<File[]>();
+  const area = useRef<HTMLDivElement>(null);
   const job = useRef<{ cancel: () => void } | undefined>(undefined);
-  const previewing = useRef<number | undefined>(undefined);
+  const previewing = useRef<{ id: number; cancel: () => void } | undefined>(undefined);
   const mounted = useRef(true);
   const live = useRef(items);
   live.current = items;
@@ -54,6 +65,7 @@ export default function ImagesToPdfTool({ t, locale, shared }: ToolProps) {
     () => () => {
       mounted.current = false;
       job.current?.cancel();
+      previewing.current?.cancel();
       live.current.forEach((item) => item.preview && URL.revokeObjectURL(item.preview));
     },
     [],
@@ -63,8 +75,9 @@ export default function ImagesToPdfTool({ t, locale, shared }: ToolProps) {
     if (previewing.current !== undefined) return;
     const next = items.find((item) => !item.preview && !item.unreadable);
     if (!next) return;
-    previewing.current = next.id;
-    imagePreview(next.file)
+    const run = imagePreview(next.file);
+    previewing.current = { id: next.id, cancel: run.cancel };
+    run.promise
       .then(
         (blob) => {
           // A preview finishing after the tool closed gets no URL to leak.
@@ -93,17 +106,26 @@ export default function ImagesToPdfTool({ t, locale, shared }: ToolProps) {
     setError("");
     setResult(undefined);
     const images = files.filter(isImage);
-    if (images.length < files.length) setError(t.imagesInvalid);
+    const pdfs = files.filter((file) => !isImage(file) && !validateFile(file));
+    setOffer(pdfs.length && !images.length ? pdfs : undefined);
+    if (images.length < files.length && images.length) setError(t.imagesInvalid);
+    else if (!images.length && !pdfs.length) setError(t.imagesInvalid);
     const room = MAX_IMAGES - live.current.length;
     if (images.length > room) setError(fill(t.imagesTooMany, { count: MAX_IMAGES }));
     const added = images.slice(0, room).map((file) => ({ id: nextId++, file, rotate: 0 }));
     setItems((current) => [...current, ...added]);
   }
-  function remove(id: number) {
+  function remove(id: number, index: number) {
     setItems((current) => {
       const gone = current.find((item) => item.id === id);
       if (gone?.preview) URL.revokeObjectURL(gone.preview);
       return current.filter((item) => item.id !== id);
+    });
+    // Keyboard focus moves to the next image's remove button, or to adding more.
+    requestAnimationFrame(() => {
+      const buttons = area.current?.querySelectorAll<HTMLElement>("[data-remove]");
+      const next = buttons?.[Math.min(index, buttons.length - 1)];
+      (next ?? area.current?.querySelector<HTMLElement>("input[type=file]"))?.focus();
     });
   }
   function move(from: number, to: number) {
@@ -129,6 +151,12 @@ export default function ImagesToPdfTool({ t, locale, shared }: ToolProps) {
     setResult(undefined);
     setProgress(undefined);
     setError("");
+    setOffer(undefined);
+  }
+  function cancel() {
+    job.current?.cancel();
+    job.current = undefined;
+    setProgress(undefined);
   }
   async function create() {
     setError("");
@@ -160,7 +188,8 @@ export default function ImagesToPdfTool({ t, locale, shared }: ToolProps) {
     }
   }
   const usable = items.filter((item) => !item.unreadable).length;
-  const total = items.reduce((sum, item) => sum + item.file.size, 0);
+  const total = items.reduce((sum, item) => sum + (item.unreadable ? 0 : item.file.size), 0);
+  const tooLarge = total > PHONE_LIMIT && smallMemory();
   const busy = progress !== undefined;
   const step = result ? 3 : items.length ? 2 : 1;
   const sizeLabel = (value: PageSize) =>
@@ -175,12 +204,14 @@ export default function ImagesToPdfTool({ t, locale, shared }: ToolProps) {
           blob={result.blob}
           name={pdfName(items[0].file)}
           pages={result.pages}
+          onBack={() => setResult(undefined)}
           onReset={reset}
         />
       ) : !items.length ? (
         <FileDropZone t={t} onSelect={add} title={t.imagesDrop} hint={t.imagesHint} accept={ACCEPT} />
       ) : (
         <div
+          ref={area}
           className="organize from-images"
           onDragOver={(event) => {
             if (event.dataTransfer.types.includes("Files")) event.preventDefault();
@@ -192,13 +223,29 @@ export default function ImagesToPdfTool({ t, locale, shared }: ToolProps) {
           }}
         >
           <div className="merge-toolbar">
-            <span>{fill(t.imagesCount, { count: items.length })}</span>
+            <span>{fill(t.imagesCount, { count: usable })}</span>
             <span className="organize-tools">
               <button type="button" className="chip-button" onClick={sortByName} disabled={busy || items.length < 2}>
                 <ArrowDownAZ size={15} aria-hidden="true" />
                 {t.sortByName}
               </button>
             </span>
+          </div>
+          <div className="image-options">
+            <div className="chips" role="group" aria-label={t.pageSize}>
+              <span className="option-label" aria-hidden="true">{t.pageSize}</span>
+              {SIZES.map((value) => (
+                <button
+                  type="button"
+                  key={value}
+                  aria-pressed={size === value}
+                  disabled={busy}
+                  onClick={() => setSize(value)}
+                >
+                  {sizeLabel(value)}
+                </button>
+              ))}
+            </div>
           </div>
           <ol className="page-grid" aria-label={t.stepOrder}>
             {items.map((item, index) => (
@@ -259,8 +306,9 @@ export default function ImagesToPdfTool({ t, locale, shared }: ToolProps) {
                     type="button"
                     className="icon-button"
                     aria-label={fill(t.removeNamed, { name: item.file.name })}
+                    data-remove
                     disabled={busy}
-                    onClick={() => remove(item.id)}
+                    onClick={() => remove(item.id, index)}
                   >
                     <X size={16} />
                   </button>
@@ -279,23 +327,11 @@ export default function ImagesToPdfTool({ t, locale, shared }: ToolProps) {
           </ol>
           {!busy && <FileDropZone t={t} onSelect={add} title={t.imagesAddMore} compact accept={ACCEPT} />}
           {items.some((item) => item.unreadable) && <p className="warning">{t.imagesSkipped}</p>}
-          {total > LARGE_TOTAL && <p className="warning">{t.imagesLarge}</p>}
-          <div className="image-options">
-            <div className="chips" role="group" aria-label={t.pageSize}>
-              <span className="option-label" aria-hidden="true">{t.pageSize}</span>
-              {SIZES.map((value) => (
-                <button
-                  type="button"
-                  key={value}
-                  aria-pressed={size === value}
-                  disabled={busy}
-                  onClick={() => setSize(value)}
-                >
-                  {sizeLabel(value)}
-                </button>
-              ))}
-            </div>
-          </div>
+          {tooLarge ? (
+            <p className="warning">{t.imagesTooLarge}</p>
+          ) : (
+            total > LARGE_TOTAL && <p className="warning">{t.imagesLarge}</p>
+          )}
           {busy ? (
             <div className="processing">
               <div className="progress-head">
@@ -312,15 +348,21 @@ export default function ImagesToPdfTool({ t, locale, shared }: ToolProps) {
               >
                 <span style={{ width: `${Math.floor((progress ?? 0) * 100)}%` }} />
               </div>
+              <button type="button" className="link-button" onClick={cancel}>
+                {t.cancel}
+              </button>
             </div>
           ) : (
             <div className="organize-save">
-              <button type="button" className="primary" disabled={!usable} onClick={create}>
+              <button type="button" className="primary" disabled={!usable || tooLarge} onClick={create}>
                 {usable === 1 ? t.imagesCreateOne : fill(t.imagesCreate, { count: usable })}
               </button>
             </div>
           )}
         </div>
+      )}
+      {offer && (
+        <OtherToolOffer t={t} locale={locale} files={offer} tool="pdf-to-images" text={t.offerPdfToImages} />
       )}
       {error && (
         <p className="error" role="alert">
@@ -336,6 +378,7 @@ function ImagesPdfResult({
   blob,
   name,
   pages,
+  onBack,
   onReset,
 }: {
   t: Messages;
@@ -343,6 +386,7 @@ function ImagesPdfResult({
   blob: Blob;
   name: string;
   pages: number;
+  onBack: () => void;
   onReset: () => void;
 }) {
   return (
@@ -361,6 +405,11 @@ function ImagesPdfResult({
           { tool: "merge", label: t.mergeWithOthers },
         ]}
       />
+      <p className="next-steps">
+        <button type="button" onClick={onBack}>
+          {t.imagesPdfBack}
+        </button>
+      </p>
       <button type="button" className="link-button" onClick={onReset}>
         <RotateCcw size={15} aria-hidden="true" />
         {t.imagesPdfAnother}

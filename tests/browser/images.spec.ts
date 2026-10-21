@@ -269,12 +269,43 @@ test.describe("JPG to PDF", () => {
     await expect(page.getByRole("heading", { name: "PDF created" })).toBeVisible({ timeout: 60000 });
     await expect(page.locator(".outcome p")).toContainText("1 pages");
   });
-  test("rejects non-image files", async ({ page }) => {
+  test("offers the other tool for files of the wrong kind, and goes back from the result", async ({ page, browserName }) => {
+    test.setTimeout(90000);
     await page.goto("/en/jpg-to-pdf/");
+    await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+    await page.reload();
     await page.locator("input[type=file]").setInputFiles("tests/fixtures/text-vector.pdf");
-    await expect(page.getByText("Some files were not images and were left out.")).toBeVisible();
+    await expect(page.getByText("That's a PDF. To turn its pages into images, use PDF to image.")).toBeVisible();
+    // The PDF goes along, already chosen (hand-over needs a service worker).
+    if (browserName === "chromium") {
+      await page.getByRole("button", { name: "PDF to image" }).last().click();
+      await expect(page).toHaveURL(/\/en\/pdf-to-jpg\//);
+      await expect(page.locator(".file-details strong")).toHaveText("text-vector.pdf", { timeout: 30000 });
+    }
+    await page.goto("/en/pdf-to-jpg/");
+    await page.locator("input[type=file]").setInputFiles({ name: "photo.png", mimeType: "image/png", buffer: await photo(page, "image/png", 40, 30) });
+    await expect(page.getByText("Those are images. To put them into a PDF, use Image to PDF.")).toBeVisible();
+    // Camera-style names carry the capture time: the PDF gets a neutral one.
+    await page.goto("/en/jpg-to-pdf/");
+    await page.locator("input[type=file]").setInputFiles({ name: "PXL_20261021_143002123.png", mimeType: "image/png", buffer: await photo(page, "image/png", 40, 30) });
+    await page.getByRole("button", { name: "Create PDF", exact: true }).click();
+    const download = page.waitForEvent("download");
+    await page.getByRole("link", { name: "Download PDF" }).click();
+    expect((await download).suggestedFilename()).toBe("images.pdf");
+    await page.getByRole("button", { name: "Change order or page size" }).click();
+    await expect(page.locator(".page-grid li")).toHaveCount(1);
+  });
+  test("keyboard focus stays in the list after removing an image", async ({ page }) => {
+    await page.goto("/en/jpg-to-pdf/");
+    await page.locator("input[type=file]").setInputFiles(
+      ["a.png", "b.png"].map((name) => ({ name, mimeType: "image/png", buffer: Buffer.from(PNG_1X1, "base64") })),
+    );
+    await page.getByRole("button", { name: "Remove a.png" }).click();
+    await expect(page.getByRole("button", { name: "Remove b.png" })).toBeFocused();
   });
 });
+const PNG_1X1 =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 
 test("landing pages run the same tools with their own words and link each other", async ({ page }) => {
   await page.goto("/en/pdf-to-png/");
