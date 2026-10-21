@@ -17,7 +17,6 @@ async function readText(image: Buffer) {
   }
 }
 
-
 /** Entries of a store-only ZIP, as zipBlobs writes them. */
 function unzip(bytes: Buffer) {
   const entries: { name: string; data: Buffer }[] = [];
@@ -275,4 +274,24 @@ test.describe("JPG to PDF", () => {
     await page.locator("input[type=file]").setInputFiles("tests/fixtures/text-vector.pdf");
     await expect(page.getByText("Some files were not images and were left out.")).toBeVisible();
   });
+});
+
+test("landing pages run the same tools with their own words and link each other", async ({ page }) => {
+  await page.goto("/en/pdf-to-png/");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Convert PDF to PNG without uploading");
+  await expect(page.locator(".tool-switcher > a")).toHaveText("PDF to image");
+  await page.locator("input[type=file]").setInputFiles("tests/fixtures/text-vector.pdf");
+  // PNG is already chosen on the PNG page.
+  await expect(page.getByRole("button", { name: "PNG", exact: true })).toHaveAttribute("aria-pressed", "true");
+  const related = page.getByRole("navigation", { name: "Related" });
+  await expect(related.getByRole("link", { name: "PDF to PNG" })).toHaveAttribute("aria-current", "page");
+  await expect(related.getByRole("link")).toHaveText(["PDF to JPG", "PDF to PNG", "PDF to image", "JPG to PDF", "PNG to PDF", "Image to PDF"]);
+  // Crawlers get the same links without running the app.
+  const html = await (await page.request.get("/vi/png-to-pdf/")).text();
+  for (const slug of ["jpg-to-pdf", "image-to-pdf", "pdf-to-jpg", "pdf-to-png", "pdf-to-image"])
+    expect(html).toContain(`href="/vi/${slug}/"`);
+  expect(html).toContain('<link rel="canonical" href="https://pdf.kha.do/vi/png-to-pdf/"');
+  await page.goto("/en/png-to-pdf/");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Convert PNG to PDF without uploading");
+  await expect(page.locator("input[type=file]")).toHaveAttribute("accept", "image/*");
 });

@@ -260,7 +260,7 @@ test("tool switcher shows the tool in use and the rest behind +", async ({ page 
   const phone = await page.evaluate(() => matchMedia("(max-width: 680px)").matches);
   if (phone) await expect(more).toBeVisible();
   else await expect(more).toBeHidden();
-  await expect(switcher.locator(".tool-more-list a")).toHaveText(["Merge PDF", "PDF to Markdown", "Organize PDF pages", "JPG to PDF", "PDF to JPG"]);
+  await expect(switcher.locator(".tool-more-list a")).toHaveText(["Merge PDF", "PDF to Markdown", "Organize PDF pages", "Image to PDF", "PDF to image"]);
   await page.keyboard.press("Escape");
   await expect(switcher.getByRole("link", { name: "Merge PDF" })).toBeHidden();
   await expect(more).toBeVisible();

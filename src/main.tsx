@@ -15,7 +15,7 @@ import { metadata } from "./i18n/metadata";
 // Loaded eagerly (~9 KB gzip): a lazy fallback swapped for the full card
 // shifted the page below it (Lighthouse CLS 0.22).
 import CompressTool from "./tools/compress/CompressTool";
-import { pageFromPath, toolFromPath, type ToolProps } from "./app/tools";
+import { pageFromPath, relatedPages, toolFromPath, type ToolProps } from "./app/tools";
 import { faqFor } from "./app/faq";
 import { ToolSwitcher } from "./components/ToolSwitcher";
 import { ToolsMenu } from "./components/ToolsMenu";
@@ -224,7 +224,13 @@ function App({
           <div id="tool">
             <ToolSwitcher t={t} locale={locale} active={activeTool} />
             <Suspense fallback={<section className="tool-card placeholder" />}>
-              <ToolComponent t={t} locale={locale} preset={preset} shared={shared} />
+              <ToolComponent
+                t={t}
+                locale={locale}
+                preset={preset}
+                shared={shared}
+                page={activePage === activeTool ? undefined : activePage.id}
+              />
             </Suspense>
           </div>
           <div className="content" id="about">
@@ -258,6 +264,21 @@ function App({
               {t.privacyMore} →
             </a>
           </section>
+          {/* The same tool under other names ("PNG to PDF"), and its reverse. */}
+          {!home && relatedPages(activeTool).length > 0 && (
+            <nav className="sizes related" aria-label={t.relatedPages}>
+              <span>{t.relatedPages}:</span>
+              {relatedPages(activeTool).map((page) => (
+                <a
+                  key={page.slug}
+                  href={`/${locale}/${page.slug}/`}
+                  aria-current={page.slug === activePage.slug ? "page" : undefined}
+                >
+                  {t[`${page.nameKey}Short` as keyof Messages]}
+                </a>
+              ))}
+            </nav>
+          )}
           {/* Plain links for the size pages: useful to crawlers, quiet for people. */}
           {home && (
         <nav className="sizes" aria-label={t.sizesTitle}>

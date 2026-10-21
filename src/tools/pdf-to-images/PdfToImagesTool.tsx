@@ -26,12 +26,12 @@ const RESOLUTIONS = { standard: 150, high: 300 } as const;
 type Resolution = keyof typeof RESOLUTIONS;
 type Image = { page: number; name: string; blob: Blob; url: string };
 /** Pages of one PDF as JPG or PNG images, drawn on this device. */
-export default function PdfToImagesTool({ t, locale, shared }: ToolProps) {
+export default function PdfToImagesTool({ t, locale, shared, page }: ToolProps) {
   const [file, setFile] = useState<File>();
   const [count, setCount] = useState<number>();
   const [selected, setSelected] = useState<boolean[]>([]);
   const [thumbnails, setThumbnails] = useState<string[]>([]);
-  const [format, setFormat] = useState<ImageFormat>("jpg");
+  const [format, setFormat] = useState<ImageFormat>(page === "pdf-to-png" ? "png" : "jpg");
   const [resolution, setResolution] = useState<Resolution>("standard");
   const [locked, setLocked] = useState(false);
   const [unlocking, setUnlocking] = useState(false);
