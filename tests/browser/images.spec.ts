@@ -275,16 +275,16 @@ test.describe("JPG to PDF", () => {
     await page.evaluate(async () => { await navigator.serviceWorker.ready; });
     await page.reload();
     await page.locator("input[type=file]").setInputFiles("tests/fixtures/text-vector.pdf");
-    await expect(page.getByText("That's a PDF. To turn its pages into images, use PDF to image.")).toBeVisible();
+    await expect(page.getByText("That's a PDF. Turn its pages into images instead?")).toBeVisible();
     // The PDF goes along, already chosen (hand-over needs a service worker).
     if (browserName === "chromium") {
-      await page.getByRole("button", { name: "PDF to image" }).last().click();
+      await page.getByRole("button", { name: "PDF → image" }).click();
       await expect(page).toHaveURL(/\/en\/pdf-to-jpg\//);
       await expect(page.locator(".file-details strong")).toHaveText("text-vector.pdf", { timeout: 30000 });
     }
     await page.goto("/en/pdf-to-jpg/");
     await page.locator("input[type=file]").setInputFiles({ name: "photo.png", mimeType: "image/png", buffer: await photo(page, "image/png", 40, 30) });
-    await expect(page.getByText("Those are images. To put them into a PDF, use Image to PDF.")).toBeVisible();
+    await expect(page.getByText("Those are images. Put them into a PDF instead?")).toBeVisible();
     // Camera-style names carry the capture time: the PDF gets a neutral one.
     await page.goto("/en/jpg-to-pdf/");
     await page.locator("input[type=file]").setInputFiles({ name: "PXL_20261021_143002123.png", mimeType: "image/png", buffer: await photo(page, "image/png", 40, 30) });
@@ -310,13 +310,13 @@ const PNG_1X1 =
 test("landing pages run the same tools with their own words and link each other", async ({ page }) => {
   await page.goto("/en/pdf-to-png/");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Convert PDF to PNG without uploading");
-  await expect(page.locator(".tool-switcher > a")).toHaveText("PDF to image");
+  await expect(page.locator(".tool-switcher > a")).toHaveText("PDF → image");
   await page.locator("input[type=file]").setInputFiles("tests/fixtures/text-vector.pdf");
   // PNG is already chosen on the PNG page.
   await expect(page.getByRole("button", { name: "PNG", exact: true })).toHaveAttribute("aria-pressed", "true");
   const related = page.getByRole("navigation", { name: "Related" });
-  await expect(related.getByRole("link", { name: "PDF to PNG" })).toHaveAttribute("aria-current", "page");
-  await expect(related.getByRole("link")).toHaveText(["PDF to JPG", "PDF to PNG", "PDF to image", "JPG to PDF", "PNG to PDF", "Image to PDF"]);
+  await expect(related.getByRole("link", { name: "PDF → PNG" })).toHaveAttribute("aria-current", "page");
+  await expect(related.getByRole("link")).toHaveText(["PDF → JPG", "PDF → PNG", "PDF → image", "JPG → PDF", "PNG → PDF", "Image → PDF"]);
   // Crawlers get the same links without running the app.
   const html = await (await page.request.get("/vi/png-to-pdf/")).text();
   for (const slug of ["jpg-to-pdf", "image-to-pdf", "pdf-to-jpg", "pdf-to-png", "pdf-to-image"])

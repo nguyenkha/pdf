@@ -1775,13 +1775,33 @@ footer a:hover {
 [dir="rtl"] .next-steps svg {
   transform: scaleX(-1);
 }
-/* Desktop: the panel is invisible structure; its tools continue the row. */
-.tool-more-panel,
-.tool-more-sheet,
-.tool-more-list {
-  display: contents;
+/* Desktop: the other tools float in a panel under the row, over the page,
+   so opening it never pushes the tool below down, whatever the language. */
+.tool-switcher {
+  position: relative;
+}
+.tool-more-panel:not([hidden]) {
+  position: absolute;
+  top: calc(100% + 6px);
+  inset-inline-start: 0;
+  z-index: 20;
+  display: block;
+}
+.tool-more-sheet {
+  width: max-content;
+  max-width: min(680px, calc(100vw - 32px));
+  padding: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.14);
 }
 .tool-more-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
   list-style: none;
 }
 .tool-more-panel[hidden],
@@ -1810,6 +1830,9 @@ footer a:hover {
     inset-inline: 0;
     bottom: 0;
     display: block;
+    width: auto;
+    max-width: none;
+    border: 0;
     padding: 10px 16px calc(18px + env(safe-area-inset-bottom));
     background: var(--surface);
     border-top: 1px solid var(--border);

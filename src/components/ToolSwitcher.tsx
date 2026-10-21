@@ -4,9 +4,9 @@ import { fill } from "../i18n/fill";
 import type { Messages } from "../i18n";
 import { availableTools, type Tool } from "../app/tools";
 /**
- * The tool in use, then a "+" that unfolds the others in the same row: on
- * hover where there is a mouse, on tap or keyboard everywhere. One choice in
- * view until someone looks for more.
+ * The tool in use, then a "+" that unfolds the others in a panel under the
+ * row: on hover where there is a mouse, on tap or keyboard everywhere. One
+ * choice in view until someone looks for more.
  */
 export function ToolSwitcher({
   t,
@@ -120,8 +120,6 @@ export function ToolSwitcher({
         ref={button}
         className="tool-more-button"
         aria-expanded={open}
-        // Once the others are out, + has done its job: they take its place.
-        hidden={shown}
         // A brief pause, so a pointer just passing over does not unfold it.
         onMouseEnter={() => {
           if (hover() && !keyboard.current) enter.current = setTimeout(() => setOpen(true), 90);
@@ -135,7 +133,8 @@ export function ToolSwitcher({
           clearTimeout(enter.current);
           cancelRefocus();
           keyboard.current = true;
-          setOpen(true);
+          // + stays in view while the panel is open, so it closes it too.
+          setOpen(!open);
         }}
         onKeyUp={(event) => {
           if (event.key === " ") event.preventDefault();
@@ -144,15 +143,16 @@ export function ToolSwitcher({
           clearTimeout(enter.current);
           // detail is 0 for clicks synthesised by assistive technology.
           if (event.detail === 0) keyboard.current = true;
-          setOpen(true);
+          // With a mouse, hovering has opened it already: a click keeps it open.
+          setOpen(!open || hover());
         }}
       >
         <Plus size={16} aria-hidden="true" />
         {/* Says there is more, and how much, in the space of one chip. */}
         {fill(t.moreTools, { count: others.length })}
       </button>
-      {/* On phones this is a sheet from the bottom over a dimmed page; with a
-          mouse the tools simply continue the row. */}
+      {/* On phones this is a sheet from the bottom over a dimmed page; on
+          larger screens a panel floating under the row. */}
       <div className="tool-more-panel" hidden={!shown} data-state={open ? "open" : "closing"}>
         <div className="tool-more-backdrop" aria-hidden="true" onClick={() => setOpen(false)} />
         <div className="tool-more-sheet">
