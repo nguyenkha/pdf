@@ -20,6 +20,8 @@ const LANDINGS = [
   { id: "image-to-pdf", slug: "image-to-pdf", nameKey: "toolImageToPdf", tool: "images-to-pdf" },
   { id: "pdf-to-png", slug: "pdf-to-png", nameKey: "toolPdfToPng", tool: "pdf-to-images" },
   { id: "pdf-to-image", slug: "pdf-to-image", nameKey: "toolPdfToImage", tool: "pdf-to-images" },
+  { id: "pdf-to-text", slug: "pdf-to-text", nameKey: "toolPdfToText", tool: "markdown" },
+  { id: "ocr-pdf", slug: "ocr-pdf", nameKey: "toolOcrPdf", tool: "markdown" },
 ];
 // Mirrors relatedPages in src/app/tools.ts: a tool's pages plus its reverse tool's.
 const RELATED = { "images-to-pdf": ["pdf-to-images"], "pdf-to-images": ["images-to-pdf"] };

@@ -6,6 +6,7 @@ import type { Messages } from "../../i18n";
 import { fill } from "../../i18n/fill";
 import { validateFile } from "../../lib/pdf";
 import { safeEntryName, zipBlobs } from "../../lib/zip";
+import { markdownToText } from "./plain";
 import { FileDropZone } from "../../components/FileDropZone";
 import { FileInformation } from "../../components/FileInformation";
 import { Steps } from "../../components/Steps";
@@ -69,7 +70,10 @@ function countWords(markdown: string, locale: string) {
   return count;
 }
 /** One PDF's text layer to Markdown, converted as soon as a file is chosen. */
-export default function MarkdownTool({ t, locale }: ToolProps) {
+// Landing pages for people who want the text itself: plain .txt first.
+const TEXT_PAGES = new Set(["pdf-to-text", "ocr-pdf"]);
+export default function MarkdownTool({ t, locale, page }: ToolProps) {
+  const plain = TEXT_PAGES.has(page ?? "");
   const [file, setFile] = useState<File>();
   const [options, setOptions] = useState<ConversionOptions>(defaultOptions);
   const [result, setResult] = useState<Result>();
@@ -325,6 +329,7 @@ export default function MarkdownTool({ t, locale }: ToolProps) {
             file={file}
             result={result}
             options={options}
+            plain={plain}
             updating={updating}
             onOptions={update}
             onReset={reset}
@@ -349,6 +354,7 @@ function MarkdownResult({
   file,
   result,
   options,
+  plain,
   updating,
   onOptions,
   onReset,
@@ -359,6 +365,8 @@ function MarkdownResult({
   file: File;
   result: Result;
   options: ConversionOptions;
+  /** The text without Markdown: a .txt, copied and shown as is. */
+  plain: boolean;
   updating: boolean;
   onOptions: (next: ConversionOptions) => void;
   onReset: () => void;
@@ -376,6 +384,8 @@ function MarkdownResult({
     () => new Blob([result.markdown], { type: "text/markdown;charset=utf-8" }),
     [result.markdown],
   );
+  const text = useMemo(() => (plain ? markdownToText(result.markdown) : ""), [plain, result.markdown]);
+  const textFile = useMemo(() => new Blob([text], { type: "text/plain;charset=utf-8" }), [text]);
   // Images and tables travel with the Markdown in one archive.
   const bundled = result.images.length > 0 || result.tables.length > 0;
   useEffect(() => {
@@ -411,7 +421,7 @@ function MarkdownResult({
   }, [copy, view]);
   async function copyMarkdown() {
     try {
-      await navigator.clipboard.writeText(result.markdown);
+      await navigator.clipboard.writeText(plain ? text : result.markdown);
       setCopy("done");
     } catch {
       setView("source");
@@ -423,7 +433,8 @@ function MarkdownResult({
   const stats = [
     [t.mdStatHeadings, result.headings],
     [t.mdStatTables, result.tables.length],
-    [t.mdStatImages, result.images.length],
+    // The .txt has no images; they come with the Markdown.
+    [t.mdStatImages, plain ? 0 : result.images.length],
     [t.mdStatLinks, result.linkCount],
     [t.mdStatLists, result.listCount],
     [t.mdStatNotes, result.noteCount],
@@ -441,24 +452,25 @@ function MarkdownResult({
   // With images the archive is the complete result; the .md alone would miss them.
   const withImages = result.images.length > 0;
   const primary = withImages ? zip : markdown;
-  const shown = comparing ? result.pageMarkdowns[page - 1] : result.markdown;
+  const shownMarkdown = comparing ? result.pageMarkdowns[page - 1] : result.markdown;
+  const shown = plain ? (comparing ? markdownToText(shownMarkdown) : text) : shownMarkdown;
   return (
     <div className="result md-result" aria-live="polite">
       <Outcome
         title={fill(t.mdDoneTitle, { pages })}
         detail={[fill(t.mdWords, { count: number.format(countWords(result.markdown, locale)) }), ...stats].join(" · ")}
       />
-      {primary && (
+      {(plain || primary) && (
         <ResultActions
           t={t}
-          blob={primary}
-          name={withImages ? `${base}.zip` : `${base}.md`}
-          download={withImages ? t.downloadZip : t.downloadMarkdown}
+          blob={plain ? textFile : primary!}
+          name={plain ? `${base}.txt` : withImages ? `${base}.zip` : `${base}.md`}
+          download={plain ? t.downloadText : withImages ? t.downloadZip : t.downloadMarkdown}
           preview={false}
         >
           <button type="button" className="secondary" onClick={copyMarkdown}>
             <Copy size={18} aria-hidden="true" />
-            {t.copyMarkdown}
+            {plain ? t.copyText : t.copyMarkdown}
           </button>
           <button
             type="button"
@@ -473,11 +485,20 @@ function MarkdownResult({
       )}
       {copy !== "idle" && (
         <p className="result-note" role="status">
-          {copy === "done" ? t.mdCopied : t.mdCopyFailed}
+          {copy === "done" ? (plain ? t.textCopied : t.mdCopied) : t.mdCopyFailed}
         </p>
       )}
       {/* The other format is a quiet link here, not one more button row. */}
-      {bundled && (
+      {plain && (
+        <p className="result-note">
+          <DownloadLink
+            blob={withImages && zip ? zip : markdown}
+            name={withImages ? `${base}.zip` : `${base}.md`}
+            label={t.alsoMarkdown}
+          />
+        </p>
+      )}
+      {!plain && bundled && (
         <p className="result-note">
           {t.mdZipNote}{" "}
           {withImages ? (
@@ -540,6 +561,7 @@ function MarkdownResult({
         </div>
       </details>
       <div className="md-toolbar">
+        {!plain && (
         <div className="chips" role="group" aria-label={`${t.preview} / ${t.viewSource}`}>
           <button type="button" aria-pressed={view === "preview"} onClick={() => setView("preview")}>
             {t.preview}
@@ -548,6 +570,7 @@ function MarkdownResult({
             {t.viewSource}
           </button>
         </div>
+        )}
         {comparing && (
           <div className="compare-bar">
             <button
@@ -583,7 +606,7 @@ function MarkdownResult({
             <PdfPagePreview file={file} page={page} />
           </Suspense>
         )}
-        {view === "preview" ? (
+        {view === "preview" && !plain ? (
           <ImageUrlsContext.Provider value={imageUrls}>
             <MarkdownPreview markdown={shown} />
           </ImageUrlsContext.Provider>
@@ -591,7 +614,7 @@ function MarkdownResult({
           <textarea
             ref={source}
             className="md-source"
-            aria-label={t.mdSource}
+            aria-label={plain ? t.textSource : t.mdSource}
             value={shown}
             readOnly
             spellCheck={false}

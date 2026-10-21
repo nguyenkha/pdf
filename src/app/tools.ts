@@ -61,6 +61,11 @@ export const tools: Tool[] = [
     nameKey: "toolMarkdown",
     icon: FileCode,
     load: () => import("../tools/pdf-to-md/MarkdownTool"),
+    // Both answer with plain text (.txt) rather than Markdown.
+    pages: [
+      { id: "pdf-to-text", slug: "pdf-to-text", nameKey: "toolPdfToText" },
+      { id: "ocr-pdf", slug: "ocr-pdf", nameKey: "toolOcrPdf" },
+    ],
   },
   {
     id: "organize",

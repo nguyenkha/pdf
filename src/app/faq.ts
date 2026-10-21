@@ -64,6 +64,17 @@ export const FAQ_BY_TOOL: Record<string, readonly (readonly [string, string])[]>
     ["toImagesPhoneQ", "toImagesPhoneA"],
     ["toImagesPagesQ", "toImagesPagesA"],
   ],
+  "pdf-to-text": [
+    ["textFormatQ", "textFormatA"],
+    ["mdScanQ", "mdScanA"],
+    ["mdLayoutQ", "mdLayoutA"],
+  ],
+  "ocr-pdf": [
+    ["mdScanQ", "mdScanA"],
+    ["ocrLanguagesQ", "ocrLanguagesA"],
+    ["ocrLocalQ", "ocrLocalA"],
+    ["textFormatQ", "textFormatA"],
+  ],
   // Landing pages lead with the question their search asks.
   "rotate-pdf": [
     ["organizeRotateQ", "organizeRotateA"],
