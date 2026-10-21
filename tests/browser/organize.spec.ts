@@ -79,7 +79,7 @@ test("cannot save with every page deleted, and resets", async ({ page }) => {
 test("landing pages open the same tool with their own words", async ({ page }) => {
   await page.goto("/en/rotate-pdf/");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Rotate PDF pages without uploading");
-  await expect(page.locator(".tool-switcher > a")).toHaveText("Organize PDF pages");
+  await expect(page.locator(".tool-switcher > a")).toHaveText("Organize PDF");
   await expect(page.locator(".faq summary").first()).toHaveText("How do I rotate pages?");
   await page.goto("/vi/delete-pdf-pages/");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Xóa trang PDF không cần tải file lên");

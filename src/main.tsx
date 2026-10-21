@@ -5,7 +5,6 @@ import {
   ShieldCheck,
   Sun,
   Moon,
-  Monitor,
   Heart,
   Github,
 } from "lucide-react";
@@ -16,7 +15,7 @@ import { metadata } from "./i18n/metadata";
 // Loaded eagerly (~9 KB gzip): a lazy fallback swapped for the full card
 // shifted the page below it (Lighthouse CLS 0.22).
 import CompressTool from "./tools/compress/CompressTool";
-import { pageFromPath, toolFromPath, type ToolProps } from "./app/tools";
+import { pageFromPath, relatedPages, toolFromPath, type ToolProps } from "./app/tools";
 import { faqFor } from "./app/faq";
 import { ToolSwitcher } from "./components/ToolSwitcher";
 import { ToolsMenu } from "./components/ToolsMenu";
@@ -24,6 +23,17 @@ import { config } from "./app/config";
 import { SIZE_PAGES, sizeFromPath, sizeFromSlug, sizePath } from "./app/sizes";
 import { fill } from "./i18n/fill";
 import "./styles/main.css";
+/** Whether a media query matches, kept current as the system changes. */
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(() => matchMedia(query).matches);
+  useEffect(() => {
+    const list = matchMedia(query);
+    const update = () => setMatches(list.matches);
+    list.addEventListener("change", update);
+    return () => list.removeEventListener("change", update);
+  }, [query]);
+  return matches;
+}
 // The engines this site is built on, linked inside the translated sentence.
 function Credits({ text }: { text: string }) {
   const links: Record<string, [string, string]> = {
@@ -90,13 +100,22 @@ function App({
 }) {
   const [locale, setLocale] = useState<Locale>(firstLocale);
   const [t, setT] = useState<Messages>(firstMessages);
-  const [theme, setTheme] = useState(() => {
+  // Two themes. Until the person picks one, the page follows the system
+  // (no data-theme, so CSS keeps tracking it) and nothing is stored.
+  const dark = useMediaQuery("(prefers-color-scheme: dark)");
+  const [chosen, setChosen] = useState<"light" | "dark" | undefined>(() => {
     try {
-      return localStorage.getItem("theme") || "system";
+      const stored = localStorage.getItem("theme");
+      return stored === "light" || stored === "dark" ? stored : undefined;
     } catch {
-      return "system";
+      return undefined;
     }
   });
+  const theme = chosen ?? (dark ? "dark" : "light");
+  useEffect(() => {
+    if (chosen) document.documentElement.dataset.theme = chosen;
+    else delete document.documentElement.dataset.theme;
+  }, [chosen]);
   useEffect(() => {
     let active = true;
     messages(locale)
@@ -129,16 +148,14 @@ function App({
       active = false;
     };
   }, [locale]);
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-  }, [theme]);
   function selectLocale(l: Locale) {
     try { localStorage.setItem("locale", l); } catch { /* Storage is optional. */ }
     setLocale(l);
   }
-  function selectTheme(v: string) {
-    try { localStorage.setItem("theme", v); } catch { /* Storage is optional. */ }
-    setTheme(v);
+  function toggleTheme() {
+    const next = theme === "dark" ? "light" : "dark";
+    try { localStorage.setItem("theme", next); } catch { /* Storage is optional. */ }
+    setChosen(next);
   }
   const privacyPage = location.pathname.endsWith("/privacy/");
   return (
@@ -168,37 +185,12 @@ function App({
           </label>
           <button
             className="theme-toggle"
-            aria-label={
-              theme === "system"
-                ? t.systemTheme
-                : theme === "dark"
-                  ? t.darkTheme
-                  : t.lightTheme
-            }
-            title={
-              theme === "system"
-                ? t.systemTheme
-                : theme === "dark"
-                  ? t.darkTheme
-                  : t.lightTheme
-            }
-            onClick={() =>
-              selectTheme(
-                theme === "system"
-                  ? "light"
-                  : theme === "light"
-                    ? "dark"
-                    : "system",
-              )
-            }
+            aria-label={t.darkTheme}
+            aria-pressed={theme === "dark"}
+            title={theme === "dark" ? t.darkTheme : t.lightTheme}
+            onClick={toggleTheme}
           >
-            {theme === "system" ? (
-              <Monitor size={17} />
-            ) : theme === "light" ? (
-              <Sun size={17} />
-            ) : (
-              <Moon size={17} />
-            )}
+            {theme === "dark" ? <Moon size={17} /> : <Sun size={17} />}
           </button>
         </div>
       </header>
@@ -232,7 +224,13 @@ function App({
           <div id="tool">
             <ToolSwitcher t={t} locale={locale} active={activeTool} />
             <Suspense fallback={<section className="tool-card placeholder" />}>
-              <ToolComponent t={t} locale={locale} preset={preset} shared={shared} />
+              <ToolComponent
+                t={t}
+                locale={locale}
+                preset={preset}
+                shared={shared}
+                page={activePage === activeTool ? undefined : activePage.id}
+              />
             </Suspense>
           </div>
           <div className="content" id="about">
@@ -266,6 +264,21 @@ function App({
               {t.privacyMore} →
             </a>
           </section>
+          {/* The same tool under other names ("PNG to PDF"), and its reverse. */}
+          {!home && relatedPages(activeTool).length > 0 && (
+            <nav className="sizes related" aria-label={t.relatedPages}>
+              <span>{t.relatedPages}:</span>
+              {relatedPages(activeTool).map((page) => (
+                <a
+                  key={page.slug}
+                  href={`/${locale}/${page.slug}/`}
+                  aria-current={page.slug === activePage.slug ? "page" : undefined}
+                >
+                  {t[`${page.nameKey}Short` as keyof Messages]}
+                </a>
+              ))}
+            </nav>
+          )}
           {/* Plain links for the size pages: useful to crawlers, quiet for people. */}
           {home && (
         <nav className="sizes" aria-label={t.sizesTitle}>

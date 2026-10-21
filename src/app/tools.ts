@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { FileArchive, FileCode, LayoutGrid, Merge, type LucideIcon } from "lucide-react";
+import { FileArchive, FileCode, FileImage, Images, LayoutGrid, Merge, type LucideIcon } from "lucide-react";
 import type { Messages } from "../i18n";
 import type { Locale } from "../i18n/config";
 import type { SizePreset } from "./sizes";
@@ -9,6 +9,8 @@ export type ToolProps = {
   locale: Locale;
   preset?: SizePreset;
   shared?: boolean;
+  /** The landing page this tool runs on ("pdf-to-png"), when it is one. */
+  page?: string;
 };
 export type Tool = {
   id: string;
@@ -24,9 +26,17 @@ export type Tool = {
    * not separate tools: the switcher shows the tool itself.
    */
   pages?: ToolPage[];
+  /** Other tools whose pages the "related" links also list (the reverse conversion). */
+  related?: string[];
 };
 /** nameKey is the prefix of its strings: <nameKey>Title, Hero, Intro, HowText. */
 export type ToolPage = { id: string; slug: string; nameKey: string };
+/** A link to every page of this tool (itself first) and of its related tools. */
+export function relatedPages(tool: Tool): ToolPage[] {
+  const family = (item: Tool): ToolPage[] => [item, ...(item.pages ?? [])];
+  const others = (tool.related ?? []).flatMap((id) => availableTools.filter((item) => item.id === id));
+  return family(tool).length > 1 || others.length ? [...family(tool), ...others.flatMap(family)] : [];
+}
 // Adding a tool: build it under src/tools/<id>/, give it `load` and its
 // strings; the switcher, routes, SEO pages and sitemap pick it up. Planned
 // tools (no `load`) never show.
@@ -63,9 +73,30 @@ export const tools: Tool[] = [
       { id: "delete-pdf-pages", slug: "delete-pdf-pages", nameKey: "toolDeletePages" },
     ],
   },
-  // Planned, in this order; names stay out of the interface until built.
-  { id: "images-to-pdf", slug: "jpg-to-pdf", nameKey: "compress", icon: FileArchive },
-  { id: "pdf-to-images", slug: "pdf-to-jpg", nameKey: "compress", icon: FileArchive },
+  {
+    id: "images-to-pdf",
+    slug: "jpg-to-pdf",
+    nameKey: "toolFromImages",
+    icon: Images,
+    load: () => import("../tools/images-to-pdf/ImagesToPdfTool"),
+    pages: [
+      { id: "png-to-pdf", slug: "png-to-pdf", nameKey: "toolPngToPdf" },
+      { id: "image-to-pdf", slug: "image-to-pdf", nameKey: "toolImageToPdf" },
+    ],
+    related: ["pdf-to-images"],
+  },
+  {
+    id: "pdf-to-images",
+    slug: "pdf-to-jpg",
+    nameKey: "toolToImages",
+    icon: FileImage,
+    load: () => import("../tools/pdf-to-images/PdfToImagesTool"),
+    pages: [
+      { id: "pdf-to-png", slug: "pdf-to-png", nameKey: "toolPdfToPng" },
+      { id: "pdf-to-image", slug: "pdf-to-image", nameKey: "toolPdfToImage" },
+    ],
+    related: ["images-to-pdf"],
+  },
 ];
 export const availableTools = tools.filter((tool) => tool.load);
 /** The tool a URL path points at; size pages belong to compress. */

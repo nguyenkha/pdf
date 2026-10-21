@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { availableTools, pageFromPath, toolFromPath, tools } from "../src/app/tools";
+import { availableTools, pageFromPath, relatedPages, toolFromPath, tools } from "../src/app/tools";
 
 describe("tool registry", () => {
   it("routes home and size pages to compress", () => {
@@ -7,8 +7,9 @@ describe("tool registry", () => {
     expect(toolFromPath("/en/compress-pdf-to-1mb/").id).toBe("compress");
     expect(toolFromPath("/en/privacy/").id).toBe("compress");
   });
-  it("never routes to a planned tool", () => {
-    expect(toolFromPath("/en/pdf-to-jpg/").id).toBe("compress");
+  it("routes every built tool by its slug", () => {
+    expect(toolFromPath("/en/pdf-to-jpg/").id).toBe("pdf-to-images");
+    expect(toolFromPath("/en/jpg-to-pdf/").id).toBe("images-to-pdf");
     expect(toolFromPath("/en/merge/").id).toBe("merge");
     expect(availableTools.every((tool) => tool.load)).toBe(true);
   });
@@ -18,6 +19,17 @@ describe("tool registry", () => {
     expect(toolFromPath("/en/delete-pdf-pages/").id).toBe("organize");
     expect(pageFromPath("/en/organize/").nameKey).toBe("toolOrganize");
     expect(pageFromPath("/en/merge/").id).toBe("merge");
+    expect(toolFromPath("/en/png-to-pdf/").id).toBe("images-to-pdf");
+    expect(toolFromPath("/en/pdf-to-png/").id).toBe("pdf-to-images");
+    expect(pageFromPath("/en/pdf-to-image/").nameKey).toBe("toolPdfToImage");
+  });
+  it("links a tool's pages and its reverse tool's", () => {
+    const tool = (id: string) => tools.find((item) => item.id === id)!;
+    expect(relatedPages(tool("images-to-pdf")).map((page) => page.slug)).toEqual([
+      "jpg-to-pdf", "png-to-pdf", "image-to-pdf", "pdf-to-jpg", "pdf-to-png", "pdf-to-image",
+    ]);
+    expect(relatedPages(tool("organize")).map((page) => page.slug)).toEqual(["organize", "rotate-pdf", "delete-pdf-pages"]);
+    expect(relatedPages(tool("merge"))).toEqual([]);
   });
   it("has unique ids and slugs", () => {
     expect(new Set(tools.map((tool) => tool.id)).size).toBe(tools.length);

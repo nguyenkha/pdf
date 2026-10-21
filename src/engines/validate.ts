@@ -1,6 +1,7 @@
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.min.mjs?url";
 import type { PdfShape, PageShape } from "../lib/shape";
+import { cleanCanvasImage } from "./metadata";
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 const IMAGE_OPS: number[] = [pdfjs.OPS.paintImageXObject, pdfjs.OPS.paintInlineImageXObject, pdfjs.OPS.paintImageMaskXObject];
 
@@ -25,6 +26,9 @@ function open(data: Uint8Array, password?: string, owned = false) {
     cMapPacked: true,
     standardFontDataUrl: new URL("/pdfjs/standard_fonts/",self.location.origin).href,
     useWorkerFetch: true, CanvasFactory: WorkerCanvasFactory,
+    // A worker has no document to load PDF fonts into, so text came out as
+    // empty boxes; drawing each glyph as a path needs none.
+    disableFontFace: true,
     // Decoded images then arrive as plain arrays the GC reclaims promptly;
     // ImageBitmaps of full-resolution scans piled up page after page and
     // pushed phones past their tab memory limit.
@@ -285,6 +289,55 @@ export async function pageThumbnails(
         }).promise;
         onThumbnail(number - 1, await canvas.convertToBlob({ type: "image/png" }));
       }
+      canvas.width = canvas.height = 0;
+      page.cleanup();
+    }
+  } finally {
+    await task.destroy();
+  }
+}
+export type RenderedPage = { page: number; blob: Blob; width: number; height: number };
+// iOS Safari refuses canvases above about 16.7 MP; posters scale down to fit.
+export const MAX_RENDER_PIXELS = 16_000_000;
+/** Scale for a page at `dpi`, lowered so the canvas stays within the pixel cap. */
+export function renderScale(width: number, height: number, dpi: number) {
+  const scale = dpi / 72;
+  const pixels = width * scale * height * scale;
+  return pixels > MAX_RENDER_PIXELS ? scale * Math.sqrt(MAX_RENDER_PIXELS / pixels) : scale;
+}
+/**
+ * Draws the chosen pages (1-based) as images, one canvas at a time, on a
+ * white background, with form fields and annotations as they print.
+ */
+export async function renderPages(
+  data: Uint8Array,
+  pages: number[],
+  options: { dpi: number; type: "image/jpeg" | "image/png" },
+  onPage: (page: RenderedPage, index: number) => void,
+): Promise<void> {
+  const task = open(data, undefined, true);
+  try {
+    const doc = await load(task);
+    for (const [index, number] of pages.entries()) {
+      const page = await doc.getPage(number);
+      const base = page.getViewport({ scale: 1 });
+      const viewport = page.getViewport({ scale: renderScale(base.width, base.height, options.dpi) });
+      const canvas = new OffscreenCanvas(Math.max(1, Math.round(viewport.width)), Math.max(1, Math.round(viewport.height)));
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("memory");
+      await page.render({
+        canvasContext: context as unknown as CanvasRenderingContext2D,
+        viewport,
+        background: "white",
+        annotationMode: pdfjs.AnnotationMode.ENABLE,
+      }).promise;
+      // Safari writes a small EXIF block into canvas images; it is cut.
+      const blob = await cleanCanvasImage(
+        await canvas.convertToBlob(
+          options.type === "image/jpeg" ? { type: options.type, quality: 0.92 } : { type: options.type },
+        ),
+      );
+      onPage({ page: number, blob, width: canvas.width, height: canvas.height }, index);
       canvas.width = canvas.height = 0;
       page.cleanup();
     }

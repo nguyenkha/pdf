@@ -9,12 +9,26 @@ const TOOLS = [
   { id: "merge", slug: "merge", nameKey: "toolMerge" },
   { id: "markdown", slug: "markdown", nameKey: "toolMarkdown" },
   { id: "organize", slug: "organize", nameKey: "toolOrganize" },
+  { id: "images-to-pdf", slug: "jpg-to-pdf", nameKey: "toolFromImages" },
+  { id: "pdf-to-images", slug: "pdf-to-jpg", nameKey: "toolToImages" },
 ];
 // Mirrors the tools' landing pages: own texts and FAQ, the tool's app.
 const LANDINGS = [
   { id: "rotate-pdf", slug: "rotate-pdf", nameKey: "toolRotate", tool: "organize" },
   { id: "delete-pdf-pages", slug: "delete-pdf-pages", nameKey: "toolDeletePages", tool: "organize" },
+  { id: "png-to-pdf", slug: "png-to-pdf", nameKey: "toolPngToPdf", tool: "images-to-pdf" },
+  { id: "image-to-pdf", slug: "image-to-pdf", nameKey: "toolImageToPdf", tool: "images-to-pdf" },
+  { id: "pdf-to-png", slug: "pdf-to-png", nameKey: "toolPdfToPng", tool: "pdf-to-images" },
+  { id: "pdf-to-image", slug: "pdf-to-image", nameKey: "toolPdfToImage", tool: "pdf-to-images" },
 ];
+// Mirrors relatedPages in src/app/tools.ts: a tool's pages plus its reverse tool's.
+const RELATED = { "images-to-pdf": ["pdf-to-images"], "pdf-to-images": ["images-to-pdf"] };
+const familyOf = (tool) => [tool, ...LANDINGS.filter((page) => page.tool === tool.id)];
+const relatedOf = (tool) => {
+  const others = (RELATED[tool.id] ?? []).map((id) => TOOLS.find((item) => item.id === id));
+  const pages = [...familyOf(tool), ...others.flatMap(familyOf)];
+  return pages.length > 1 ? pages : [];
+};
 import fs from "node:fs";
 import path from "node:path";
 
@@ -195,7 +209,12 @@ for (const locale of locales) {
         })),
       },
     ];
-    const content = `${header}<main><div class="hero"><div class="eyebrow">${escape(t.privacy)}</div><h1>${escape(h1)}</h1><p>${escape(intro)}</p></div><div id="tool">${switcher(t, locale, appOf(tool))}<section class="tool-card placeholder" aria-label="${escape(tool ? t[appOf(tool).nameKey] : t.compress)}"></section></div><section class="content"><h2>${escape(t.how)}</h2><p>${escape(tool ? text(`${tool.nameKey}HowText`) : t.howText)}</p><h2>${escape(t.why)}</h2><p>${escape(t.whyText)}</p></section><section class="faq"><h2>${escape(t.faq)}</h2>${faq.map(([q, a]) => `<h3>${escape(text(q))}</h3><p>${escape(text(a))}</p>`).join("")}</section><section class="privacy-section"><h2>${escape(t.privacyTitle)}</h2><p class="philosophy">${escape(t.philosophy)}</p><p>${escape(t.privacyBody)}</p><a class="more-link" href="/${locale}/privacy/">${escape(t.privacyMore)} →</a></section>${tool ? "" : sizeLinks}</main>`;
+    const app = appOf(tool);
+    const related = app ? relatedOf(app) : [];
+    const relatedLinks = related.length
+      ? `<nav class="sizes related"><span>${escape(t.relatedPages)}:</span>${related.map((page) => `<a href="/${locale}/${page.slug}/"${page.slug === tool.slug ? ' aria-current="page"' : ""}>${escape(text(`${page.nameKey}Short`))}</a>`).join("")}</nav>`
+      : "";
+    const content = `${header}<main><div class="hero"><div class="eyebrow">${escape(t.privacy)}</div><h1>${escape(h1)}</h1><p>${escape(intro)}</p></div><div id="tool">${switcher(t, locale, appOf(tool))}<section class="tool-card placeholder" aria-label="${escape(tool ? t[appOf(tool).nameKey] : t.compress)}"></section></div><section class="content"><h2>${escape(t.how)}</h2><p>${escape(tool ? text(`${tool.nameKey}HowText`) : t.howText)}</p><h2>${escape(t.why)}</h2><p>${escape(t.whyText)}</p></section><section class="faq"><h2>${escape(t.faq)}</h2>${faq.map(([q, a]) => `<h3>${escape(text(q))}</h3><p>${escape(text(a))}</p>`).join("")}</section><section class="privacy-section"><h2>${escape(t.privacyTitle)}</h2><p class="philosophy">${escape(t.philosophy)}</p><p>${escape(t.privacyBody)}</p><a class="more-link" href="/${locale}/privacy/">${escape(t.privacyMore)} →</a></section>${tool ? relatedLinks : sizeLinks}</main>`;
     const html = base(
       locale,
       title,

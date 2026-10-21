@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { readFile } from "node:fs/promises";
 
 async function audit(page: Page, state: string) {
   const results = await new AxeBuilder({ page })
@@ -58,6 +59,28 @@ for (const scheme of ["light", "dark"] as const)
       await expect(page.locator(".page-grid img")).toHaveCount(3, { timeout: 30000 });
       await page.getByRole("button", { name: "Delete page 2" }).click();
       await audit(page, "organize grid");
+    });
+    test("PDF to JPG tool", async ({ page }) => {
+      test.setTimeout(120000);
+      await page.goto("/en/pdf-to-jpg/");
+      await audit(page, "pdf-to-jpg empty");
+      await page.locator("input[type=file]").setInputFiles("tests/fixtures/multipage.pdf");
+      await expect(page.locator(".pick-grid img")).toHaveCount(3, { timeout: 30000 });
+      await page.getByRole("button", { name: "Page 2", exact: true }).click();
+      await audit(page, "pdf-to-jpg pages");
+      await page.getByRole("button", { name: "Convert 2 pages to JPG" }).click();
+      await expect(page.locator(".result")).toBeVisible({ timeout: 60000 });
+      await audit(page, "pdf-to-jpg result");
+    });
+    test("JPG to PDF tool", async ({ page }) => {
+      await page.goto("/en/jpg-to-pdf/");
+      await audit(page, "jpg-to-pdf empty");
+      await page.locator("input[type=file]").setInputFiles([
+        { name: "a.png", mimeType: "image/png", buffer: await readFile("public/icons/icon-192.png") },
+        { name: "IMG_0001.heic", mimeType: "image/heic", buffer: Buffer.from("not a photo") },
+      ]);
+      await expect(page.getByText("Can't open here")).toBeVisible({ timeout: 30000 });
+      await audit(page, "jpg-to-pdf list");
     });
     test("markdown OCR offer", async ({ page }) => {
       await page.goto("/en/markdown/");

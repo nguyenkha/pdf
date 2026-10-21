@@ -9,6 +9,7 @@ export function ResultActions({
   name,
   download,
   preview = true,
+  shareFiles,
   children,
 }: {
   t: Messages;
@@ -18,18 +19,20 @@ export function ResultActions({
   download?: string;
   /** The browser viewer only makes sense for PDFs. */
   preview?: boolean;
+  /** Shares these instead of the download, e.g. the images inside a ZIP. */
+  shareFiles?: File[];
   /** Tool-specific extra buttons, after the shared ones. */
   children?: ReactNode;
 }) {
   const url = useObjectUrl(blob);
   // The system share sheet reaches Drive, Dropbox, OneDrive, Files, Mail...
-  const shareFile = useMemo(
-    () => new File([blob], name, { type: blob.type || "application/pdf" }),
-    [blob, name],
+  const shared = useMemo(
+    () => shareFiles ?? [new File([blob], name, { type: blob.type || "application/pdf" })],
+    [blob, name, shareFiles],
   );
   const canShare =
     typeof navigator.canShare === "function" &&
-    navigator.canShare({ files: [shareFile] });
+    navigator.canShare({ files: shared });
   if (!url) return null;
   return (
     <div className="result-actions">
@@ -49,7 +52,7 @@ export function ResultActions({
           type="button"
           className="secondary"
           onClick={() =>
-            navigator.share({ files: [shareFile], title: shareFile.name }).catch(() => {})
+            navigator.share({ files: shared, title: name }).catch(() => {})
           }
         >
           <Share2 size={18} aria-hidden="true" />

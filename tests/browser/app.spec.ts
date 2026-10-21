@@ -32,10 +32,28 @@ test("language switching and RTL", async ({ page }) => {
     page.getByText("File của bạn không bao giờ rời thiết bị.").filter({ visible: true }).first(),
   ).toBeVisible();
 });
+test.describe("theme follows the system until chosen", () => {
+  test.use({ colorScheme: "dark" });
+  test("two states, remembered once picked", async ({ page }) => {
+    await page.goto("/en/compress/");
+    const toggle = page.getByRole("button", { name: "Dark theme" });
+    // First visit: the system's dark theme, nothing stored or forced.
+    await expect(toggle).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator("html")).not.toHaveAttribute("data-theme", /.*/);
+    expect(await page.evaluate(() => localStorage.getItem("theme"))).toBeNull();
+    await toggle.click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await expect(toggle).toHaveAttribute("aria-pressed", "false");
+    await page.reload();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await toggle.click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  });
+});
 test("theme and mobile", async ({ page }) => {
   await page.goto("/en/compress/");
-  await page.getByRole("button", { name: "System theme" }).click();
-  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await page.getByRole("button", { name: "Dark theme" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator(".drop")).toBeVisible();
   // The drop zone must start above the fold on a phone.
@@ -234,15 +252,16 @@ test("tool switcher shows the tool in use and the rest behind +", async ({ page 
   await expect(switcher.locator("> a")).toHaveAttribute("aria-current", "page");
   await expect(switcher.getByRole("link", { name: "Merge PDF" })).toBeHidden();
   // The "+" says how many other tools there are.
-  const more = switcher.getByRole("button", { name: "3 more tools" });
-  // Tap or click unfolds the rest, which take the place of +.
+  const more = switcher.getByRole("button", { name: "5 more tools" });
+  // Tap or click unfolds the rest in a panel (a sheet on phones); + stays,
+  // and the tool below does not move however long the names are.
+  const card = page.locator(".tool-card").first();
+  const before = (await card.boundingBox())!.y;
   await more.click();
   await expect(switcher.getByRole("link", { name: "Merge PDF" })).toBeVisible();
-  // With a mouse the others take the place of +; on phones a sheet opens and + stays.
-  const phone = await page.evaluate(() => matchMedia("(max-width: 680px)").matches);
-  if (phone) await expect(more).toBeVisible();
-  else await expect(more).toBeHidden();
-  await expect(switcher.locator(".tool-more-list a")).toHaveText(["Merge PDF", "PDF to Markdown", "Organize PDF pages"]);
+  await expect(more).toBeVisible();
+  expect((await card.boundingBox())!.y).toBe(before);
+  await expect(switcher.locator(".tool-more-list a")).toHaveText(["Merge PDF", "PDF → MD", "Organize PDF", "Image → PDF", "PDF → image"]);
   await page.keyboard.press("Escape");
   await expect(switcher.getByRole("link", { name: "Merge PDF" })).toBeHidden();
   await expect(more).toBeVisible();
@@ -270,7 +289,7 @@ test("tool switcher shows the tool in use and the rest behind +", async ({ page 
 test("tool switcher opens from the keyboard without navigating and survives rapid reopening", async ({ page }) => {
   await page.goto("/en/compress/");
   const switcher = page.locator(".tool-switcher");
-  const more = switcher.getByRole("button", { name: "3 more tools" });
+  const more = switcher.getByRole("button", { name: "5 more tools" });
   const merge = switcher.getByRole("link", { name: "Merge PDF" });
   const url = page.url();
   await more.focus();
