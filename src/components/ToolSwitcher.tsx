@@ -26,18 +26,28 @@ export function ToolSwitcher({
   const enter = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   // Opened from the keyboard: focus goes into the list, and back to + on close.
   const keyboard = useRef(false);
+  // Pending return of focus to + after a close; must not outlive a reopening.
+  const refocus = useRef<number | undefined>(undefined);
+  const cancelRefocus = () => {
+    if (refocus.current !== undefined) cancelAnimationFrame(refocus.current);
+    refocus.current = undefined;
+  };
   const list = useRef<HTMLUListElement>(null);
   const media = (query: string) => typeof matchMedia === "function" && matchMedia(query).matches;
   const hover = () => media("(hover: hover)");
   useEffect(() => {
-    if (open) return setShown(true);
+    if (open) {
+      cancelRefocus();
+      return setShown(true);
+    }
     const fold = setTimeout(
       () => {
         setShown(false);
         // Stays set until focus has moved back, so a pointer resting where +
         // reappears does not reopen the list in between.
         if (keyboard.current)
-          requestAnimationFrame(() => {
+          refocus.current = requestAnimationFrame(() => {
+            refocus.current = undefined;
             button.current?.focus();
             keyboard.current = false;
           });
@@ -71,6 +81,7 @@ export function ToolSwitcher({
     () => () => {
       clearTimeout(leave.current);
       clearTimeout(enter.current);
+      cancelRefocus();
     },
     [],
   );
@@ -114,10 +125,23 @@ export function ToolSwitcher({
           if (hover() && !keyboard.current) enter.current = setTimeout(() => setOpen(true), 90);
         }}
         aria-controls="tool-more-list"
+        // Enter and Space open it here, and the key's own activation is
+        // cancelled so it cannot land on the first link once focus moves.
+        onKeyDown={(event) => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          clearTimeout(enter.current);
+          cancelRefocus();
+          keyboard.current = true;
+          setOpen(true);
+        }}
+        onKeyUp={(event) => {
+          if (event.key === " ") event.preventDefault();
+        }}
         onClick={(event) => {
           clearTimeout(enter.current);
-          // detail is 0 for Enter or Space, which should move focus along.
-          keyboard.current = event.detail === 0;
+          // detail is 0 for clicks synthesised by assistive technology.
+          if (event.detail === 0) keyboard.current = true;
           setOpen(true);
         }}
       >
