@@ -291,6 +291,13 @@ test("tool switcher opens from the keyboard without navigating and survives rapi
   expect(page.url()).toBe(url);
   await page.keyboard.press("Escape");
   await expect(more).toBeFocused();
+  // Focus must come back every time, however the close and the commit interleave.
+  for (let i = 0; i < 8; i++) {
+    await page.keyboard.press("Enter");
+    await expect(merge).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(more).toBeFocused();
+  }
 });
 test("the site and locale homes go straight to compress", async ({ page }) => {
   await page.goto("/");
