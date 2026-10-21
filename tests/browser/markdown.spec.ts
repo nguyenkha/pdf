@@ -108,3 +108,38 @@ test("reads only the scanned pages of a mixed PDF", async ({ page }) => {
   await expect(preview).toContainText("Typed Introduction");
   await expect(page.getByText("Nhận dạng chữ bằng OCR?")).toHaveCount(0);
 });
+test("PDF to text gives plain text first, the Markdown a link away", async ({ page }) => {
+  test.setTimeout(120000);
+  await page.goto("/en/pdf-to-text/");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Extract text from PDF without uploading");
+  // The same tool, under its own name in the switcher.
+  await expect(page.locator(".tool-switcher > a")).toHaveText("PDF → MD");
+  await page.locator("input[type=file]").setInputFiles("tests/fixtures/multipage.pdf");
+  await expect(page.getByRole("heading", { name: "Converted 3 pages" })).toBeVisible({ timeout: 60000 });
+  const download = page.waitForEvent("download");
+  await page.getByRole("link", { name: "Download text (.txt)" }).click();
+  const saved = await download;
+  expect(saved.suggestedFilename()).toBe("multipage.txt");
+  const text = await readFile((await saved.path())!, "utf8");
+  expect(text).toContain("Selectable page 1");
+  expect(text).toContain("Selectable page 3");
+  // No Markdown: no page comments, image links or escapes.
+  expect(text).not.toMatch(/<!--|!\[|\]\(|\\/);
+  await expect(page.getByLabel("Text", { exact: true })).toHaveValue(text);
+  await expect(page.getByRole("button", { name: "Preview" })).toHaveCount(0);
+  const markdown = page.waitForEvent("download");
+  await page.getByRole("link", { name: "Also as Markdown (.md)" }).click();
+  expect((await markdown).suggestedFilename()).toBe("multipage.zip");
+  await expect(page.getByRole("navigation", { name: "Related" }).getByRole("link")).toHaveText(["PDF → MD", "PDF → text", "OCR PDF"]);
+});
+test("OCR PDF reads a scan into plain text", async ({ page }) => {
+  test.setTimeout(240000);
+  await page.goto("/en/ocr-pdf/");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("OCR a scanned PDF without uploading it");
+  await page.locator("input[type=file]").setInputFiles("tests/fixtures/scanned-text.pdf");
+  await page.getByRole("button", { name: "Recognize text" }).click();
+  await expect(page.getByRole("heading", { name: "Converted 1 pages" })).toBeVisible({ timeout: 180000 });
+  await expect(page.getByLabel("Text", { exact: true })).toHaveValue(
+    /^Scanned Report\n\nThis page has no text layer\. It was printed and scanned, so its words exist only as pixels in an image\./,
+  );
+});
