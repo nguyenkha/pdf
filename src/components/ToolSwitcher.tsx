@@ -34,8 +34,13 @@ export function ToolSwitcher({
     const fold = setTimeout(
       () => {
         setShown(false);
-        if (keyboard.current) requestAnimationFrame(() => button.current?.focus());
-        keyboard.current = false;
+        // Stays set until focus has moved back, so a pointer resting where +
+        // reappears does not reopen the list in between.
+        if (keyboard.current)
+          requestAnimationFrame(() => {
+            button.current?.focus();
+            keyboard.current = false;
+          });
       },
       media("(prefers-reduced-motion: reduce)") ? 0 : 170,
     );
@@ -106,7 +111,7 @@ export function ToolSwitcher({
         hidden={shown}
         // A brief pause, so a pointer just passing over does not unfold it.
         onMouseEnter={() => {
-          if (hover()) enter.current = setTimeout(() => setOpen(true), 90);
+          if (hover() && !keyboard.current) enter.current = setTimeout(() => setOpen(true), 90);
         }}
         aria-controls="tool-more-list"
         onClick={(event) => {

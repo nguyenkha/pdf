@@ -170,6 +170,20 @@ export async function prunePageResources(doc: PDFDocument, overlap: boolean[]): 
       const font = doc.context.lookup(value);
       return font instanceof PDFDict && font.get(name("Subtype")) === name("Type3") && !font.has(name("Resources"));
     })) throw new Error("unsupported");
+    // Patterns and soft-mask forms without their own resources draw with the
+    // inherited XObjects, which the content scanner does not follow either.
+    const group = (key: string) => {
+      const found = resources.lookup(name(key));
+      return found instanceof PDFDict ? found.values().map((value) => doc.context.lookup(value)) : [];
+    };
+    const bare = (value: PDFObject | undefined) => {
+      const stream = value && doc.context.lookup(value);
+      return stream instanceof PDFStream && !stream.dict.has(name("Resources"));
+    };
+    if (group("Pattern").some(bare) || group("ExtGState").some((state) => {
+      const mask = state instanceof PDFDict ? state.lookup(name("SMask")) : undefined;
+      return mask instanceof PDFDict && bare(mask.get(name("G")));
+    })) throw new Error("unsupported");
     const used = new Set<string>();
     const pending = [...streams];
     const seen = new Set<PDFStream>();

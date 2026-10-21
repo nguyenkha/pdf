@@ -66,6 +66,39 @@ describe("resources after page deletion", () => {
     });
     await expect(organizePdf(bytes, [{ page: 0, rotate: 0 }])).rejects.toThrow("unsupported");
   });
+  it("refuses a trimmed page whose private pattern inherits page images", async () => {
+    const bytes = await twoPages((doc, kept, removed, image) => {
+      const pattern = doc.context.register(doc.context.flateStream("/Mine Do", { PatternType: 1, PaintType: 1, TilingType: 1, BBox: [0, 0, 1, 1], XStep: 1, YStep: 1 }));
+      kept.node.set(PDFName.of("Resources"), doc.context.obj({ Pattern: { P: pattern }, XObject: { Shared: image(), Mine: image() } }));
+      removed.node.set(PDFName.of("Resources"), doc.context.obj({ XObject: { Shared: kept.node.Resources()!.lookup(PDFName.of("XObject"), PDFDict).get(PDFName.of("Shared")) } }));
+      kept.node.set(PDFName.of("Contents"), doc.context.register(doc.context.flateStream("/Pattern cs /P scn 0 0 1 1 re f")));
+      removed.node.set(PDFName.of("Contents"), doc.context.register(doc.context.flateStream("/Shared Do")));
+    });
+    await expect(organizePdf(bytes, [{ page: 0, rotate: 0 }])).rejects.toThrow("unsupported");
+  });
+  it("refuses a trimmed page whose private soft mask form inherits page images", async () => {
+    const bytes = await twoPages((doc, kept, removed, image) => {
+      const form = doc.context.register(doc.context.flateStream("/Mine Do", { Type: "XObject", Subtype: "Form", BBox: [0, 0, 1, 1] }));
+      kept.node.set(PDFName.of("Resources"), doc.context.obj({ ExtGState: { GS: { SMask: { Type: "Mask", S: "Alpha", G: form } } }, XObject: { Shared: image(), Mine: image() } }));
+      removed.node.set(PDFName.of("Resources"), doc.context.obj({ XObject: { Shared: kept.node.Resources()!.lookup(PDFName.of("XObject"), PDFDict).get(PDFName.of("Shared")) } }));
+      kept.node.set(PDFName.of("Contents"), doc.context.register(doc.context.flateStream("/GS gs 0 0 1 1 re f")));
+      removed.node.set(PDFName.of("Contents"), doc.context.register(doc.context.flateStream("/Shared Do")));
+    });
+    await expect(organizePdf(bytes, [{ page: 0, rotate: 0 }])).rejects.toThrow("unsupported");
+  });
+  it("keeps private pattern and soft mask graphs when nothing overlaps", async () => {
+    const bytes = await twoPages((doc, kept, removed, image) => {
+      const pattern = doc.context.register(doc.context.flateStream("/Mine Do", { PatternType: 1, PaintType: 1, TilingType: 1, BBox: [0, 0, 1, 1], XStep: 1, YStep: 1 }));
+      const form = doc.context.register(doc.context.flateStream("/Mine Do", { Type: "XObject", Subtype: "Form", BBox: [0, 0, 1, 1] }));
+      kept.node.set(PDFName.of("Resources"), doc.context.obj({ Pattern: { P: pattern }, ExtGState: { GS: { SMask: { Type: "Mask", S: "Alpha", G: form } } }, XObject: { Mine: image() } }));
+      removed.node.set(PDFName.of("Resources"), doc.context.obj({ XObject: { Other: image() } }));
+      kept.node.set(PDFName.of("Contents"), doc.context.register(doc.context.flateStream("/Pattern cs /P scn /GS gs 0 0 1 1 re f")));
+      removed.node.set(PDFName.of("Contents"), doc.context.register(doc.context.flateStream("/Other Do")));
+    });
+    const result = await PDFDocument.load((await organizePdf(bytes, [{ page: 0, rotate: 0 }])).bytes);
+    expect(result.getPageCount()).toBe(1);
+    expect(imageCount(result)).toBe(1);
+  });
   it("deletes pages that share only an ordinary font, even with private inline images", async () => {
     const bytes = await twoPages((doc, kept, removed, image) => {
       const font = doc.context.register(doc.context.obj({ Type: "Font", Subtype: "Type1", BaseFont: StandardFonts.Helvetica }));
