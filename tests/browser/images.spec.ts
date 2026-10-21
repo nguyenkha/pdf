@@ -1,6 +1,22 @@
 import { test, expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { PDFDocument } from "pdf-lib";
+import { createWorker } from "tesseract.js";
+
+/** The text in an image, read with the OCR engine the Markdown tool uses. */
+async function readText(image: Buffer) {
+  const worker = await createWorker("eng", 1, {
+    langPath: "node_modules/@tesseract.js-data/eng/4.0.0_best_int",
+    gzip: true,
+    cacheMethod: "none",
+  });
+  try {
+    return (await worker.recognize(image)).data.text;
+  } finally {
+    await worker.terminate();
+  }
+}
+
 
 /** Entries of a store-only ZIP, as zipBlobs writes them. */
 function unzip(bytes: Buffer) {
@@ -105,6 +121,9 @@ test.describe("PDF to JPG", () => {
     const bytes = await readFile((await saved.path())!);
     expect(bytes.subarray(1, 4).toString()).toBe("PNG");
     expect([bytes.readUInt32BE(16), bytes.readUInt32BE(20)]).toEqual([2479, 3508]);
+    // Text is drawn as letters: the worker has no document for PDF fonts,
+    // and without glyph paths every letter came out as an empty box.
+    expect(await readText(bytes)).toContain("Selectable page 1");
   });
   test("unlocks a password-protected PDF first", async ({ page }) => {
     test.setTimeout(120000);

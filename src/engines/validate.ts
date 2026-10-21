@@ -25,6 +25,9 @@ function open(data: Uint8Array, password?: string, owned = false) {
     cMapPacked: true,
     standardFontDataUrl: new URL("/pdfjs/standard_fonts/",self.location.origin).href,
     useWorkerFetch: true, CanvasFactory: WorkerCanvasFactory,
+    // A worker has no document to load PDF fonts into, so text came out as
+    // empty boxes; drawing each glyph as a path needs none.
+    disableFontFace: true,
     // Decoded images then arrive as plain arrays the GC reclaims promptly;
     // ImageBitmaps of full-resolution scans piled up page after page and
     // pushed phones past their tab memory limit.
