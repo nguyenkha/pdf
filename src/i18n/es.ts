@@ -305,6 +305,7 @@ export default {
   organizeDoneTitle: "PDF guardado",
   organizeAnother: "Organizar otro PDF",
   organizeFailed: "No se pudo guardar este PDF. Puede estar dañado.",
+  organizeUnsupported: "No se pueden quitar páginas de este PDF con seguridad, porque comparten contenido con las páginas que conservas. Tu archivo original no cambia.",
   organizeNote: "Los marcadores y campos de formulario no se conservan en el archivo nuevo.",
   organizeUnlockedNote: "El PDF nuevo no tiene contraseña. Vuelve a protegerlo antes de compartirlo si hace falta.",
   organizeSignedNote: "Las firmas digitales ya no son válidas en el PDF nuevo; sus sellos e imágenes siguen en la página.",

@@ -7,6 +7,11 @@ export type PdfImage = {
   kind?: number;
   data?: Uint8Array | Uint8ClampedArray;
 };
+// Bound decoding in PDF.js as well as the buffers built from raw pixels.
+export const PDF_IMAGE_LIMITS = {
+  maxImageSize: 50_000_000,
+  canvasMaxAreaInBytes: 64_000_000,
+};
 type Page = {
   objs: { get(id: string, callback: (value: unknown) => void): void };
   commonObjs: { get(id: string, callback: (value: unknown) => void): void };
@@ -28,31 +33,42 @@ export const imageObject = (page: Page, id: string) =>
 export function imageSource(
   image: PdfImage,
   canvas: (width: number, height: number) => OffscreenCanvas | HTMLCanvasElement,
+  maxSide = 3000,
 ): CanvasImageSource | undefined {
+  if (!Number.isSafeInteger(image.width) || !Number.isSafeInteger(image.height) ||
+      image.width <= 0 || image.height <= 0 || image.width * image.height > PDF_IMAGE_LIMITS.maxImageSize ||
+      !Number.isFinite(maxSide) || maxSide < 1) return;
   if (image.bitmap) return image.bitmap;
-  if (!image.data || !image.width || !image.height) return;
-  const rgba = new Uint8ClampedArray(image.width * image.height * 4);
+  if (!image.data) return;
   const { data, kind } = image;
-  if (kind === 3) rgba.set(data.subarray(0, rgba.length));
-  else if (kind === 2)
-    for (let i = 0, j = 0; j < rgba.length; i += 3, j += 4) {
-      rgba[j] = data[i];
-      rgba[j + 1] = data[i + 1];
-      rgba[j + 2] = data[i + 2];
-      rgba[j + 3] = 255;
-    }
-  else if (kind === 1) {
-    const row = Math.ceil(image.width / 8);
-    for (let y = 0; y < image.height; y++)
-      for (let x = 0; x < image.width; x++) {
-        const on = (data[y * row + (x >> 3)] >> (7 - (x & 7))) & 1;
-        rgba.fill(on ? 255 : 0, (y * image.width + x) * 4, (y * image.width + x) * 4 + 3);
-        rgba[(y * image.width + x) * 4 + 3] = 255;
+  if (kind !== 1 && kind !== 2 && kind !== 3) return;
+  const stride = kind === 1 ? Math.ceil(image.width / 8) : image.width * (kind === 2 ? 3 : 4);
+  if (data.length < stride * image.height) return;
+  const scale = Math.min(1, Math.min(maxSide, 3000) / Math.max(image.width, image.height));
+  const width = Math.max(1, Math.round(image.width * scale));
+  const height = Math.max(1, Math.round(image.height * scale));
+  const rgba = new Uint8ClampedArray(width * height * 4);
+  for (let y = 0; y < height; y++) {
+    const sy = Math.min(image.height - 1, Math.floor((y + 0.5) * image.height / height));
+    for (let x = 0; x < width; x++) {
+      const sx = Math.min(image.width - 1, Math.floor((x + 0.5) * image.width / width));
+      const at = (y * width + x) * 4;
+      if (kind === 1) {
+        const value = (data[sy * stride + (sx >> 3)] >> (7 - (sx & 7))) & 1;
+        rgba[at] = rgba[at + 1] = rgba[at + 2] = value ? 255 : 0;
+        rgba[at + 3] = 255;
+      } else {
+        const from = sy * stride + sx * (kind === 2 ? 3 : 4);
+        rgba[at] = data[from];
+        rgba[at + 1] = data[from + 1];
+        rgba[at + 2] = data[from + 2];
+        rgba[at + 3] = kind === 3 ? data[from + 3] : 255;
       }
-  } else return;
-  const raw = canvas(image.width, image.height);
+    }
+  }
+  const raw = canvas(width, height);
   const context = raw.getContext("2d") as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null;
   if (!context) return;
-  context.putImageData(new ImageData(rgba, image.width, image.height), 0, 0);
+  context.putImageData(new ImageData(rgba, width, height), 0, 0);
   return raw;
 }

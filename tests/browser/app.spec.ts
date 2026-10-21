@@ -267,6 +267,31 @@ test("tool switcher shows the tool in use and the rest behind +", async ({ page 
   expect(html).toContain('<details class="tool-more">');
   expect(html).toContain('href="/en/compress/"');
 });
+test("tool switcher opens from the keyboard without navigating and survives rapid reopening", async ({ page }) => {
+  await page.goto("/en/compress/");
+  const switcher = page.locator(".tool-switcher");
+  const more = switcher.getByRole("button", { name: "3 more tools" });
+  const merge = switcher.getByRole("link", { name: "Merge PDF" });
+  const url = page.url();
+  await more.focus();
+  await page.keyboard.press("Enter");
+  await expect(merge).toBeFocused();
+  expect(page.url()).toBe(url);
+  await page.keyboard.press("Escape");
+  // Reopen straight away: the pending return of focus to + must not steal it.
+  await expect(more).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(merge).toBeFocused();
+  await page.keyboard.press("Escape");
+  await more.focus();
+  await page.keyboard.press("Space");
+  await expect(merge).toBeFocused();
+  await page.waitForTimeout(300);
+  await expect(merge).toBeFocused();
+  expect(page.url()).toBe(url);
+  await page.keyboard.press("Escape");
+  await expect(more).toBeFocused();
+});
 test("the site and locale homes go straight to compress", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveURL(/\/[a-zA-Z-]+\/compress\/$/);

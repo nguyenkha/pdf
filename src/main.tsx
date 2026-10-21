@@ -313,7 +313,7 @@ const firstLocale = initialLocale();
 // The locale home forwards to compress (the static page does too, without
 // keeping the query); never render the app there.
 const atHome = /^\/[^/]+\/$/.test(location.pathname);
-if (atHome) location.replace(`/${firstLocale}/compress/${location.search}`);
+if (atHome) location.replace(`/${firstLocale}/compress/${location.search}${location.hash}`);
 if (!atHome)
   Promise.all([messages(firstLocale).catch(() => en), toolReady])
   .then(([firstMessages]) =>

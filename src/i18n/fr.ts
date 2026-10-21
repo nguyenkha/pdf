@@ -306,6 +306,7 @@ export default {
   organizeDoneTitle: "PDF enregistré",
   organizeAnother: "Organiser un autre PDF",
   organizeFailed: "Impossible d'enregistrer ce PDF. Il est peut-être endommagé.",
+  organizeUnsupported: "Impossible de retirer des pages de ce PDF en toute sécurité : elles partagent du contenu avec les pages conservées. Votre fichier d'origine reste inchangé.",
   organizeNote: "Les signets et champs de formulaire ne sont pas conservés dans le nouveau fichier.",
   organizeUnlockedNote: "Le nouveau PDF n'a pas de mot de passe. Protégez-le à nouveau avant de le partager si besoin.",
   organizeSignedNote: "Les signatures numériques ne sont plus valides dans le nouveau PDF ; leurs tampons et images restent sur la page.",

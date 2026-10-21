@@ -1,4 +1,4 @@
-const CACHE = "pdf-kha-do-assets-v5";
+const CACHE = "pdf-kha-do-assets-v6";
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
@@ -33,25 +33,51 @@ self.addEventListener("activate", (event) => {
 // Android share sheet -> installed app. Shared PDFs stay in this worker's
 // memory only until the page takes them (or the worker stops); they are
 // never written to storage.
-let shared = [];
-// Files nobody takes (the next page never opened) are dropped after a minute.
-let forget;
-const forgetSoon = () => {
-  clearTimeout(forget);
-  forget = setTimeout(() => (shared = []), 60_000);
+const transfers = new Map();
+const remember = (files, client, path) => {
+  const token = crypto.randomUUID();
+  const timer = setTimeout(() => transfers.delete(token), 60_000);
+  transfers.set(token, { files, client, path, timer, expires: Date.now() + 60_000 });
+  return token;
 };
 self.addEventListener("message", (event) => {
   const port = event.ports[0];
-  if (!port) return;
+  if (!port || !event.source?.id) return;
   // One tool hands its result to another, the same way as the share sheet.
   if (event.data?.type === "hand-over") {
-    shared = event.data.files.filter((file) => file instanceof File);
-    forgetSoon();
-    port.postMessage(true);
+    const path = event.data.path;
+    if (typeof path !== "string" || !/^\/[a-zA-Z-]+\/[a-z0-9-]+\/$/.test(path) || !Array.isArray(event.data.files))
+      return port.postMessage(false);
+    const files = event.data.files.filter((file) => file instanceof File);
+    const token = remember(files, event.source.id, path);
+    const transfer = transfers.get(token);
+    // navigate() identifies the resulting document even in browsers that do
+    // not expose FetchEvent.replacesClientId/resultingClientId.
+    transfer.navigation = event.source.navigate(`${path}?shared=1#transfer=${token}`)
+      .then((client) => {
+        transfer.client = client?.id;
+        port.postMessage(Boolean(client));
+      }).catch(() => { transfers.delete(token); clearTimeout(transfer.timer); port.postMessage(false); });
+    event.waitUntil(transfer.navigation);
   }
   if (event.data?.type === "take-shared") {
-    port.postMessage(shared);
-    shared = [];
+    const transfer = transfers.get(event.data.token);
+    if (!transfer) return port.postMessage([]);
+    event.waitUntil((async () => {
+      await transfer.navigation;
+      const url = new URL(event.source.url);
+      // External share-target navigation has no sending WindowClient. The
+      // unguessable token must arrive on the recipient's original URL.
+      if (transfer.path === null && transfer.client === null &&
+          new URLSearchParams(url.hash.slice(1)).get("transfer") === event.data.token)
+        transfer.client = event.source.id;
+      if (transfer.expires < Date.now() || transfer.client !== event.source.id ||
+          (transfer.path !== null && url.pathname !== transfer.path) || !transfers.has(event.data.token))
+        return port.postMessage([]);
+      transfers.delete(event.data.token);
+      clearTimeout(transfer.timer);
+      port.postMessage(transfer.files);
+    })());
   }
 });
 self.addEventListener("fetch", (event) => {
@@ -61,9 +87,9 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       (async () => {
         const form = await request.formData();
-        shared = form.getAll("file").filter((file) => file instanceof File);
-        forgetSoon();
-        return Response.redirect("/?shared=1", 303);
+        const files = form.getAll("file").filter((file) => file instanceof File);
+        const token = remember(files, null, null);
+        return Response.redirect(`/?shared=1#transfer=${token}`, 303);
       })(),
     );
     return;

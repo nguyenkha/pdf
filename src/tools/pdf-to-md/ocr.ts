@@ -4,7 +4,7 @@ import workerUrl from "pdfjs-dist/legacy/build/pdf.worker.min.mjs?url";
 import type { Locale } from "../../i18n/config";
 import { ocrLanguages } from "./ocr-data";
 import { findImages, type ImagePlacement } from "./images";
-import { imageObject, imageSource } from "./pdf-image";
+import { imageObject, imageSource, PDF_IMAGE_LIMITS } from "./pdf-image";
 import type { Ruling } from "./rulings";
 import { scanRulings } from "./scan-rulings";
 import type { TextPart } from "./text";
@@ -174,6 +174,8 @@ export async function recognizePages(
   const languages = ocrLanguages(locale);
   let position = 0;
   const task = pdfjs.getDocument({
+    ...PDF_IMAGE_LIMITS,
+    stopAtErrors: true,
     data: new Uint8Array(await file.arrayBuffer()),
     isEvalSupported: false,
     verbosity: 0,

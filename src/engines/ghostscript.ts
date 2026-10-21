@@ -232,18 +232,19 @@ export async function compressWithGhostscript(
     reported = Math.max(reported, Math.min(1, value));
     onProgress({ stage, value: reported, page });
   };
-  // A size limit is met by a binary search over the quality-ordered ladder
-  // (about 3 passes instead of up to 9); the lossless pass is only worth a
-  // run when the limit is close to the original size.
+  // Probe the ladder quickly, then verify any skipped better profiles:
+  // encoded sizes can be nonmonotonic across quality/resolution changes.
   const search = Boolean(options.target) && hasImages;
   const lossless = profiles[0].quality > 100 ? profiles[0] : undefined;
   const ladder = search ? profiles.slice(lossless ? 1 : 0) : profiles;
   const tryLossless =
     search && lossless && options.target! >= inputSize * (1 - WORTHWHILE);
   const planned = search
-    ? Math.ceil(Math.log2(ladder.length + 1)) + (tryLossless ? 1 : 0)
+    ? ladder.length + (tryLossless ? 1 : 0)
     : profiles.length;
   let smallest: Candidate | undefined;
+  // Only sizes are cached: bytes stay held through `selected` and `smallest`.
+  const tried = new Map<Profile, number>();
   const pass = async (profile: Profile): Promise<Candidate | undefined> => {
     const slot = Math.min(attempts, planned - 1);
     const span = (share: number) => (PASS_SHARE * (slot + share)) / planned;
@@ -253,9 +254,13 @@ export async function compressWithGhostscript(
     );
     attempts++;
     heapBytes = Math.max(heapBytes, output.heapBytes);
-    if (output.bytes.length >= inputSize) return undefined;
+    if (output.bytes.length >= inputSize) {
+      tried.set(profile, Infinity);
+      return undefined;
+    }
     const candidate = { bytes: output.bytes, quality: profile.quality, dpi: profile.dpi, lossless: profile.quality > 100 };
     if (!smallest || candidate.bytes.length < smallest.bytes.length) smallest = candidate;
+    tried.set(profile, candidate.bytes.length);
     return candidate;
   };
   if (search) {
@@ -275,6 +280,21 @@ export async function compressWithGhostscript(
         selected = candidate;
         high = middle - 1;
       } else low = middle + 1;
+    }
+    if (!selected?.lossless) {
+      for (const profile of ladder) {
+        const known = tried.get(profile);
+        if (known !== undefined) {
+          // The earliest cached hit is the best one already held in `selected`.
+          if (known <= target) break;
+          continue;
+        }
+        const candidate = await pass(profile);
+        if (candidate && candidate.bytes.length <= target) {
+          selected = candidate;
+          break;
+        }
+      }
     }
     selected ??= smallest;
   } else

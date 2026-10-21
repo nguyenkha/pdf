@@ -303,6 +303,7 @@ export default {
   organizeDoneTitle: "PDF を保存しました",
   organizeAnother: "別の PDF を整理",
   organizeFailed: "この PDF を保存できませんでした。ファイルが壊れている可能性があります。",
+  organizeUnsupported: "この PDF からは安全にページを削除できません。残すページと内容を共有しているためです。元のファイルは変更されていません。",
   organizeNote: "しおりとフォームのフィールドは新しいファイルに残りません。",
   organizeUnlockedNote: "新しい PDF にはパスワードがありません。必要なら共有前にもう一度保護してください。",
   organizeSignedNote: "新しい PDF では電子署名は無効です。印影や署名の画像はページに残っています。",

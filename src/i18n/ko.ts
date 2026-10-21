@@ -303,6 +303,7 @@ export default {
   organizeDoneTitle: "PDF 저장됨",
   organizeAnother: "다른 PDF 정리",
   organizeFailed: "이 PDF를 저장하지 못했습니다. 파일이 손상되었을 수 있습니다.",
+  organizeUnsupported: "이 PDF에서는 페이지를 안전하게 삭제할 수 없습니다. 남길 페이지와 내용을 공유하기 때문입니다. 원본 파일은 바뀌지 않았습니다.",
   organizeNote: "새 파일에는 책갈피와 양식 필드가 남지 않습니다.",
   organizeUnlockedNote: "새 PDF에는 암호가 없습니다. 필요하면 공유 전에 다시 보호하세요.",
   organizeSignedNote: "새 PDF에서 전자 서명은 유효하지 않습니다. 도장과 서명 이미지는 페이지에 남아 있습니다.",

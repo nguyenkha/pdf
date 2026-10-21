@@ -302,6 +302,7 @@ export default {
   organizeDoneTitle: "PDF saved",
   organizeAnother: "Organize another PDF",
   organizeFailed: "This PDF could not be saved. It may be damaged.",
+  organizeUnsupported: "Pages can't be safely removed from this PDF, because they share content with the pages you keep. Your original file is unchanged.",
   organizeNote: "Bookmarks and form fields are not kept in the new file.",
   organizeUnlockedNote: "The new PDF has no password. Protect it again before sharing if needed.",
   organizeSignedNote: "The digital signatures are no longer valid in the new PDF; their stamps and images are still on the page.",

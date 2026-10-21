@@ -36,7 +36,7 @@ try {
   // straight to compress, keeping ?shared=1 from the share target.
   var route = location.pathname.split("/")[1];
   if (supported.indexOf(route) !== -1) match = route;
-  location.replace("/" + match + "/compress/" + location.search);
+  location.replace("/" + match + "/compress/" + location.search + location.hash);
 } catch {
-  location.replace("/en/compress/");
+  location.replace("/en/compress/" + location.search + location.hash);
 }
