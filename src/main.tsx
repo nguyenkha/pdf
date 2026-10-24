@@ -164,7 +164,7 @@ function App({
         <a className="brand" href={`/${locale}/compress/`}>
           <img className="brand-logo light-only" src="/icons/icon.svg" alt="" />
           <img className="brand-logo dark-only" src="/icons/icon-dark.svg" alt="" />
-          pdf.kha.do
+          PDF Tools
         </a>
         <div className="header-actions">
           {/* Tool pages have the switcher; a second menu there would repeat it. */}
