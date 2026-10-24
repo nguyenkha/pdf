@@ -1,4 +1,3 @@
-import { Gauge, Gem, Minimize2, Sparkles, type LucideIcon } from "lucide-react";
 import type { Messages } from "../i18n";
 import type { ImageQuality } from "../engines/ghostscript";
 import type { PdfSummary } from "../engines/validate";
@@ -26,16 +25,15 @@ export function CompressionPlan({
 }) {
   const set = (patch: Partial<PlanChoice>) => onChange({ ...value, ...patch });
   const limits = limitChoices(size);
-  const goals: [Goal, string, string, LucideIcon][] = [
+  const goals: [Goal, string, string][] = [
     [
       "recommended",
       t.recommended,
       summary.hasImages ? t.recommendedImages : t.recommendedText,
-      Sparkles,
     ],
-    ["quality", t.quality, t.qualityHint, Gem],
-    ["smallest", t.smallest, t.smallestHint, Minimize2],
-    ["limit", t.limit, t.limitHint, Gauge],
+    ["quality", t.quality, t.qualityHint],
+    ["smallest", t.smallest, t.smallestHint],
+    ["limit", t.limit, t.limitHint],
   ];
   return (
     <fieldset className="plan">
@@ -51,7 +49,7 @@ export function CompressionPlan({
         </div>
       )}
       <div className="goals">
-        {goals.map(([goal, label, hint, Icon]) => (
+        {goals.map(([goal, label, hint]) => (
           <label
             key={goal}
             className={`goal-${goal}${value.goal === goal ? " selected" : ""}`}
@@ -63,10 +61,7 @@ export function CompressionPlan({
               checked={value.goal === goal}
               onChange={() => set({ goal })}
             />
-            <strong>
-              <Icon size={15} aria-hidden="true" />
-              {label}
-            </strong>
+            <strong>{label}</strong>
             <small>{hint}</small>
           </label>
         ))}

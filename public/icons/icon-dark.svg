@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
   <title id="title">pdf.kha.do</title>
-  <rect width="64" height="64" rx="16" fill="#1d4ed8"/>
-  <path d="M18 10h22l9 10v30a4 4 0 0 1-4 4H18a4 4 0 0 1-4-4V14a4 4 0 0 1 4-4Z" fill="#f6f8fc"/>
-  <path d="M39 10v11h10" fill="#93b8ff"/>
-  <g fill="none" stroke="#1e3a8a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+  <rect width="64" height="64" rx="16" fill="#b8481a"/>
+  <path d="M18 10h22l9 10v30a4 4 0 0 1-4 4H18a4 4 0 0 1-4-4V14a4 4 0 0 1 4-4Z" fill="#f7f4ef"/>
+  <path d="M39 10v11h10" fill="#f3a46f"/>
+  <g fill="none" stroke="#8a3210" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
     <path d="M20 40V29h4a3 3 0 0 1 0 6h-4M30 40V29h3a5.5 5.5 0 0 1 0 11h-3M41 40V29h6M41 34h5"/>
   </g>
 </svg>

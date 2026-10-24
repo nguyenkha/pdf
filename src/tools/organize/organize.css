@@ -115,7 +115,7 @@
   width: 35%;
   height: 100%;
   border-radius: inherit;
-  background: var(--accent-gradient);
+  background: var(--accent);
   animation: organize-busy 1.1s ease-in-out infinite;
 }
 @keyframes organize-busy {

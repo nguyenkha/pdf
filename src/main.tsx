@@ -235,12 +235,10 @@ function App({
           </div>
           <div className="content" id="about">
             <div className="info-card how">
-              <span>01</span>
               <h2>{t.how}</h2>
               <p>{home ? t.howText : toolText(t, "HowText")}</p>
             </div>
             <div className="info-card why">
-              <span>02</span>
               <h2>{t.why}</h2>
               <p>{t.whyText}</p>
             </div>
