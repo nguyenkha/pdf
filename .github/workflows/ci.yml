@@ -1,17 +1,17 @@
-name: Deploy GitHub Pages
+name: CI
+# Cloudflare Workers Builds deploys main on its own (wrangler.jsonc); this
+# runs the checks on every push and pull request.
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
-# Build steps (dependencies, tests) get read access only; deploy rights
-# belong to the deploy job alone.
 permissions:
   contents: read
 concurrency:
-  group: pages-${{ github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
-# One build, then the browser suites and the memory budget in parallel;
-# deploy only when all of them pass.
+# One build, then the browser suites and the memory budget in parallel.
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -32,9 +32,6 @@ jobs:
           name: dist
           path: dist
           retention-days: 1
-      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
-        with:
-          path: dist
   e2e:
     needs: build
     runs-on: ubuntu-latest
@@ -106,17 +103,3 @@ jobs:
           echo "| Browser | File | Time | Peak memory |" >> "$GITHUB_STEP_SUMMARY"
           echo "|---|---|---|---|" >> "$GITHUB_STEP_SUMMARY"
           pnpm test:corpus --project=${{ matrix.project }}
-  deploy:
-    # Other branches can run the checks by hand; only main is published.
-    if: github.ref == 'refs/heads/main'
-    needs: [build, e2e, corpus]
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

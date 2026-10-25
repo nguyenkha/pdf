@@ -7,10 +7,17 @@ self.onmessage = async (
     const { default: createCore } = (await import(
       /* @vite-ignore */ `${ENGINE_BASE}core.js`
     )) as { default: CoreFactory };
-    const response = await fetch(`${ENGINE_BASE}core.wasm`);
-    if (!response.ok) throw new Error("initialization");
+    const load = async (init?: RequestInit) => {
+      const response = await fetch(`${ENGINE_BASE}core.wasm`, init);
+      if (!response.ok) throw new Error("initialization");
+      return new Uint8Array(await response.arrayBuffer());
+    };
+    // Chrome can drop a streamed body when another fetch (the page's warm-up,
+    // a sibling worker) writes the same HTTP cache entry
+    // (ERR_CACHE_WRITE_FAILURE). The retry stays out of that cache.
+    const wasmBinary = await load().catch(() => load({ cache: "no-store" }));
     const core = await createCore({
-      wasmBinary: new Uint8Array(await response.arrayBuffer()),
+      wasmBinary,
       // PDFs can contain sensitive text in diagnostics. Never expose engine
       // logs; only the page number of pdfwrite's "Page N" lines leaves here.
       print: (line: string) => {

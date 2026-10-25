@@ -19,7 +19,7 @@ Source: https://github.com/nguyenkha/pdf · Website: https://pdf.kha.do
 - Selectable text and vectors preserved in ordinary PDFs; no whole-page rasterization
 - Real input/output checks for pages, text, annotations, links, dimensions, and coarse visual regressions
 - Twelve languages, Arabic RTL, locale-aware numbers, system/light/dark themes
-- Static localized SEO and privacy pages; GitHub Pages and Cloudflare Pages support
+- Static localized SEO and privacy pages; served from Cloudflare
 - Works offline after the required application and engine assets have been cached
 
 Each tool loads only on its own page: the merge code on /merge/, pdf.js when files are added (previews) and pdf-lib when merging. Planned tools are never shown by name.
@@ -83,22 +83,13 @@ There is no artificial file-size quota. Files above 80 MiB show a memory advisor
 
 ## Hosting
 
-The **same `dist/` directory** is deployable on either host. Serve it at an origin root; the app does not require the official domain to function. Canonical/hreflang URLs intentionally use the production domain. All runtime processing assets are included locally.
+Production is a Cloudflare Worker that serves `dist/` as static assets (`wrangler.jsonc`); no Worker code runs. Serve it at an origin root; the app does not require the official domain to function. Canonical/hreflang URLs intentionally use the production domain. All runtime processing assets are included locally.
 
-### GitHub Pages
+Cloudflare Workers Builds is connected to this repository: every push to `main` is built there (`pnpm install --frozen-lockfile && pnpm build`, Node from `.node-version`) and published with `npx wrangler deploy`, which also attaches the `pdf.kha.do` custom domain. `.github/workflows/ci.yml` runs lint/typecheck/unit tests/build and the Chromium/WebKit browser and corpus suites on `main` and pull requests; it does not gate the deploy, so merge only green pull requests.
 
-1. Create a public repository, push to `main`, and set Settings → Pages → Source to **GitHub Actions**.
-2. Set the repository's custom domain to `pdf.kha.do`. For Actions deployments, the repository Pages setting is authoritative; the included `CNAME` also documents the intended domain.
-3. Create DNS `CNAME pdf -> nguyenkha.github.io`, without a `/pdf` suffix. Wait for the certificate, then enable Enforce HTTPS.
-4. `.github/workflows/deploy.yml` installs from the lockfile, runs lint/typecheck/unit tests/build and Chromium/WebKit browser tests, then deploys Pages automatically on pushes to `main`.
+To try a build locally the way Cloudflare serves it: `pnpm build && npx wrangler dev`.
 
-Every locale and privacy URL has a real HTML entry point, so no SPA rewrite is needed. GitHub Pages cannot set response headers, so the CSP is a meta tag in each page; it does not cover the workers, which get no CSP on this host.
-
-### Cloudflare Pages
-
-Build command: `pnpm install --frozen-lockfile && pnpm build`. Output: `dist`. Node: 24. Add `pdf.kha.do` under Custom domains and configure its DNS as instructed by Pages. No Workers, Functions, API keys, or backend are needed for the application.
-
-Hashed/versioned assets never change; HTML and `sw.js` are revalidated by the service worker. Root redirects to the saved/browser locale with English fallback. Every localized route is a file; no catch-all rewrite is needed.
+`public/_headers` sets the CSP, `nosniff`, referrer and permissions policies on every response, which also covers the workers; the same CSP is a meta tag in each page so another static host stays safe. Hashed/versioned assets are cached as immutable; HTML and `sw.js` are revalidated by the service worker. Root redirects to the saved/browser locale with English fallback. Every localized route is a file; no catch-all rewrite is needed.
 
 ## Roadmap and contributing
 

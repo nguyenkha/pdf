@@ -1,0 +1,13 @@
+// Static assets only: no Worker code runs, Cloudflare serves dist/ as is.
+{
+  "name": "pdf-kha-do",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "none"
+  },
+  "routes": [{ "pattern": "pdf.kha.do", "custom_domain": true }],
+  "workers_dev": true,
+  "preview_urls": false
+}

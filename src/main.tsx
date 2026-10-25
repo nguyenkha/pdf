@@ -301,7 +301,7 @@ function App({
       <footer>
         <span className="copyright">© {new Date().getFullYear()} Kha Do</span>
         <span className="hosted">
-          Hosted on GitHub Pages with
+          Hosted on Cloudflare with
           <Heart size={12} fill="currentColor" aria-label="love" />
         </span>
         <nav aria-label={t.about}>
