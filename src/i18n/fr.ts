@@ -59,7 +59,7 @@ export default {
     "Votre navigateur lit le PDF et recompresse les images adaptées. Le texte et les éléments vectoriels sont conservés lorsque le moteur le permet.",
   why: "Pourquoi utiliser cet outil ?",
   whyText:
-    "Sans transfert, compte, publicité ni suivi. Le traitement a lieu sur votre appareil.",
+    "Sans transfert, compte ni publicité. Le traitement a lieu sur votre appareil.",
   faq: "Questions fréquentes",
   q1: "La compression réduit-elle la qualité ?",
   a1: "Les détails des images peuvent changer. Le mode haute qualité privilégie la netteté ; texte et vecteurs restent généralement nets.",
@@ -71,7 +71,7 @@ export default {
   a4: "Un PDF déjà optimisé contient peu de données redondantes. Nous conservons l’original si le résultat est plus gros.",
   privacyTitle: "Confidentialité",
   privacyBody:
-    "Tout le traitement s’effectue dans un Web Worker local. Ce site n’utilise ni analytique, ni compte, ni cookie, et ne stocke aucun PDF. Le navigateur télécharge les ressources de l’application, mais aucune donnée PDF, aucun nom de fichier ni métadonnée ne nous est envoyé.",
+    "Tout le traitement s’effectue dans un Web Worker local. Les visites sont comptées avec Cloudflare Web Analytics, qui n’utilise aucun cookie et ne voit que l’adresse de la page, pas vos fichiers. Il n’y a ni compte, ni cookie, ni stockage de PDF. Le navigateur télécharge les ressources de l’application, mais aucune donnée PDF, aucun nom de fichier ni métadonnée n’est jamais envoyé.",
   unsupported:
     "Certaines fonctions de ce document ne peuvent pas être conservées lors de la compression. Gardez l’original.",
   limitations:

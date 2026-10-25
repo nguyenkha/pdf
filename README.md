@@ -2,7 +2,7 @@
 
 **Your PDF. Your device. Your rules.**
 
-Free, open-source PDF tools that run entirely in your browser. No uploads, accounts, paywalls, ads, analytics, daily quotas, or bullshit. The website loads from the internet; your PDF stays on your device.
+Free, open-source PDF tools that run entirely in your browser. No uploads, accounts, paywalls, ads, daily quotas, or bullshit. The website loads from the internet; your PDF stays on your device.
 
 Source: https://github.com/nguyenkha/pdf · Website: https://pdf.kha.do
 
@@ -50,7 +50,7 @@ The page fetches only its own application assets. There is no upload endpoint or
 
 No document data is put in localStorage, IndexedDB, or Cache Storage. Only language/theme choices are stored in localStorage. A service worker caches explicitly allowed same-origin application assets, never PDFs or blob URLs. Cancel/reset releases workers and result object URLs. Browser tests monitor HTTP requests while processing and verify no document data or metadata is sent.
 
-Initial website/asset requests still reach the hosting provider, which may maintain normal access logs. This is not a claim of zero network traffic when visiting the site.
+Initial website/asset requests still reach the hosting provider, which may maintain normal access logs. Visits are counted with Cloudflare Web Analytics (cookieless; the CSP allows only its beacon script and endpoint); it sees page addresses, never PDF data. This is not a claim of zero network traffic when visiting the site.
 
 ## Architecture and compression
 

@@ -56,7 +56,7 @@ export default {
     "Your browser reads the PDF and recompresses suitable images. Text and vector content are kept where the PDF engine supports it.",
   why: "Why use this tool?",
   whyText:
-    "No uploads, accounts, ads, or tracking. The processing engine runs locally on your device.",
+    "No uploads, accounts, or ads. The processing engine runs locally on your device.",
   faq: "Frequently asked questions",
   q1: "Does compression reduce quality?",
   a1: "Image detail may change. High quality favors clarity; text and vector graphics usually remain sharp.",
@@ -68,7 +68,7 @@ export default {
   a4: "Already optimized PDFs may have little redundancy. We keep the original if rewriting makes it larger.",
   privacyTitle: "Privacy",
   privacyBody:
-    "All processing runs in a local Web Worker. This site uses no analytics, accounts, cookies, or PDF storage. Your browser downloads application assets, but PDF data, filenames, and metadata are not sent to us.",
+    "All processing runs in a local Web Worker. Visits are counted with Cloudflare Web Analytics, which uses no cookies and sees only the page address, not your files. There are no accounts, cookies, or PDF storage. Your browser downloads application assets, but PDF data, filenames, and metadata are never sent anywhere.",
   unsupported:
     "This document uses features that cannot be safely preserved during compression. Keep the original.",
   limitations:

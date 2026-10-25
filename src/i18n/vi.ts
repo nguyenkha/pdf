@@ -59,7 +59,7 @@ export default {
     "Trình duyệt đọc PDF và nén lại những ảnh phù hợp. Văn bản và đồ họa vector được giữ lại khi bộ xử lý PDF hỗ trợ.",
   why: "Vì sao dùng công cụ này?",
   whyText:
-    "Không tải file lên, không tài khoản, quảng cáo hay theo dõi. Mọi xử lý diễn ra trên thiết bị của bạn.",
+    "Không tải file lên, không tài khoản, không quảng cáo. Mọi xử lý diễn ra trên thiết bị của bạn.",
   faq: "Câu hỏi thường gặp",
   q1: "Nén có làm giảm chất lượng không?",
   a1: "Chi tiết ảnh có thể thay đổi. Chất lượng cao ưu tiên độ rõ; văn bản và đồ họa vector thường vẫn sắc nét.",
@@ -71,7 +71,7 @@ export default {
   a4: "PDF đã tối ưu có thể gần như không còn phần dư. Nếu xử lý làm file lớn hơn, chúng tôi giữ file gốc.",
   privacyTitle: "Quyền riêng tư",
   privacyBody:
-    "Toàn bộ xử lý chạy trong Web Worker trên thiết bị. Trang này không dùng phân tích truy cập, tài khoản, cookie hay lưu PDF. Trình duyệt tải tài nguyên ứng dụng, nhưng dữ liệu PDF, tên file và siêu dữ liệu không được gửi cho chúng tôi.",
+    "Toàn bộ xử lý chạy trong Web Worker trên thiết bị. Lượt truy cập được đếm bằng Cloudflare Web Analytics, không dùng cookie và chỉ thấy địa chỉ trang, không thấy file của bạn. Trang không có tài khoản, cookie hay lưu PDF. Trình duyệt tải tài nguyên ứng dụng, nhưng dữ liệu PDF, tên file và siêu dữ liệu không bao giờ được gửi đi.",
   unsupported:
     "Tài liệu có tính năng không thể giữ an toàn khi nén. Hãy giữ file gốc.",
   limitations:

@@ -58,7 +58,7 @@ export default {
     "Ihr Browser liest das PDF und komprimiert geeignete Bilder neu. Text und Vektorgrafiken bleiben erhalten, soweit die Engine dies unterstützt.",
   why: "Warum dieses Werkzeug?",
   whyText:
-    "Keine Uploads, Konten, Werbung oder Nachverfolgung. Die Verarbeitung findet auf Ihrem Gerät statt.",
+    "Keine Uploads, Konten oder Werbung. Die Verarbeitung findet auf Ihrem Gerät statt.",
   faq: "Häufige Fragen",
   q1: "Verringert die Komprimierung die Qualität?",
   a1: "Bilddetails können sich ändern. Hohe Qualität bevorzugt Klarheit; Text und Vektoren bleiben meist scharf.",
@@ -70,7 +70,7 @@ export default {
   a4: "Bereits optimierte PDFs enthalten wenig überflüssige Daten. Wird das Ergebnis größer, bleibt das Original erhalten.",
   privacyTitle: "Datenschutz",
   privacyBody:
-    "Die gesamte Verarbeitung läuft in einem lokalen Web Worker. Diese Website verwendet weder Analysen, Konten oder Cookies noch speichert sie PDFs. Ihr Browser lädt App-Dateien herunter, aber PDF-Daten, Dateinamen und Metadaten werden nicht an uns gesendet.",
+    "Die gesamte Verarbeitung läuft in einem lokalen Web Worker. Besuche werden mit Cloudflare Web Analytics gezählt, das keine Cookies verwendet und nur die Seitenadresse sieht, nicht Ihre Dateien. Es gibt keine Konten, keine Cookies und keine PDF-Speicherung. Ihr Browser lädt App-Dateien herunter, aber PDF-Daten, Dateinamen und Metadaten werden nirgendwohin gesendet.",
   unsupported:
     "Dieses Dokument enthält Funktionen, die beim Komprimieren nicht sicher erhalten bleiben. Behalten Sie das Original.",
   limitations:
